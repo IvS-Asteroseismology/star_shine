@@ -11,8 +11,8 @@ MAJOR = 0
 MINOR = 1
 ATTR = '0'
 # full acronym
-ACRONYM = ('Satellite Time-series Analysis Routine using Sinusoids and Harmonics Automatedly '
-           'for Double stars with Occultations and Waves')
+ACRONYM = ('Satellite Time-series Analysis Routine using '
+           'Sinusoids and Harmonics through Iterative Non-linear Extraction')
 
 setup(name="star_shine",
       version=f'{MAJOR}.{MINOR}.{ATTR}',

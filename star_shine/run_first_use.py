@@ -1,6 +1,5 @@
 """STAR SHINE
-Satellite Time series Analysis Routine using
-Sinusoids and Harmonics in an Automated way for Double stars with Occultations and Waves
+Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This Python script is meant to be run before first use,
 it ensures that the Just-In-Time compiler has done its job.

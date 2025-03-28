@@ -1,6 +1,5 @@
 """STAR SHINE
-Satellite Time series Analysis Routine using
-Sinusoids and Harmonics in an Automated way for Double stars with Occultations and Waves
+Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This Python module contains functions for data analysis;
 specifically for the analysis of stellar variability and eclipses.

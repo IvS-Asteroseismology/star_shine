@@ -1,5 +1,5 @@
 # STAR SHINE
-### Satellite Time-series Analysis Routine using Sinusoids and Harmonics Automatedly for Double stars with Occultations and Waves
+### Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 
 ![Language Badge](https://img.shields.io/badge/Language-Python-blue.svg)

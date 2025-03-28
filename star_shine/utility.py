@@ -1,6 +1,5 @@
 """STAR SHINE
-Satellite Time series Analysis Routine using
-Sinusoids and Harmonics in an Automated way for Double stars with Occultations and Waves
+Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This module contains utility functions for data processing, unit conversions
 and loading in data (some functions specific to TESS data).

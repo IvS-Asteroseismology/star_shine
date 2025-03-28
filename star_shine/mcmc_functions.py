@@ -1,6 +1,5 @@
 """STAR SHADOW
-Satellite Time series Analysis Routine using
-Sinusoids and Harmonics in an Automated way for Double stars with Occultations and Waves
+Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This module contains functions for the use in and to perform
 Markov Chain Monte Carlo (MCMC) with PyMC3
