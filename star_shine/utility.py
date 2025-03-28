@@ -90,34 +90,6 @@ def std_unb(x, n):
 
 
 @nb.njit(cache=True)
-def interp_two_points(x, xp1, yp1, xp2, yp2):
-    """Interpolate on a straight line between two points
-
-    Parameters
-    ----------
-    x: numpy.ndarray[float]
-        The x-coordinates at which to evaluate the interpolated values.
-        All other inputs must have the same length.
-    xp1: float, numpy.ndarray[float]
-        The x-coordinate of the left point(s)
-    yp1: float, numpy.ndarray[float]
-        The y-coordinate of the left point(s)
-    xp2: float, numpy.ndarray[float]
-        The x-coordinate of the right point(s)
-    yp2: float, numpy.ndarray[float]
-        The y-coordinate of the right point(s)
-
-    Returns
-    -------
-    y: numpy.ndarray[float]
-        The interpolated values, same shape as x.
-    """
-    y_inter, slope = tsf.linear_pars_two_points(xp1, yp1, xp2, yp2)
-    y = y_inter + slope * (x - (xp1 + xp2) / 2)  # assumes output of y_inter is for mean-centered x
-    return y
-
-
-@nb.njit(cache=True)
 def decimal_figures(x, n_sf):
     """Determine the number of decimal figures to print given a target
     number of significant figures
@@ -139,61 +111,6 @@ def decimal_figures(x, n_sf):
     else:
         decimals = 1
     return decimals
-
-
-def bounds_multiplicity_check(bounds, value):
-    """Some bounds can have multiple intervals
-    
-    Parameters
-    ----------
-    bounds: numpy.ndarray
-        One or more sets of bounding values
-    value: float
-        Value that is bounded (by one of the bounds)
-    
-    Returns
-    -------
-    bounds_1: numpy.ndarray[float]
-        Bounds that contain the value
-    bounds_2: numpy.ndarray[float], None
-        Bounds that do not contain the value
-    
-    Notes
-    -----
-    If the value is not contained within one of the bounds
-    the closest bounds are taken in terms of interval width.
-    """
-    if hasattr(bounds[0], '__len__'):
-        if (len(bounds) == 1):
-            bounds_1 = bounds[0]
-            bounds_2 = None
-        elif (len(bounds) > 1):
-            # sign only changes if w is not in the interval
-            sign_change = (np.sign((value - bounds[:, 0]) * (bounds[:, 1] - value)) == 1)
-            if np.any(sign_change):
-                bounds_1 = bounds[sign_change][0]
-                bounds_2 = bounds[sign_change == False]
-            else:
-                # take the closest bounds (in terms of bound width)
-                width = bounds[:, 1] - bounds[:, 0]
-                mid = (bounds[:, 0] + bounds[:, 1]) / 2
-                distance = np.abs(value - mid) / width
-                closest = (distance == np.min(distance))
-                bounds_1 = bounds[closest][0]
-                bounds_2 = bounds[closest == False]
-            # if bounds_2 still contains multiple bounds, pick the largest one
-            if (len(bounds_2) == 1):
-                bounds_2 = bounds_2[0]
-            else:
-                width = bounds_2[:, 1] - bounds_2[:, 0]
-                bounds_2 = bounds_2[np.argmax(width)]
-        else:
-            bounds_1 = None
-            bounds_2 = None
-    else:
-        bounds_1 = bounds
-        bounds_2 = None
-    return bounds_1, bounds_2
 
 
 @nb.njit(cache=True)
@@ -587,92 +504,6 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
 
 
 @nb.njit(cache=True)
-def convert_to_phys_space(ecosw, esinw, cosi, phi_0, log_rr, log_sb):
-    """Convert eclipse parameters to physical space
-    
-    Parameters
-    ----------
-    ecosw: float, numpy.ndarray[float]
-        Eccentricity times cosine of omega
-    esinw: float, numpy.ndarray[float]
-        Eccentricity times sine of omega
-    cosi: float, numpy.ndarray[float]
-        Cosine of the inclination of the orbit
-    phi_0: float, numpy.ndarray[float]
-        Auxiliary angle, see Kopal 1959
-    log_rr: float, numpy.ndarray[float]
-        Logarithm of the radius ratio r_2/r_1
-    log_sb: float, numpy.ndarray[float]
-        Logarithm of the surface brightness ratio sb_2/sb_1
-    
-    Returns
-    -------
-    e: float, numpy.ndarray[float]
-        Eccentricity of the orbit
-    w: float, numpy.ndarray[float]
-        Argument of periastron
-    i: float, numpy.ndarray[float]
-        Inclination of the orbit
-    r_sum_sma: float, numpy.ndarray[float]
-        Sum of radii in units of the semi-major axis
-    r_ratio: float, numpy.ndarray[float]
-        Radius ratio r_2/r_1
-    sb_ratio: float, numpy.ndarray[float]
-        Surface brightness ratio sb_2/sb_1
-    """
-    e = np.sqrt(ecosw**2 + esinw**2)
-    w = np.arctan2(esinw, ecosw) % (2 * np.pi)
-    i = np.arccos(cosi)
-    r_sum = af.r_sum_sma_from_phi_0(e, i, phi_0)
-    r_rat = 10**log_rr
-    sb_rat = 10**log_sb
-    return e, w, i, r_sum, r_rat, sb_rat
-
-
-@nb.njit(cache=True)
-def convert_from_phys_space(e, w, i, r_sum, r_rat, sb_rat):
-    """Convert eclipse parameters to physical space
-
-    Parameters
-    ----------
-    e: float, numpy.ndarray[float]
-        Eccentricity of the orbit
-    w: float, numpy.ndarray[float]
-        Argument of periastron
-    i: float, numpy.ndarray[float]
-        Inclination of the orbit
-    r_sum: float, numpy.ndarray[float]
-        Sum of radii in units of the semi-major axis
-    r_rat: float, numpy.ndarray[float]
-        Radius ratio r_2/r_1
-    sb_rat: float, numpy.ndarray[float]
-        Surface brightness ratio sb_2/sb_1
-    
-    Returns
-    -------
-    ecosw: float, numpy.ndarray[float]
-        Eccentricity times cosine of omega
-    esinw: float, numpy.ndarray[float]
-        Eccentricity times sine of omega
-    cosi: float, numpy.ndarray[float]
-        Cosine of the inclination of the orbit
-    phi_0: float, numpy.ndarray[float]
-        Auxiliary angle, see Kopal 1959
-    log_rr: float, numpy.ndarray[float]
-        Logarithm of the radius ratio r_2/r_1
-    log_sb: float, numpy.ndarray[float]
-        Logarithm of the surface brightness ratio sb_2/sb_1
-    """
-    ecosw = e * np.cos(w)
-    esinw = e * np.sin(w)
-    cosi = np.cos(i)
-    phi_0 = af.phi_0_from_r_sum_sma(e, i, r_sum)
-    log_rr = np.log10(r_rat)
-    log_sb = np.log10(sb_rat)
-    return ecosw, esinw, cosi, phi_0, log_rr, log_sb
-
-
-@nb.njit(cache=True)
 def correct_for_crowdsap(signal, crowdsap, i_sectors):
     """Correct the signal for flux contribution of a third source
     
@@ -712,7 +543,7 @@ def correct_for_crowdsap(signal, crowdsap, i_sectors):
 @nb.njit(cache=True)
 def model_crowdsap(signal, crowdsap, i_sectors):
     """Incorporate flux contribution of a third source into the signal
-    
+
     Parameters
     ----------
     signal: numpy.ndarray[float]
@@ -724,12 +555,12 @@ def model_crowdsap(signal, crowdsap, i_sectors):
         These can indicate the TESS observation sectors, but taking
         half the sectors is recommended. If only a single curve is
         wanted, set i_half_s = np.array([[0, len(times)]]).
-    
+
     Returns
     -------
     model: numpy.ndarray[float]
         Model of the signal incorporating light contamination
-    
+
     Notes
     -----
     Does the opposite as correct_for_crowdsap, to be able to model the effect of
@@ -742,89 +573,9 @@ def model_crowdsap(signal, crowdsap, i_sectors):
     return model
 
 
-def check_crowdsap_correlation(min_third_light, i_sectors, crowdsap, verbose=False):
-    """Check the CROWDSAP correlation with the data-extracted third light.
-
-    Parameters
-    ----------
-    min_third_light: numpy.ndarray[float]
-        Minimum amount of third light present per sector
-    i_sectors: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans.
-        These can indicate the TESS observation sectors, but taking
-        half the sectors is recommended. If only a single curve is
-        wanted, set i_half_s = np.array([[0, len(times)]]).
-    crowdsap: list[float], numpy.ndarray[float]
-        Light contamination parameter (1-third_light) listed per sector
-    verbose: bool
-        If set to True, this function will print some information.
-    
-    Returns
-    -------
-    corr: float
-        correlation found with the measured third light
-        and crowdsap paramter
-    check: bool
-        Can be used to decide whether the data needs a manual check
-    
-    Notes
-    -----
-    If the CROWDSAP parameter from the TESS data is anti-correlated with the similar
-    measure fitted from the light curve, it may indicate that the source is not the
-    eclipsing binary but a neighbouring star is. This would indicate further
-    investigation of the target pixels is needed.
-    The fit for third light can be unreliable for few sectors and/or few eclipses.
-    """
-    # do the fit
-    n_sectors = len(i_sectors)
-    if verbose:
-        if np.any(min_third_light > 0.05):
-            print(f'Found third light above 0.05 for one or more sectors ({np.sum(min_third_light > 0.05)}).')
-        elif (n_sectors > 1):
-            print('Third light correction minimal (<5%) for all sectors.')
-        else:
-            print('Only one sector: no minimum third light can be inferred.')
-    # first convert the third light to crowdsap-like fraction
-    max_crowd = 1 - min_third_light
-    if (len(max_crowd) > 1):
-        corr_coef = np.corrcoef(max_crowd, crowdsap)
-        corr = corr_coef[0, 1]
-    else:
-        # not enough data
-        corr = 0
-    # decide to flag for check or not
-    if (corr > 0.7):
-        check = False
-        s1, s2 = 'a strong', ', indicative of insufficient compensation'
-    elif (corr > 0.5):
-        check = False
-        s1, s2 = 'a moderate', ', indicative of insufficient compensation'
-    elif (corr > 0.3):
-        check = False
-        s1, s2 = 'only a weak', ', indicative of slightly incomplete compensation'
-    elif (corr > -0.3):
-        check = False
-        s1, s2 = 'no significant', ''
-    elif (corr > -0.5):
-        check = True
-        s1, s2 = 'only a weak', ', indicative that the target might not be the EB'
-    elif (corr > -0.7):
-        check = True
-        s1, s2 = 'a moderate', ', indicative that the target might not be the EB'
-    else:  # (corr <= -0.7)
-        check = True
-        s1, s2 = 'a strong', ', indicative that the target might not be the EB'
-    
-    if verbose:
-        print(f'There is {s1} correlation between measured minimum third light and '
-              f'CROWDSAP parameter{s2}. Corr={corr:1.3f}')
-    return corr, check
-
-
-def save_parameters_hdf5(file_name, sin_mean=None, sin_err=None, sin_hdi=None, sin_select=None, ephem=None,
-                         ephem_err=None, ephem_hdi=None, phys_mean=None, phys_err=None, phys_hdi=None,
-                         timings=None, timings_err=None, timings_hdi=None, timings_indiv_err=None,
-                         var_stats=None, stats=None, i_sectors=None, description='none', data_id='none'):
+def save_parameters_hdf5(file_name, sin_mean=None, sin_err=None, sin_hdi=None, sin_select=None, p_orb=None,
+                         p_orb_err=None, p_orb_hdi=None, stats=None, i_sectors=None,
+                         description='none', data_id='none'):
     """Save the full model parameters of the linear, sinusoid
     and eclipse models to an hdf5 file.
 
@@ -847,43 +598,12 @@ def save_parameters_hdf5(file_name, sin_mean=None, sin_err=None, sin_hdi=None, s
     sin_select: None, list[numpy.ndarray[bool]]
         Sinusoids that pass certain selection criteria
         passed_sigma, passed_snr, passed_h
-    ephem: None, numpy.ndarray[float]
-        Ephemerides of the EB, p_orb and t_zero
-    ephem_err: None, numpy.ndarray[float]
-        Error values for the ephemerides, p_err and t_zero_err
-    ephem_hdi: None, numpy.ndarray[float]
-        Hdi values for the ephemerides, p_hdi and t_zero_hdi
-    phys_mean: None, numpy.ndarray[float]
-        Parameter mean values for the physical eclipse model in the order they appear below.
-        ecosw, esinw, cosi, phi_0, log_rr, log_sb,
-        extra parametrisations: e, w, i, r_sum, r_rat, sb_rat
-    phys_err: None, numpy.ndarray[float]
-        Parameter error values for the physical eclipse model in the order they appear below.
-        ecosw_err, esinw_err, cosi_err, phi_0_err, log_rr_err, log_sb_err,
-        Extra parametrisation: e_err, w_err, i_err, r_sum_err, r_rat_err, sb_rat_err
-    phys_hdi: None, numpy.ndarray[float]
-        Parameter hdi values for the physical eclipse model in the order they appear below.
-        ecosw_hdi, esinw_hdi, cosi_hdi, phi_0_hdi, log_rr_hdi, log_sb_hdi,
-        Extra parametrisations: e_hdi, w_hdi, i_hdi, r_sum_hdi, r_rat_hdi, sb_rat_hdi
-    timings: None, numpy.ndarray[float]
-        Eclipse timings of minima and first and last contact points, internal tangency
-        and eclipse depth of the primary and secondary:
-        t_1, t_2, t_1_1, t_1_2, t_2_1, t_2_2, t_b_1_1, t_b_1_2, t_b_2_1, t_b_2_2, depth_1, depth_2
-    timings_err: None, numpy.ndarray[float]
-        Parameter error values for the eclipse timings and depths:
-        t_1_err, t_2_err, t_1_1_err, t_1_2_err, t_2_1_err, t_2_2_err,
-        t_b_1_1_err, t_b_1_2_err, t_b_2_1_err, t_b_2_2_err, depth_1_err, depth_2_err
-    timings_hdi: None, numpy.ndarray[float]
-        Parameter hdi values for the eclipse timings and depths:
-        t_1_hdi, t_2_hdi, t_1_1_hdi, t_1_2_hdi, t_2_1_hdi, t_2_2_hdi,
-        t_b_1_1_hdi, t_b_1_2_hdi, t_b_2_1_hdi, t_b_2_2_hdi, depth_1_hdi, depth_2_hdi
-    timings_indiv_err: None, numpy.ndarray[float]
-        Parameter error values for the individual eclipse timings and depths:
-        t_1_err, t_2_err, t_1_1_err, t_1_2_err, t_2_1_err, t_2_2_err,
-        t_b_1_1_err, t_b_1_2_err, t_b_2_1_err, t_b_2_2_err, depth_1_err, depth_2_err
-    var_stats: None, list[union(float, numpy.ndarray[float])]
-        Variability level diagnostic statistics
-        std_1, std_2, std_3, std_4, ratios_1, ratios_2, ratios_3, ratios_4
+    p_orb: None, numpy.ndarray[float]
+        p_orb of the EB
+    p_orb_err: None, numpy.ndarray[float]
+        Error values for the p_orb, p_err
+    p_orb_hdi: None, numpy.ndarray[float]
+        Hdi values for the p_orb, p_hdi
     stats: None, list[float]
         Some statistics: t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level
     i_sectors: numpy.ndarray[int]
@@ -916,43 +636,17 @@ def save_parameters_hdf5(file_name, sin_mean=None, sin_err=None, sin_hdi=None, s
         sin_hdi += [np.zeros((len(sin_mean[2]), 2)) for _ in range(3)]
     if sin_select is None:
         sin_select = [np.ones(len(sin_mean[2]), dtype=bool) for _ in range(3)]
-    if ephem is None:
-        ephem = -np.ones(2)
-    if ephem_err is None:
-        ephem_err = -np.ones(2)
-    if ephem_hdi is None:
-        ephem_hdi = -np.ones((2, 2))
-    if phys_mean is None:
-        phys_mean = -np.ones(12)
-    if phys_err is None:
-        phys_err = -np.ones(12)
-    if phys_hdi is None:
-        phys_hdi = -np.ones((12, 2))
-    if timings is None:
-        timings = -np.ones(12)
-    if timings_err is None:
-        timings_err = -np.ones(12)
-    if timings_hdi is None:
-        timings_hdi = -np.ones((12, 2))
-    if timings_indiv_err is None:
-        timings_indiv_err = -np.ones(12)
-    if var_stats is None:
-        var_stats = [-1 for _ in range(4)] + [np.array([-1, -1]) for _ in range(4)]
+    if p_orb is None:
+        p_orb = -np.ones(1)
+    if p_orb_err is None:
+        p_orb_err = -np.ones(1)
+    if p_orb_hdi is None:
+        p_orb_hdi = -np.ones((1, 2))
     if stats is None:
         stats = [-1 for _ in range(7)]
     if i_sectors is None:
         i_sectors = -np.ones((1, 2))
-    # unpack timings
-    t_1, t_2, t_1_1, t_1_2, t_2_1, t_2_2, t_b_1_1, t_b_1_2, t_b_2_1, t_b_2_2, depth_1, depth_2 = timings
-    t_1_err, t_2_err, t_1_1_err, t_1_2_err, t_2_1_err, t_2_2_err = timings_err[:6]
-    t_b_1_1_err, t_b_1_2_err, t_b_2_1_err, t_b_2_2_err, depth_1_err, depth_2_err = timings_err[6:]
-    t_b_1_1_err, t_b_1_2_err, t_b_2_1_err, t_b_2_2_err = t_1_1_err, t_1_2_err, t_2_1_err, t_2_2_err
-    t_1_hdi, t_2_hdi, t_1_1_hdi, t_1_2_hdi, t_2_1_hdi, t_2_2_hdi = timings_hdi[:6]
-    t_b_1_1_hdi, t_b_1_2_hdi, t_b_2_1_hdi, t_b_2_2_hdi, depth_1_hdi, depth_2_hdi = timings_hdi[6:]
-    t_1_ind, t_2_ind, t_1_1_ind, t_1_2_ind, t_2_1_ind, t_2_2_ind = timings_indiv_err[:6]
-    t_b_1_1_ind, t_b_1_2_ind, t_b_2_1_ind, t_b_2_2_ind, depth_1_ind, depth_2_ind = timings_indiv_err[6:]
     # unpack stats
-    std_1, std_2, std_3, std_4, ratios_1, ratios_2, ratios_3, ratios_4 = var_stats
     t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level = stats
     # check some input
     ext = os.path.splitext(os.path.basename(file_name))[1]
@@ -971,13 +665,10 @@ def save_parameters_hdf5(file_name, sin_mean=None, sin_err=None, sin_hdi=None, s
         file.attrs['n_param'] = n_param  # number of free parameters
         file.attrs['bic'] = bic  # Bayesian Information Criterion of the residuals
         file.attrs['noise_level'] = noise_level  # standard deviation of the residuals
-        # orbital period and time of deepest eclipse
-        file.create_dataset('p_orb', data=np.array([ephem[0], ephem_err[0], ephem_hdi[0, 0], ephem_hdi[0, 1]]))
+        # orbital period
+        file.create_dataset('p_orb', data=np.array([p_orb[0], p_orb_err[0], p_orb_hdi[0, 0], p_orb_hdi[0, 1]]))
         file['p_orb'].attrs['unit'] = 'd'
         file['p_orb'].attrs['description'] = 'Orbital period and error estimates.'
-        file.create_dataset('t_zero', data=np.array([ephem[1], ephem_err[1], ephem_hdi[1, 0], ephem_hdi[1, 1]]))
-        file['t_zero'].attrs['unit'] = 'd'
-        file['t_zero'].attrs['description'] = 'time of deepest eclipse with reference point t_mean and error estimates.'
         # the linear model
         # y-intercepts
         file.create_dataset('const', data=sin_mean[0])
@@ -1043,85 +734,6 @@ def save_parameters_hdf5(file_name, sin_mean=None, sin_err=None, sin_hdi=None, s
         file['passed_b'].attrs['description'] = 'sinusoids passing both the sigma and the signal to noise critera'
         file.create_dataset('passed_h', data=sin_select[2])
         file['passed_h'].attrs['description'] = 'harmonic sinusoids passing the sigma criterion'
-        # the physical eclipse model parameters
-        # parametrisation used in optimisation
-        file.create_dataset('ecosw', data=np.array([phys_mean[0], phys_err[0], phys_hdi[0, 0], phys_hdi[0, 1]]))
-        file['ecosw'].attrs['description'] = 'tangential part of the eccentricity'
-        file.create_dataset('esinw', data=np.array([phys_mean[1], phys_err[1], phys_hdi[1, 0], phys_hdi[1, 1]]))
-        file['esinw'].attrs['description'] = 'radial part of the eccentricity'
-        file.create_dataset('cosi', data=np.array([phys_mean[2], phys_err[2], phys_hdi[2, 0], phys_hdi[2, 1]]))
-        file['cosi'].attrs['description'] = 'cosine of the inclination'
-        file.create_dataset('phi_0', data=np.array([phys_mean[3], phys_err[3], phys_hdi[3, 0], phys_hdi[3, 1]]))
-        file['phi_0'].attrs['description'] = 'auxilary angle of Kopal 1959, measures the sum of eclipse durations'
-        file.create_dataset('log_rr', data=np.array([phys_mean[4], phys_err[4], phys_hdi[4, 0], phys_hdi[4, 1]]))
-        file['log_rr'].attrs['description'] = 'logarithm of the ratio of radii r_2 / r_1'
-        file.create_dataset('log_sb', data=np.array([phys_mean[5], phys_err[5], phys_hdi[5, 0], phys_hdi[5, 1]]))
-        file['log_sb'].attrs['description'] = 'logarithm of the ratio of surface brightnesses sb_2 / sb_1'
-        # alternate parametrisation (also uses r_rat and sb_rat)
-        file.create_dataset('e', data=np.array([phys_mean[6], phys_err[6], phys_hdi[6, 0], phys_hdi[6, 1]]))
-        file['e'].attrs['description'] = 'orbital eccentricity'
-        file.create_dataset('w', data=np.array([phys_mean[7], phys_err[7], phys_hdi[7, 0], phys_hdi[7, 1]]))
-        file['w'].attrs['description'] = 'argument of periastron'
-        file.create_dataset('i', data=np.array([phys_mean[8], phys_err[8], phys_hdi[8, 0], phys_hdi[8, 1]]))
-        file['i'].attrs['description'] = 'orbital inclination'
-        file.create_dataset('r_sum', data=np.array([phys_mean[9], phys_err[9], phys_hdi[9, 0], phys_hdi[9, 1]]))
-        file['r_sum'].attrs['description'] = 'sum of radii scaled to the semi-major axis'
-        file.create_dataset('r_rat', data=np.array([phys_mean[10], phys_err[10], phys_hdi[10, 0], phys_hdi[10, 1]]))
-        file['r_rat'].attrs['description'] = 'ratio of radii r_2 / r_1'
-        file.create_dataset('sb_rat', data=np.array([phys_mean[11], phys_err[11], phys_hdi[11, 0], phys_hdi[11, 1]]))
-        file['sb_rat'].attrs['description'] = 'ratio of surface brightnesses sb_2 / sb_1'
-        # eclipse timings and depths
-        # minima
-        file.create_dataset('t_1', data=np.array([t_1, t_1_err, t_1_hdi[0], t_1_hdi[1], t_1_ind]))
-        file['t_1'].attrs['description'] = 'time of primary minimum with respect to t_zero'
-        file.create_dataset('t_2', data=np.array([t_2, t_2_err, t_2_hdi[0], t_2_hdi[1], t_2_ind]))
-        file['t_2'].attrs['description'] = 'time of secondary minimum with respect to t_zero'
-        # contact
-        file.create_dataset('t_1_1', data=np.array([t_1_1, t_1_1_err, t_1_1_hdi[0], t_1_1_hdi[1], t_1_1_ind]))
-        file['t_1_1'].attrs['description'] = 'time of primary first contact with respect to t_zero'
-        file.create_dataset('t_1_2', data=np.array([t_1_2, t_1_2_err, t_1_2_hdi[0], t_1_2_hdi[1], t_1_2_ind]))
-        file['t_1_2'].attrs['description'] = 'time of primary last contact with respect to t_zero'
-        file.create_dataset('t_2_1', data=np.array([t_2_1, t_2_1_err, t_2_1_hdi[0], t_2_1_hdi[1], t_2_1_ind]))
-        file['t_2_1'].attrs['description'] = 'time of secondary first contact with respect to t_zero'
-        file.create_dataset('t_2_2', data=np.array([t_2_2, t_2_2_err, t_2_2_hdi[0], t_2_2_hdi[1], t_2_2_ind]))
-        file['t_2_2'].attrs['description'] = 'time of secondary last contact with respect to t_zero'
-        # internal tangency
-        file.create_dataset('t_b_1_1', data=np.array([t_b_1_1, t_b_1_1_err, t_b_1_1_hdi[0], t_b_1_1_hdi[1],
-                                                      t_b_1_1_ind]))
-        file['t_b_1_1'].attrs['description'] = 'time of primary first internal tangency with respect to t_zero'
-        file.create_dataset('t_b_1_2', data=np.array([t_b_1_2, t_b_1_2_err, t_b_1_2_hdi[0], t_b_1_2_hdi[1],
-                                                      t_b_1_2_ind]))
-        file['t_b_1_2'].attrs['description'] = 'time of primary last internal tangency with respect to t_zero'
-        file.create_dataset('t_b_2_1', data=np.array([t_b_2_1, t_b_2_1_err, t_b_2_1_hdi[0], t_b_2_1_hdi[1],
-                                                      t_b_2_1_ind]))
-        file['t_b_2_1'].attrs['description'] = 'time of secondary first internal tangency with respect to t_zero'
-        file.create_dataset('t_b_2_2', data=np.array([t_b_2_2, t_b_2_2_err, t_b_2_2_hdi[0], t_b_2_2_hdi[1],
-                                                      t_b_2_2_ind]))
-        file['t_b_2_2'].attrs['description'] = 'time of secondary last internal tangency with respect to t_zero'
-        # depths
-        file.create_dataset('depth_1', data=np.array([depth_1, depth_1_err, depth_1_hdi[0], depth_1_hdi[1],
-                                                      depth_1_ind]))
-        file['depth_1'].attrs['description'] = 'depth of primary minimum (median normalised flux)'
-        file.create_dataset('depth_2', data=np.array([depth_2, depth_2_err, depth_2_hdi[0], depth_2_hdi[1],
-                                                      depth_2_ind]))
-        file['depth_2'].attrs['description'] = 'depth of secondary minimum (median normalised flux)'
-        # variability to eclipse depth ratios
-        file.create_dataset('ratios_1', data=np.array([std_1, ratios_1[0], ratios_1[1]]))
-        desc = ('Standard deviation of the residuals of the linear+sinusoid+eclipse model, '
-                'Ratio of the first eclipse depth to std_1, Ratio of the second eclipse depth to std_1')
-        file['ratios_1'].attrs['description'] = desc
-        file.create_dataset('ratios_2', data=np.array([std_2, ratios_2[0], ratios_2[1]]))
-        desc = ('Standard deviation of the residuals of the linear+eclipse model, '
-                'Ratio of the first eclipse depth to std_2, Ratio of the second eclipse depth to std_2')
-        file['ratios_2'].attrs['description'] = desc
-        file.create_dataset('ratios_3', data=np.array([std_3, ratios_3[0], ratios_3[1]]))
-        desc = ('Standard deviation of the residuals of the linear+harmonic 1 and 2+eclipse model, '
-                'Ratio of the first eclipse depth to std_3, Ratio of the second eclipse depth to std_3')
-        file['ratios_3'].attrs['description'] = desc
-        file.create_dataset('ratios_4', data=np.array([std_4, ratios_4[0], ratios_4[1]]))
-        desc = ('Standard deviation of the residuals of the linear+non-harmonic sinusoid+eclipse model, '
-                'Ratio of the first eclipse depth to std_4, Ratio of the second eclipse depth to std_4')
-        file['ratios_4'].attrs['description'] = desc
     return None
 
 
@@ -1221,9 +833,8 @@ def read_parameters_hdf5(file_name, verbose=False, h5py_file_kwargs={}):
         n_param = file.attrs['n_param']
         bic = file.attrs['bic']
         noise_level = file.attrs['noise_level']
-        # orbital period and time of deepest eclipse
+        # orbital period
         p_orb = np.copy(file['p_orb'])
-        t_zero = np.copy(file['t_zero'])
         # the linear model
         # y-intercepts
         const = np.copy(file['const'])
@@ -1253,33 +864,6 @@ def read_parameters_hdf5(file_name, verbose=False, h5py_file_kwargs={}):
         passed_snr = np.copy(file['passed_snr'])
         passed_b = np.copy(file['passed_b'])
         passed_h = np.copy(file['passed_h'])
-        # the physical eclipse model parameters
-        ecosw = np.copy(file['ecosw'])
-        esinw = np.copy(file['esinw'])
-        cosi = np.copy(file['cosi'])
-        phi_0 = np.copy(file['phi_0'])
-        log_rr = np.copy(file['log_rr'])
-        log_sb = np.copy(file['log_sb'])
-        # some alternate parametrisations
-        e = np.copy(file['e'])
-        w = np.copy(file['w'])
-        i = np.copy(file['i'])
-        r_sum = np.copy(file['r_sum'])
-        r_rat = np.copy(file['r_rat'])
-        sb_rat = np.copy(file['sb_rat'])
-        # eclipse timings
-        t_1 = np.copy(file['t_1'])
-        t_2 = np.copy(file['t_2'])
-        t_1_1 = np.copy(file['t_1_1'])
-        t_1_2 = np.copy(file['t_1_2'])
-        t_2_1 = np.copy(file['t_2_1'])
-        t_2_2 = np.copy(file['t_2_2'])
-        t_b_1_1 = np.copy(file['t_b_1_1'])
-        t_b_1_2 = np.copy(file['t_b_1_2'])
-        t_b_2_1 = np.copy(file['t_b_2_1'])
-        t_b_2_2 = np.copy(file['t_b_2_2'])
-        depth_1 = np.copy(file['depth_1'])
-        depth_2 = np.copy(file['depth_2'])
         # variability to eclipse depth ratios
         ratios_1 = np.copy(file['ratios_1'])
         ratios_2 = np.copy(file['ratios_2'])
@@ -1290,33 +874,16 @@ def read_parameters_hdf5(file_name, verbose=False, h5py_file_kwargs={}):
     sin_err = [c_err, sl_err, f_n_err, a_n_err, ph_n_err]
     sin_hdi = [c_hdi, sl_hdi, f_n_hdi, a_n_hdi, ph_n_hdi]
     sin_select = [passed_sigma, passed_snr, passed_b, passed_h]
-    ephem = [p_orb[0], t_zero[0]]
-    ephem_err = [p_orb[1], t_zero[1]]
-    ephem_hdi = [p_orb[2:4], t_zero[2:4]]
-    phys_mean = np.array([ecosw[0], esinw[0], cosi[0], phi_0[0], log_rr[0], log_sb[0],
-                          e[0], w[0], i[0], r_sum[0], r_rat[0], sb_rat[0]])
-    phys_err = np.array([ecosw[1], esinw[1], cosi[1], phi_0[1], log_rr[1], log_sb[1],
-                         e[1], w[1], i[1], r_sum[1], r_rat[1], sb_rat[1]])
-    phys_hdi = np.array([ecosw[2:4], esinw[2:4], cosi[2:4], phi_0[2:4], log_rr[2:4], log_sb[2:4],
-                         e[2:4], w[2:4], i[2:4], r_sum[2:4], r_rat[2:4], sb_rat[2:4]])
-    timings = np.array([t_1[0], t_2[0], t_1_1[0], t_1_2[0], t_2_1[0], t_2_2[0],
-                        t_b_1_1[0], t_b_1_2[0], t_b_2_1[0], t_b_2_2[0], depth_1[0], depth_2[0]])
-    timings_err = np.array([t_1[1], t_2[1], t_1_1[1], t_1_2[1], t_2_1[1], t_2_2[1],
-                            t_b_1_1[1], t_b_1_2[1], t_b_2_1[1], t_b_2_2[1], depth_1[1], depth_2[1]])
-    timings_hdi = np.array([t_1[2:4], t_2[2:4], t_1_1[2:4], t_1_2[2:4], t_2_1[2:4], t_2_2[2:4],
-                            t_b_1_1[2:4], t_b_1_2[2:4], t_b_2_1[2:4], t_b_2_2[2:4], depth_1[2:4], depth_2[2:4]])
-    timings_indiv_err = np.array([t_1[4], t_2[4], t_1_1[4], t_1_2[4], t_2_1[4], t_2_2[4],
-                                  t_b_1_1[4], t_b_1_2[4], t_b_2_1[4], t_b_2_2[4], depth_1[4], depth_2[4]])
+    p_orb = [p_orb[0]]
+    p_orb_err = [p_orb[1]]
+    p_orb_hdi = [p_orb[2:4]]
     var_stats = [ratios_1[0], ratios_2[0], ratios_3[0], ratios_4[0],
                  ratios_1[1:], ratios_2[1:], ratios_3[1:], ratios_4[1:]]
     stats = [t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level]
     text = [identifier, data_id, description, date_time]
     # put everything in a dict
     results = {'sin_mean': sin_mean, 'sin_err': sin_err, 'sin_hdi': sin_hdi, 'sin_select': sin_select,
-               'ephem': ephem, 'ephem_err': ephem_err, 'ephem_hdi': ephem_hdi,
-               'phys_mean': phys_mean, 'phys_err': phys_err, 'phys_hdi': phys_hdi,
-               'timings': timings, 'timings_err': timings_err, 'timings_hdi': timings_hdi,
-               'timings_indiv_err': timings_indiv_err,
+               'ephem': p_orb, 'ephem_err': p_orb_err, 'ephem_hdi': p_orb_hdi,
                'var_stats': var_stats, 'stats': stats, 'i_sectors': i_sectors, 'text': text}
     if verbose:
         print(f'Loaded analysis file with identifier: {identifier}, created on {date_time}. \n'
@@ -1353,15 +920,7 @@ def convert_hdf5_to_ascii(file_name):
     p_orb, t_zero = results['ephem']
     p_err, t_zero_err = results['ephem_err']
     p_hdi, t_zero_hdi = results['ephem_hdi']
-    ecosw, esinw, cosi, phi_0, log_rr, log_sb, e, w, i, r_sum, r_rat, sb_rat = results['phys_mean']
-    ecosw_err, esinw_err, cosi_err, phi_0_err, log_rr_err, log_sb_err = results['phys_err'][:6]
-    e_err, w_err, i_err, r_sum_err, r_rat_err, sb_rat_err = results['phys_err'][6:]
-    ecosw_hdi, esinw_hdi, cosi_hdi, phi_0_hdi, log_rr_hdi, log_sb_hdi = results['phys_hdi'][:6]
-    e_hdi, w_hdi, i_hdi, r_sum_hdi, r_rat_hdi, sb_rat_hdi = results['phys_hdi'][6:]
-    t_1_hdi, t_2_hdi, t_1_1_hdi, t_1_2_hdi, t_2_1_hdi, t_2_2_hdi = results['timings_hdi'][:6]
-    t_b_1_1_hdi, t_b_1_2_hdi, t_b_2_1_hdi, t_b_2_2_hdi, depth_1_hdi, depth_2_hdi = results['timings_hdi'][6:]
     passed_sigma, passed_snr, passed_b, passed_h = results['sin_select']
-    std_1, std_2, std_3, std_4, ratios_1, ratios_2, ratios_3, ratios_4 = results['var_stats']
     t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level = results['stats']
     target_id, data_id, description, date_time = results['text']
     # check for -1 values and ignore those parameters - errors or hdis are always stored alongside
@@ -1383,78 +942,6 @@ def convert_hdf5_to_ascii(file_name):
                'ph_n, ph_n_err, ph_n_hdi_l, ph_n_hdi_r, passed_sigma, passed_snr, passed_b, passed_h')
         file_name_sin = file_name.replace(ext, '_sinusoid.csv')
         np.savetxt(file_name_sin, data, delimiter=',', header=hdr)
-    # eclipse timings
-    if not np.all(results['timings'] == -1):
-        names = ('t_1', 't_2', 't_1_1', 't_1_2', 't_2_1', 't_2_2', 't_b_1_1', 't_b_1_2', 't_b_2_1', 't_b_2_2',
-                 'depth_1', 'depth_2')
-        hdi_l = (t_1_hdi[0], t_2_hdi[0], t_1_1_hdi[0], t_1_2_hdi[0], t_2_1_hdi[0], t_2_2_hdi[0],
-                 t_b_1_1_hdi[0], t_b_1_2_hdi[0], t_b_2_1_hdi[0], t_b_2_2_hdi[0], depth_1_hdi[0], depth_2_hdi[0])
-        hdi_r = (t_1_hdi[1], t_2_hdi[1], t_1_1_hdi[1], t_1_2_hdi[1], t_2_1_hdi[1], t_2_2_hdi[1],
-                 t_b_1_1_hdi[1], t_b_1_2_hdi[1], t_b_2_1_hdi[1], t_b_2_2_hdi[1], depth_1_hdi[1], depth_2_hdi[1])
-        var_desc = ['time of primary minimum with respect to t_zero',
-                    'time of secondary minimum with respect to t_zero',
-                    'time of primary first contact with respect to t_zero',
-                    'time of primary last contact with respect to t_zero',
-                    'time of secondary first contact with respect to t_zero',
-                    'time of secondary last contact with respect to t_zero',
-                    'time of primary first internal tangency with respect to t_zero',
-                    'time of primary last internal tangency with respect to t_zero',
-                    'time of secondary first internal tangency with respect to t_zero',
-                    'time of secondary last internal tangency with respect to t_zero',
-                    'depth of primary minimum (median normalised flux)',
-                    'depth of secondary minimum (median normalised flux)']
-        data = np.column_stack((names, results['timings'], results['timings_err'], hdi_l, hdi_r,
-                                results['timings_indiv_err'], var_desc))
-        description = 'Eclipse timings and their error estimates'
-        hdr = f'{target_id}, {data_id}, {description}\nname, value, error, hdi_l, hdi_r, description'
-        file_name_tim = file_name.replace(ext, '_timings.csv')
-        np.savetxt(file_name_tim, data, delimiter=',', header=hdr, fmt='%s')
-    # variability statistics
-    if not np.all(results['var_stats'][:4] == -1):
-        names = ['std_1', 'std_2', 'std_3', 'std_4', 'ratio_1_1', 'ratio_1_2', 'ratio_2_1', 'ratio_2_2',
-                 'ratio_3_1', 'ratio_3_2', 'ratio_4_1', 'ratio_4_2']
-        data = np.array([std_1, std_2, std_3, std_4, ratios_1[0], ratios_1[1],
-                         ratios_2[0], ratios_2[1], ratios_3[0], ratios_3[1],
-                         ratios_4[0], ratios_4[1]]).astype(str)
-        desc = ['Standard deviation of the residuals of the linear+sinusoid+eclipse model',
-                'Standard deviation of the residuals of the linear+eclipse model',
-                'Standard deviation of the residuals of the linear+harmonic 1 and 2+eclipse model',
-                'Standard deviation of the residuals of the linear+non-harmonic sinusoid+eclipse model',
-                'Ratio of the first eclipse depth to std_1', 'Ratio of the second eclipse depth to std_1',
-                'Ratio of the first eclipse depth to std_2', 'Ratio of the second eclipse depth to std_2',
-                'Ratio of the first eclipse depth to std_3', 'Ratio of the second eclipse depth to std_3',
-                'Ratio of the first eclipse depth to std_4', 'Ratio of the second eclipse depth to std_4']
-        table = np.column_stack((names, data, desc))
-        target_id = os.path.splitext(os.path.basename(file_name))[0]  # the file name without extension
-        description = 'Variability levels of different model residuals'
-        hdr = f'{target_id}, {data_id}, {description}\nname, value, description'
-        file_name_var = file_name.replace(ext, '_var_stats.csv')
-        np.savetxt(file_name_var, table, delimiter=',', fmt='%s', header=hdr)
-    # eclipse model parameters
-    values = np.array([p_orb, t_zero, ecosw, esinw, cosi, phi_0, log_rr, log_sb, e, w, i, r_sum, r_rat, sb_rat])
-    if (not np.all(values == -1)):
-        names = ('p_orb', 't_zero', 'ecosw', 'esinw', 'cosi', 'phi_0', 'log_rr', 'log_sb',
-                 'e', 'w', 'i', 'r_sum', 'r_rat', 'sb_rat')
-        errors = (p_err, t_zero_err, ecosw_err, esinw_err, cosi_err, phi_0_err, log_rr_err, log_sb_err,
-                  e_err, w_err, i_err, r_sum_err, r_rat_err, sb_rat_err)
-        hdi_l = (p_hdi[0], t_zero_hdi[0], ecosw_hdi[0], esinw_hdi[0], cosi_hdi[0], phi_0_hdi[0], log_rr_hdi[0],
-                 log_sb_hdi[0], e_hdi[0], w_hdi[0], i_hdi[0], r_sum_hdi[0], r_rat_hdi[0], sb_rat_hdi[0])
-        hdi_r = (p_hdi[1], t_zero_hdi[1], ecosw_hdi[1], esinw_hdi[1], cosi_hdi[1], phi_0_hdi[1], log_rr_hdi[1],
-                 log_sb_hdi[1], e_hdi[1], w_hdi[1], i_hdi[1], r_sum_hdi[1], r_rat_hdi[1], sb_rat_hdi[1])
-        desc = ['Orbital period', 'time of deepest eclipse with reference point t_mean',
-                'tangential part of the eccentricity', 'radial part of the eccentricity',
-                'cosine of the orbital inclination',
-                'auxilary angle of Kopal 1959, measures the sum of eclipse durations',
-                'logarithm of the ratio of radii r_2 / r_1',
-                'logarithm of the ratio of surface brightnesses sb_2 / sb_1',
-                'orbital eccentricity', 'argument of periastron', 'orbital inclination',
-                'sum of radii scaled to the semi-major axis', 'ratio of radii r_2 / r_1',
-                'ratio of surface brightnesses sb_2 / sb_1']
-        data = np.column_stack((names, values, errors, hdi_l, hdi_r, desc))
-        description = 'Eclipse model parameters and their error estimates'
-        hdr = f'{target_id}, {data_id}, {description}\nname, value, error, hdi_l, hdi_r, description'
-        file_name_ecl = file_name.replace(ext, '_eclipse.csv')
-        np.savetxt(file_name_ecl, data, delimiter=',', header=hdr, fmt='%s')
     # statistics
     if not np.all(results['stats'] == -1):
         names = ('t_tot', 't_mean', 't_int', 'n_param', 'bic', 'noise_level')
@@ -1468,115 +955,6 @@ def convert_hdf5_to_ascii(file_name):
         file_name_stats = file_name.replace(ext, '_stats.csv')
         np.savetxt(file_name_stats, data, delimiter=',', header=hdr, fmt='%s')
     return None
-
-
-def save_results_ecl_indices(file_name, ecl_indices, data_id='none'):
-    """Save the eclipse indices of the eclipse timings
-
-    Parameters
-    ----------
-    file_name: str
-        File name (including path) for saving the results.
-        This name is altered slightly to not interfere with another
-        save file (from save_results_timings).
-    ecl_indices: numpy.ndarray[int]
-        Indices of several important points in the harmonic model
-        as generated here (see function for details)
-    data_id: int, str
-        Identification for the dataset used
-
-    Returns
-    -------
-    None
-    """
-    split_name = os.path.splitext(os.path.basename(file_name))
-    target_id = split_name[0]  # the file name without extension
-    fn_ext = split_name[1]
-    file_name_2 = file_name.replace(fn_ext, '_ecl_indices.csv')
-    description = 'Eclipse indices (see function measure_eclipses_dt).'
-    hdr = (f'{target_id}, {data_id}, {description}\nzeros_1, minimum_1, peaks_2_n, peaks_1, p_2_p, minimum_1_in, '
-           f'zeros_1_in, minimum_1_in_mid, zeros_1_in, minimum_1_in, p_2_p, peaks_1, peaks_2_n, minimum_1, zeros_1')
-    ecl_indices = np.atleast_1d(ecl_indices)
-    np.savetxt(file_name_2, ecl_indices, delimiter=',', fmt='%s', header=hdr)
-    return None
-
-
-def read_results_ecl_indices(file_name):
-    """Read in the eclipse indices of the eclipse timings
-
-    Parameters
-    ----------
-    file_name: str
-        File name (including path) for loading the results.
-
-    Returns
-    -------
-    ecl_indices: numpy.ndarray[int]
-        Indices of several important points in the harmonic model
-        as generated here (see function for details)
-    """
-    fn_ext = os.path.splitext(os.path.basename(file_name))[1]
-    file_name_2 = file_name.replace(fn_ext, '_ecl_indices.csv')
-    ecl_indices = np.loadtxt(file_name_2, delimiter=',', dtype=int)
-    return ecl_indices
-
-
-def save_results_dists(file_name, dists_in, dists_out, data_id='none'):
-    """Save the distributions of the determination of orbital elements
-    
-    Parameters
-    ----------
-    file_name: str
-        File name (including path) for saving the results.
-    dists_in: tuple[numpy.ndarray[float]]
-        Full input distributions for: p, t_1, t_2, t_1_1, t_1_2, t_2_1, t_2_2,
-        t_b_1_1, t_b_1_2, t_b_2_1, t_b_2_2, d_1, d_2
-    dists_out: tuple[numpy.ndarray[float]]
-        Full output distributions for the same parameters as intervals
-    data_id: int, str
-        Identification for the dataset used
-    
-    Returns
-    -------
-    None
-    """
-    data = np.column_stack((*dists_in, *dists_out))
-    # file name just adds 'dists' at the end
-    split_name = os.path.splitext(os.path.basename(file_name))
-    target_id = split_name[0]  # the file name without extension
-    fn_ext = split_name[1]
-    file_name_2 = file_name.replace(fn_ext, '_dists' + fn_ext)
-    description = 'Prior and posterior distributions (not MCMC).'
-    hdr = (f'{target_id}, {data_id}, {description}\n'
-           'p_vals, t_1_vals, t_2_vals, t_1_1_vals, t_1_2_vals, t_2_1_vals, t_2_2_vals, '
-           't_b_1_1_vals, t_b_1_2_vals, t_b_2_1_vals, t_b_2_2_vals, d_1_vals, d_2_vals, '
-           'e_vals, w_vals, i_vals, rsumsma_vals, rratio_vals, sbratio_vals')
-    np.savetxt(file_name_2, data, delimiter=',', header=hdr)
-    return None
-
-
-def read_results_dists(file_name):
-    """Read the distributions of the determination of orbital elements
-
-    Parameters
-    ----------
-    file_name: str
-        File name (including path) for saving the results.
-
-    Returns
-    -------
-    dists_in: tuple[numpy.ndarray[float]]
-        Full input distributions for: p, t_1, t_2, t_1_1, t_1_2, t_2_1, t_2_2,
-        t_b_1_1, t_b_1_2, t_b_2_1, t_b_2_2, d_1, d_2
-    dists_out: tuple[numpy.ndarray[float]]
-        Full output distributions for the same parameters as intervals
-    """
-    fn_ext = os.path.splitext(os.path.basename(file_name))[1]
-    file_name_2 = file_name.replace(fn_ext, '_dists' + fn_ext)
-    all_dists = np.loadtxt(file_name_2, delimiter=',', unpack=True)
-    dists_in = all_dists[:13]
-    dists_out = all_dists[13:]
-    return dists_in, dists_out
 
 
 def save_inference_data(file_name, inf_data):
@@ -1671,53 +1049,7 @@ def save_summary(target_id, save_dir, data_id='none'):
         p_hdi, _ = results['ephem_hdi']
         t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level = results['stats']
         prew_par = [p_orb, p_err, p_hdi[0], p_hdi[1], n_param, bic, noise_level]
-    # load timing results (6)
-    file_name = os.path.join(save_dir, f'{target_id}_analysis_6.hdf5')
-    if os.path.isfile(file_name):
-        results = read_parameters_hdf5(file_name, verbose=False)
-        p_err, _ = results['ephem_err']
-        t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level = results['stats']
-        timings_par = [*results['timings'], *results['timings_err'], *results['timings_indiv_err']]
-        prew_par[1] = p_err
-    # load parameter results from formulae (7)
-    file_name = os.path.join(save_dir, f'{target_id}_analysis_7.hdf5')
-    if os.path.isfile(file_name):
-        results = read_parameters_hdf5(file_name, verbose=False)
-        ecosw, esinw, cosi, phi_0, log_rr, log_sb, e, w, i, r_sum, r_rat, sb_rat = results['phys_mean']
-        sigma_ecosw, sigma_esinw, sigma_cosi, sigma_phi_0, sigma_log_rr, sigma_log_sb = results['phys_err'][:6]
-        sigma_e, sigma_w, sigma_i, sigma_r_sum, sigma_r_rat, sigma_sb_rat = results['phys_err'][6:]
-        ecosw_err, esinw_err, cosi_err, phi_0_err, log_rr_err, log_sb_err = results['phys_hdi'][:6]
-        e_err, w_err, i_err, r_sum_err, r_rat_err, sb_rat_err = results['phys_hdi'][6:]
-        form_par = [ecosw, esinw, cosi, phi_0, log_rr, log_sb, e, w, i, r_sum, r_rat, sb_rat,
-                    sigma_ecosw, sigma_esinw, sigma_cosi, sigma_phi_0, sigma_log_rr, sigma_log_sb,
-                    sigma_e, sigma_w, sigma_i, sigma_r_sum, sigma_r_rat, sigma_sb_rat,
-                    ecosw_err[0], ecosw_err[1], esinw_err[0], esinw_err[1], cosi_err[0], cosi_err[1],
-                    phi_0_err[0], phi_0_err[1], log_rr_err[0], log_rr_err[1], log_sb_err[0], log_sb_err[1],
-                    e_err[0], e_err[1], w_err[0], w_err[1], i_err[0], i_err[1],
-                    r_sum_err[0], r_sum_err[1], r_rat_err[0], r_rat_err[1], sb_rat_err[0], sb_rat_err[1]]
-    # load parameter results from physical model fit (8)
-    file_name = os.path.join(save_dir, f'{target_id}_analysis_8.hdf5')
-    if os.path.isfile(file_name):
-        results = read_parameters_hdf5(file_name, verbose=False)
-        ecosw, esinw, cosi, phi_0, log_rr, log_sb, e, w, i, r_sum, r_rat, sb_rat = results['phys_mean']
-        ecosw_err, esinw_err, cosi_err, phi_0_err, log_rr_err, log_sb_err = results['phys_hdi'][:6]
-        e_err, w_err, i_err, r_sum_err, r_rat_err, sb_rat_err = results['phys_hdi'][6:]
-        t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level = results['stats']
-        fit_par = [ecosw, esinw, cosi, phi_0, log_rr, log_sb, e, w, i, r_sum, r_rat, sb_rat,
-                   ecosw_err[0], ecosw_err[1], esinw_err[0], esinw_err[1], cosi_err[0], cosi_err[1],
-                   phi_0_err[0], phi_0_err[1], log_rr_err[0], log_rr_err[1], log_sb_err[0], log_sb_err[1],
-                   e_err[0], e_err[1], w_err[0], w_err[1], i_err[0], i_err[1], r_sum_err[0], r_sum_err[1],
-                   r_rat_err[0], r_rat_err[1], sb_rat_err[0], sb_rat_err[1], n_param, bic, noise_level]
-        # include n_freqs/n_freqs_passed
-        passed_sigma, passed_snr, passed_both, passed_h = results['sin_select']
-        freqs_par = [len(passed_both), np.sum(passed_sigma), np.sum(passed_snr), np.sum(passed_both),
-                     np.sum(passed_h)]
-    # include variability stats (9)
-    file_name = os.path.join(save_dir, f'{target_id}_analysis_9.hdf5')
-    if os.path.isfile(file_name):
-        results = read_parameters_hdf5(file_name, verbose=False)
-        std_1, std_2, std_3, std_4, ratios_1, ratios_2, ratios_3, ratios_4 = results['var_stats']
-        level_par = [std_1, std_2, std_3, std_4, *ratios_1, *ratios_2, *ratios_3, *ratios_4]
+    # todo: needs update
     # file header with all variable names
     hdr = ['id', 'stage', 't_tot', 't_mean', 'period', 'p_err', 'p_err_l', 'p_err_u',
            'n_param_prew', 'bic_prew', 'noise_level_prew',
@@ -1975,53 +1307,8 @@ def sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_di
     p_err_i = [0, 0, p_err_3, p_err_3, p_err_5]
     f_n_i = [f_n_1, f_n_2, f_n_3, f_n_4, f_n_5]
     a_n_i = [a_n_1, a_n_2, a_n_3, a_n_4, a_n_5]
-    # load timing results (6)
-    file_name = os.path.join(load_dir, f'{target_id}_analysis_6.hdf5')
-    fn_ext = os.path.splitext(os.path.basename(file_name))[1]
-    file_name_2 = file_name.replace(fn_ext, '_ecl_indices.csv')
-    if os.path.isfile(file_name):
-        results = read_parameters_hdf5(file_name, verbose=False)
-        timings_6, depths_6 = results['timings'][:10], results['timings'][10:]
-        timings_err_6, depths_err_6 = results['timings_err'][:10], results['timings_err'][10:]
-        ecl_indices_6 = read_results_ecl_indices(file_name)
-    elif os.path.isfile(file_name_2):
-        ecl_indices_6 = read_results_ecl_indices(file_name)
-    if os.path.isfile(file_name) | os.path.isfile(file_name_2):
-        ecl_indices_6 = np.atleast_2d(ecl_indices_6)
-        if (len(ecl_indices_6) == 0):
-            del ecl_indices_6  # delete the empty array to not do the plot
-    # load parameter results from formulae (7)
-    file_name = os.path.join(load_dir, f'{target_id}_analysis_7.hdf5')
-    if os.path.isfile(file_name):
-        results = read_parameters_hdf5(file_name, verbose=False)
-        # ecosw_7, esinw_7, cosi_7, phi_0_7, log_rr_7, log_sb_7 = results['phys_mean'][:6]
-        e_7, w_7, i_7, r_sum_7, r_rat_7, sb_rat_7 = results['phys_mean'][6:]
-        # ecosw_err_7, esinw_err_7, cosi_err_7, phi_0_err_7, log_rr_err_7, log_sb_err_7 = results['phys_hdi'][:6]
-        # e_err_7, w_err_7, i_err_7, r_sum_err_7, r_rat_err_7, sb_rat_err_7 = results['phys_hdi'][6:]
-        ecl_par_7 = [e_7, w_7, i_7, r_sum_7, r_rat_7, sb_rat_7]
-        dists_in_7, dists_out_7 = read_results_dists(file_name)
-        # intervals_w #? for when the interval is disjoint
-    # load parameter results from full fit (8)
-    file_name = os.path.join(load_dir, f'{target_id}_analysis_8.hdf5')
-    if os.path.isfile(file_name):
-        results = read_parameters_hdf5(file_name, verbose=False)
-        const_8, slope_8, f_n_8, a_n_8, ph_n_8 = results['sin_mean']
-        _, t_zero_8 = results['ephem']
-        ecosw_8, esinw_8, cosi_8, phi_0_8, log_rr_8, log_sb_8 = results['phys_mean'][:6]
-        e_8, w_8, i_8, r_sum_8, r_rat_8, sb_rat_8 = results['phys_mean'][6:]
-        timings_8, depths_8 = results['timings'][:10], results['timings'][10:]
-        # t_tot, t_mean, t_mean_s, t_int, n_param_8, bic_8, noise_level_8 = results['stats']
-        ecl_par_8 = np.array([e_8, w_8, i_8, r_sum_8, r_rat_8, sb_rat_8])
-    fn_ext = os.path.splitext(os.path.basename(file_name))[1]
-    file_name_mc = file_name.replace(fn_ext, '_dists.nc4')
-    if os.path.isfile(file_name_mc):
-        inf_data_8 = read_inference_data(file_name)
-    # include n_freqs/n_freqs_passed (9)
-    file_name = os.path.join(load_dir, f'{target_id}_analysis_9.hdf5')
-    if os.path.isfile(file_name):
-        results = read_parameters_hdf5(file_name, verbose=False)
-        passed_sigma_9, passed_snr_9, passed_b_9, passed_h_9 = results['sin_select']
-    # frequency_analysis
+
+    # plot frequency_analysis
     try:
         if save_dir is not None:
             file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_pd_full.png')
@@ -2054,74 +1341,6 @@ def sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_di
         pass  # some variable wasn't loaded (file did not exist)
     except ValueError:
         pass  # no frequencies?
-    # eclipse_analysis
-    try:
-        if save_dir is not None:
-            file_name = os.path.join(save_dir, f'{target_id}_eclipse_analysis_derivatives_h.png')
-        else:
-            file_name = None
-        vis.plot_lc_derivatives(p_orb_5, f_h_5, a_h_5, ph_h_5, ecl_indices_6, save_file=file_name, show=show)
-    except NameError:
-        pass  # some variable wasn't loaded (file did not exist)
-    try:
-        if save_dir is not None:
-            file_name = os.path.join(save_dir, f'{target_id}_eclipse_analysis_initial_timings_h.png')
-        else:
-            file_name = None
-        vis.plot_lc_timings_harmonics(times, signal, p_orb_5, timings_6, depths_6, timings_err_6,
-                                      depths_err_6, const_5, slope_5, f_n_5, a_n_5, ph_n_5, f_h_5, a_h_5, ph_h_5,
-                                      i_sectors, save_file=file_name, show=show)
-    except NameError:
-        pass  # some variable wasn't loaded (file did not exist)
-    try:
-        if save_dir is not None:
-            file_name = os.path.join(save_dir, f'{target_id}_eclipse_analysis_timings_elements.png')
-        else:
-            file_name = None
-        vis.plot_corner_eclipse_elements(p_orb_5, timings_6, depths_6, ecl_par_7, dists_in_7, dists_out_7,
-                                         save_file=file_name, show=show)
-    except NameError:
-        pass  # some variable wasn't loaded (file did not exist)
-    except ValueError:
-        pass  # no dynamic range for some variable
-    try:
-        if save_dir is not None:
-            file_name = os.path.join(save_dir, f'{target_id}_eclipse_analysis_lc_physical_eclipse.png')
-        else:
-            file_name = None
-        vis.plot_lc_physical_model(times, signal, p_orb_5, t_zero_8, const_8, slope_8, f_n_8, a_n_8, ph_n_8,
-                                   ecl_par_8, passed_b_9, i_sectors, save_file=file_name, show=show)
-    except NameError:
-        pass  # some variable wasn't loaded (file did not exist)
-    try:
-        if save_dir is not None:
-            file_name = os.path.join(save_dir, f'{target_id}_eclipse_analysis_lc_physical_eclipse_h.png')
-        else:
-            file_name = None
-        vis.plot_lc_physical_model_h(times, signal, p_orb_5, t_zero_8, timings_6, timings_8, const_8, slope_8,
-                                     f_n_8, a_n_8, ph_n_8, ecl_par_7, ecl_par_8, passed_b_9, passed_h_9, i_sectors,
-                                     save_file=file_name, show=show)
-    except NameError:
-        pass  # some variable wasn't loaded (file did not exist)
-    try:
-        if save_dir is not None:
-            file_name = os.path.join(save_dir, f'{target_id}_eclipse_analysis_mcmc.png')
-        else:
-            file_name = None
-        vis.plot_corner_eclipse_mcmc(inf_data_8, ecosw_8, esinw_8, cosi_8, phi_0_8, r_rat_8, sb_rat_8, const_8, slope_8,
-                                     f_n_8, a_n_8, ph_n_8, save_file=file_name, show=show)
-    except NameError:
-        pass  # some variable wasn't loaded (file did not exist)
-    # pulsation_analysis
-    try:
-        if save_dir is not None:
-            file_name = os.path.join(save_dir, f'{target_id}_eclipse_analysis_pd_leftover_sinusoid.png')
-        else:
-            file_name = None
-        vis.plot_pd_leftover_sinusoids(times, signal, p_orb_5, t_zero_8, const_8, slope_8, f_n_8, a_n_8, ph_n_8,
-                                       passed_b_9, ecl_par_8, i_sectors, save_file=file_name, show=show)
-    except NameError:
-        pass  # some variable wasn't loaded (file did not exist)
     return None
 
 
@@ -2182,11 +1401,11 @@ def plot_all_from_tic(tic, all_files, load_dir=None, save_dir=None, show=True):
         with the corresponding TIC number are selected.
     load_dir: str
         Path to a directory for loading analysis results.
-        Will append <target_id> + _analysis automatically.
+        Will append <tic> + _analysis automatically.
         Assumes the same directory as all_files if None.
     save_dir: str, None
         Path to a directory for saving the plots.
-        Will append <target_id> + _analysis automatically.
+        Will append <tic> + _analysis automatically.
         Directory is created if it doesn't exist yet.
     show: bool
         Whether to show the plots or not.
@@ -2204,5 +1423,5 @@ def plot_all_from_tic(tic, all_files, load_dir=None, save_dir=None, show=True):
     lc_processed = stitch_tess_sectors(times, signal, signal_err, i_sectors)
     times, signal, signal_err, sector_medians, t_combined, i_half_s = lc_processed
     # do the plotting
-    sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_dir, save_dir=save_dir, show=show)
+    sequential_plotting(times, signal, signal_err, i_sectors, tic, load_dir, save_dir=save_dir, show=show)
     return None

@@ -27,5 +27,5 @@ setup(name="star_shine",
       include_package_data=True,
       python_requires='>=3.6',
       install_requires=['numpy', 'scipy', 'numba', 'h5py', 'astropy', 'matplotlib', 'arviz', 'corner'],
-      extras_require={'ellc': ['ellc'], 'mcmc': ['pymc3', 'fastprogress', 'theano']}
+      extras_require={'mcmc': ['pymc3', 'fastprogress', 'theano']}
      )

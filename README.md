@@ -10,15 +10,11 @@
 [//]: # (make the badges dynamic...)
 
 ## What is STAR SHINE?
-STAR SHINE is a Python code that is aimed at the automatic analysis of space based light curves of eclipsing binaries 
-and provide a measurement of eccentricity, among other parameters. It provides a recipe to measure timings of eclipses 
-using the time derivatives of the light curves, using a model of orbital harmonics obtained from an initial iterative 
-prewhitening of sinusoids. Since the algorithm extracts the harmonics from the rest of the sinusoidal variability 
-eclipse timings can be measured even in the presence of other (astrophysical) signals. The aim is to determine 
-the orbital eccentricity automatically from the light curve along with information about the other variability present 
-in the light curve. The output includes, but is not limited to, a sinusoid plus linear model of 
-the light curve, the orbital period, the eccentricity, argument of periastron and inclination. See the documentation 
-for more information.
+STAR SHINE is a Python code that is aimed at the automatic and fast analysis of space based light curves of variable 
+sources. It implements the iterative prewhitening scheme common in asteroseismology. It is broadly applicable to 
+variable sources like pulsators, eclipsing binaries, and spotted stars. The output includes the parameters 
+(frequencies, amplitudes, and phases) of all sinusoids found in the light curve. See the documentation for more 
+information.
 
 
 ### Reference Material
@@ -45,13 +41,13 @@ although any Python version >=3.6 is expected to work.
 **Package dependencies:** The following package versions have been used in the development of this code, 
 meaning older versions can in principle work, but this is not guaranteed. NumPy 1.20.3, SciPy 1.7.3, Numba 0.55.1, 
 h5py 3.7.0, Astropy 4.3.1, Matplotlib 3.5.3, Arviz 0.11.4, corner 2.2.1, pymc3 3.11.4 (optional), 
-theano 1.1.2 (optional), fastprogress 1.0.0 (optional), ellc 1.8.5 (optional).
+theano 1.1.2 (optional), fastprogress 1.0.0 (optional).
 
 Newer versions are expected to work, and it is considered a bug if this is not the case.
 
 Before first use, it is recommended to run one very short time-series (for example sim_000_lc.dat included in the data 
-folder). This will make sure that the just-in-time compiler can do its magic and make everything run as fast as it can. See the 
-script run_first_use.py.
+folder). This will make sure that the just-in-time compiler can do its magic and make everything run as fast as it can. 
+See the script run_first_use.py.
 
 
 ### Example use
@@ -73,11 +69,11 @@ The stage parameter can be set to indicate which parts of the analysis are perfo
 If a save_dir is given, the outputs are saved in that directory with either the TIC number or the file name as 
 identifier. If not given, files are saved in a subdirectory of where the light curve file is.
 The 'overwrite' argument can be used to overwrite old data or to continue from a previous save file. The functions can 
-print useful progress information if verbose=True. If an orbital period is known beforehand, this information 
-will be used to find orbital harmonics in the prewhitened frequencies. If left zero, a period is found through 
-a combination of phase dispersion minimisation, Lomb-Scargle periodogram and extracted frequencies. For the 
-'analyse_from_tic' function, the files corresponding to the given TIC number are picked out from a list of all 
-available TESS data files, provided by the user, for ease of use.
+print useful progress information if verbose=True. In the case of eclipsing binaries, if an orbital period is known 
+beforehand, this information will be used to find orbital harmonics in the prewhitened frequencies. If left zero, 
+a period is found through a combination of phase dispersion minimisation, Lomb-Scargle periodogram and extracted 
+frequencies. For the 'analyse_from_tic' function, the files corresponding to the given TIC number are picked out 
+from a list of all available TESS data files, provided by the user, for ease of use.
 
 Either function can be used for a set of light curves by using:
 
@@ -90,10 +86,9 @@ Results are saved mainly in hdf5 files, in addition to csv and sometimes nc4 fil
 of the start and end time of the analysis and can contain important messages about the operation of the algorithm, 
 like a reason for early termination.
 
-Currently, there are a total of 9 analysis steps. Normal operation can terminate at several intermediate stages. 
+Currently, there are a total of 5 analysis steps. Normal operation can terminate at several intermediate stages. 
 A log entry is made when this happens containing further information. The analysis can stop if for example no 
-frequencies were extracted, the period is too long for the given data set, not enough orbital harmonics are found, 
-or primary or secondary eclipse cannot be identified.
+frequencies were extracted, or not enough orbital harmonics are found.
 
 Each step produces at least an .hdf5 file with all the model parameters from that stage of the analysis. 
 The utility module contains a function for reading these files, 'read_parameters_hdf5', which outputs a convenient 
@@ -110,7 +105,7 @@ There are several plotting functions available that show various diagnostics fro
 
 saves and/or shows most of the available plots for one target. Unfortunately matplotlib plotting only works in
 the main thread, so when processing a whole set of light curves in parallel, this function will have to be run 
-sequentially on the results afterwards (hence the name).
+sequentially on the results afterward (hence the name).
 
 
 ## Bugs and Issues
@@ -119,8 +114,7 @@ Despite all the testing, I am certain that there are still bugs in this code, or
 
 If you happen to come across any bugs or issues, *please* contact me. Only known bugs can be resolved.
 This can be done through opening an issue on the STAR SHINE GitHub page: 
-[LucIJspeert/star_shine/issues](https://github.com/LucIJspeert/star_shineshine/issues), 
-or by contacting me directly (see below).
+[LucIJspeert/star_shine/issues](https://github.com/LucIJspeert/star_shineshine/issues).
 
 If you are (going to be) working on new or improved features, I would love to hear from you and see if it can be 
 implemented in the source code.
@@ -130,6 +124,4 @@ implemented in the source code.
 
 For questions and suggestions, please contact:
 
-* luc.ijspeert(at)kuleuven.be
-
-**Developer:** Luc IJspeert (KU Leuven)
+**Main developer:** Luc IJspeert (KU Leuven)
