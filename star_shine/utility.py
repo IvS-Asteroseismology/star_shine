@@ -13,12 +13,21 @@ import fnmatch
 import h5py
 import numpy as np
 import numba as nb
+
+try:
+    import pandas as pd  # optional functionality
+except ImportError:
+    pass
 import astropy.io.fits as fits
-import arviz as az
+try:
+    import arviz as az  # optional functionality
+except ImportError:
+    pass
 
 from . import timeseries_functions as tsf
 from . import analysis_functions as af
 from . import visualisation as vis
+from .. import config
 
 
 @nb.njit(cache=True)
@@ -139,7 +148,7 @@ def signal_to_noise_threshold(n_points):
 
 
 @nb.njit(cache=True)
-def normalise_counts(flux_counts, i_sectors, flux_counts_err=None):
+def normalise_counts(flux_counts, flux_counts_err, i_chunks):
     """Median-normalises flux (counts or otherwise, should be positive) by
     dividing by the median.
     
@@ -147,317 +156,236 @@ def normalise_counts(flux_counts, i_sectors, flux_counts_err=None):
     ----------
     flux_counts: numpy.ndarray[float]
         Flux measurement values in counts of the time series
-    i_sectors: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans.
-        These can indicate the TESS observation sectors, but taking
-        half the sectors is recommended. If only a single curve is
-        wanted, set i_half_s = np.array([[0, len(times)]]).
-    flux_counts_err: numpy.ndarray[float], None
+    flux_counts_err: numpy.ndarray[float]
         Errors in the flux measurements
+    i_chunks: numpy.ndarray[float]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     
     Returns
     -------
-    flux_norm: numpy.ndarray[float]
-        Normalised flux measurements
-    median: numpy.ndarray[float]
-        Median flux counts per sector
-    flux_err_norm: numpy.ndarray[float]
-        Normalised flux errors (zeros if flux_counts_err is None)
+    tuple:
+        flux_norm: numpy.ndarray[float]
+            Normalised flux measurements
+        flux_err_norm: numpy.ndarray[float]
+            Normalised flux errors (zeros if flux_counts_err is None)
+        medians: numpy.ndarray[float]
+            Median flux counts per chunk
     
     Notes
     -----
     The result is positive and varies around one.
-    The signal is processed per sector.
+    The signal is processed per chunk.
     """
-    median = np.zeros(len(i_sectors))
+    medians = np.zeros(len(i_chunks))
     flux_norm = np.zeros(len(flux_counts))
     flux_err_norm = np.zeros(len(flux_counts))
-    for i, s in enumerate(i_sectors):
-        median[i] = np.median(flux_counts[s[0]:s[1]])
-        flux_norm[s[0]:s[1]] = flux_counts[s[0]:s[1]] / median[i]
-        if flux_counts_err is not None:
-            flux_err_norm[s[0]:s[1]] = flux_counts_err[s[0]:s[1]] / median[i]
-    return flux_norm, median, flux_err_norm
+    for i, ch in enumerate(i_chunks):
+        medians[i] = np.median(flux_counts[ch[0]:ch[1]])
+        flux_norm[ch[0]:ch[1]] = flux_counts[ch[0]:ch[1]] / medians[i]
+        flux_err_norm[ch[0]:ch[1]] = flux_counts_err[ch[0]:ch[1]] / medians[i]
+    return flux_norm, flux_err_norm, medians
 
 
-def get_tess_sectors(times, bjd_ref=2457000.0):
-    """Load the times of the TESS sectors from a file and return a set of
-    indices indicating the separate sectors in the time series.
-    
+def sort_chunks(chunk_sorter, i_chunks):
+    """Sorts the time chunks based on chunk_sorter and updates the indices accordingly.
+
     Parameters
     ----------
-    times: numpy.ndarray[float]
-        Timestamps of the time series
-    bjd_ref: float
-        BJD reference date
-        
+    chunk_sorter: np.ndarray
+        Sort indices of the time chunks based on their means
+    i_chunks: numpy.ndarray[int]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+
     Returns
     -------
-    i_sectors: numpy.ndarray[int]
-        Pair(s) of indices indicating the TESS observing sectors
-    
-    Notes
-    -----
-    Make sure to use the appropriate Baricentric Julian Date (BJD)
-    reference date for your data set. This reference date is subtracted
-    from the loaded sector dates.
+    time_sorter: numpy.ndarray[int]
+        Sort indices for the full array
+    i_chunks: numpy.ndarray[int]
+        Updated pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     """
-    # the 0.5 offset comes from test results, and the fact that no exact JD were found (just calendar days)
-    script_dir = os.path.dirname(os.path.abspath(__file__))  # absolute dir the script is in
-    data_dir = script_dir.replace('star_shadow', 'data')
-    jd_sectors = np.loadtxt(os.path.join(data_dir, 'tess_sectors.dat'), usecols=(2, 3)) - bjd_ref
-    # use a quick searchsorted to get the positions of the sector transitions
-    i_start = np.searchsorted(times, jd_sectors[:, 0])
-    i_end = np.searchsorted(times, jd_sectors[:, 1])
-    sectors_included = (i_start != i_end)  # this tells which sectors it received data for
-    i_sectors = np.column_stack([i_start[sectors_included], i_end[sectors_included]])
-    return i_sectors
+    # Update i_chunks to be in the sorted order
+    sorted_i_chunks = i_chunks[chunk_sorter]
+
+    # Create full index array corresponding to the sorted chunks
+    time_sorter = np.concatenate([np.arange(ch[0], ch[1]) for ch in sorted_i_chunks])
+
+    # update i_chunks to the full sorted time array
+    sorted_chunk_len = sorted_i_chunks[:, 1] - sorted_i_chunks[:, 0]
+    index_high = np.cumsum(sorted_chunk_len)
+    index_low = np.append([0], index_high[:-1])
+    i_chunks = np.vstack((index_low, index_high)).T
+
+    return time_sorter, i_chunks
 
 
-def convert_tess_t_sectors(times, t_sectors):
-    """Converts from the sector start and end times to the indices in the array.
-    
-    Parameters
-    ----------
-    times: numpy.ndarray[float]
-        Timestamps of the time series
-    t_sectors: numpy.ndarray[float]
-        Pair(s) of times indicating the timespans of each sector
-    
-    Returns
-    -------
-    i_sectors: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans.
-        These can indicate the TESS observation sectors, but taking
-        half the sectors is recommended.
-    """
-    starts = np.searchsorted(times, t_sectors[:, 0])
-    ends = np.searchsorted(times, t_sectors[:, 1])
-    i_sectors = np.column_stack((starts, ends))
-    return i_sectors
+def load_csv_data(file_name):
+    """Load in the data from a single csv file.
 
+    Change column names in the config file.
 
-@nb.njit(cache=True)
-def time_zero_points(times, i_sectors):
-    """Determines the time reference points to zero the time series
-    
-    Parameters
-    ----------
-    times: numpy.ndarray[float]
-        Timestamps of the time series
-    i_sectors: numpy.ndarray[int]
-        Pair(s) of indices indicating the TESS observing sectors
-    
-    Returns
-    -------
-    times_fzp: float
-        Zero point of the full time series
-    times_szp: numpy.ndarray[float]
-        Zero point(s) of the time series per observing sector
-    
-    Notes
-    -----
-    Mean-center the time array to reduce correlations
-    """
-    times_fzp = np.mean(times)
-    times_szp = np.zeros(len(i_sectors))
-    for i, s in enumerate(i_sectors):
-        times_szp[i] = np.mean(times[s[0]:s[1]])
-    return times_fzp, times_szp
-
-
-def load_tess_data(file_name):
-    """Load in the data from a single fits file, TESS specific.
-    
     Parameters
     ----------
     file_name: str
-        File name (including path) for loading the results.
+        File name (including path) of the data.
+
+    Returns
+    -------
+    time: numpy.ndarray[float]
+        Timestamps of the time series
+    flux: numpy.ndarray[float]
+        Measurement values of the time series
+    flux_err: numpy.ndarray[float]
+        Errors in the measurement values
+    """
+    # get the right columns with pandas
+    col_names = [config.CN_TIME, config.CN_FLUX, config.CN_FLUX_ERR]
+    df = pd.read_csv(file_name, usecols=col_names)
+
+    # convert to numpy arrays
+    time, flux, flux_err = df[col_names].values.T
+
+    return time, flux, flux_err
+
+
+def load_fits_data(file_name):
+    """Load in the data from a single fits file.
+
+    The SAP flux is Simple Aperture Photometry, the processed data can be PDC_SAP, KSP_SAP, or other
+    depending on the data source. Change column names in the config file.
+
+    Parameters
+    ----------
+    file_name: str
+        File name (including path) of the data.
     
     Returns
     -------
-    times: numpy.ndarray[float]
+    time: numpy.ndarray[float]
         Timestamps of the time series
-    sap_flux: numpy.ndarray[float]
-        Raw measurement values of the time series
-    signal: numpy.ndarray[float]
+    flux: numpy.ndarray[float]
         Measurement values of the time series
-    errors: numpy.ndarray[float]
+    flux_err: numpy.ndarray[float]
         Errors in the measurement values
     qual_flags: numpy.ndarray[int]
         Integer values representing the quality of the
         data points. Zero means good quality.
-    sector: int
-        Sector number of the TESS observations
     crowdsap: float
         Light contamination parameter (1-third_light)
-    
+
     Notes
     -----
-    The SAP flux is Simple Aperture Photometry, the processed data
-    can be PDC_SAP or KSP_SAP depending on the data source.
+    Originally written for TESS data products, adapted to be flexible.
     """
-    if ((file_name[-5:] != '.fits') & (file_name[-4:] != '.fit')):
-        file_name += '.fits'
-    # grab the time series data, sector number, start and stop time
+    # grab the time series data
     with fits.open(file_name, mode='readonly') as hdul:
-        sector = hdul[0].header['SECTOR']
-        times = hdul[1].data['TIME']
-        sap_flux = hdul[1].data['SAP_FLUX']
-        if ('PDCSAP_FLUX' in hdul[1].data.columns.names):
-            signal = hdul[1].data['PDCSAP_FLUX']
-            errors = hdul[1].data['PDCSAP_FLUX_ERR']
-        elif ('KSPSAP_FLUX' in hdul[1].data.columns.names):
-            signal = hdul[1].data['KSPSAP_FLUX']
-            errors = hdul[1].data['KSPSAP_FLUX_ERR']
-        else:
-            signal = np.zeros(len(sap_flux))
-            if ('SAP_FLUX_ERR' in hdul[1].data.columns.names):
-                errors = hdul[1].data['SAP_FLUX_ERR']
-            else:
-                errors = np.zeros(len(sap_flux))
-            print('Only SAP data product found.')
+        # time stamps and flux measurements
+        time = hdul[1].data[config.CF_TIME]
+        flux = hdul[1].data[config.CF_FLUX]
+        flux_err = hdul[1].data[config.CF_FLUX_ERR]
+
         # quality flags
-        qual_flags = hdul[1].data['QUALITY']
+        qual_flags = hdul[1].data[config.CF_QUALITY]
+
         # get crowding numbers if found
-        if ('CROWDSAP' in hdul[1].header.keys()):
+        if 'CROWDSAP' in hdul[1].header.keys():
             crowdsap = hdul[1].header['CROWDSAP']
         else:
             crowdsap = -1
-    return times, sap_flux, signal, errors, qual_flags, sector, crowdsap
+
+    return time, flux, flux_err, qual_flags, crowdsap
 
 
-def load_tess_lc(tic, all_files, apply_flags=True):
-    """Load in the data from (potentially) multiple TESS specific fits files.
+def load_light_curve(file_list, apply_flags=True):
+    """Load in the data from a list of ((TESS specific) fits) files.
+
+    Also stitches the light curves of each individual file together and normalises to the median.
     
     Parameters
     ----------
-    tic: int
-        The TESS Input Catalog number for later reference
-        Use any number (or even str) as reference if not available.
-    all_files: list[str]
-        A list of file names (including path) for loading the results.
-        This list is searched for files with the correct tic number.
+    file_list: list[str]
+        A list of file names (including path) of the data.
     apply_flags: bool
         Whether to apply the quality flags to the time series data
         
     Returns
     -------
-    times: numpy.ndarray[float]
-        Timestamps of the time series
-    sap_signal: numpy.ndarray[float]
-        Raw measurement values of the time series
-    signal: numpy.ndarray[float]
-        Measurement values of the time series
-    signal_err: numpy.ndarray[float]
-        Errors in the measurement values
-    sectors: list[int]
-        List of sector numbers of the TESS observations
-    t_sectors: numpy.ndarray[float]
-        Pair(s) of times indicating the timespans of each sector
-    crowdsap: list[float]
-        Light contamination parameter (1-third_light) listed per sector
+    tuple:
+        time: numpy.ndarray[float]
+            Timestamps of the time series
+        flux: numpy.ndarray[float]
+            Measurement values of the time series
+        flux_err: numpy.ndarray[float]
+            Errors in the measurement values
+        i_chunks: numpy.ndarray[int]
+            Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+            the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+        medians: numpy.ndarray[float]
+            Median flux counts per chunk
     """
-    tic_files = [file for file in all_files if f'{tic:016.0f}' in file]
-    times = np.array([])
-    sap_signal = np.array([])
-    signal = np.array([])
-    signal_err = np.array([])
+    time = np.array([])
+    flux = np.array([])
+    flux_err = np.array([])
     qual_flags = np.array([])
-    sectors = np.array([])
-    t_sectors = []
-    crowdsap = np.array([])
-    for file in tic_files:
-        # get the data from the file
-        ti, s_fl, fl, err, qf, sec, cro = load_tess_data(file)
-        dt = np.median(np.diff(ti[~np.isnan(ti)]))
-        # keep track of the start and end time of every sector
-        t_sectors.append([ti[0] - dt / 2, ti[-1] + dt / 2])
+    i_chunks = np.zeros((0, 2))
+
+    # load the data in list order
+    for file in file_list:
+        # get the data from the file with one of the following methods
+        if file.endswith('.fits') | file.endswith('.fit'):
+            ti, fl, err, qf, cro = load_fits_data(file)
+        elif file.endswith('.csv') & ('pd' in locals()):
+            ti, fl, err = load_csv_data(file)
+            qf = np.zeros(len(ti))
+            cro = 1
+        else:
+            ti, fl, err = np.loadtxt(file, usecols=(0, 1, 2), unpack=True)
+            qf = np.zeros(len(ti))
+            cro = 1
+
+        # keep track of the data belonging to each time chunk
+        chunk_index = [len(i_chunks), len(i_chunks) + len(ti)]
+        if config.HALVE_CHUNKS & (file.endswith('.fits') | file.endswith('.fit')):
+            chunk_index = [[len(i_chunks), len(i_chunks) + len(ti)//2],
+                           [len(i_chunks) + len(ti)//2, len(i_chunks) + len(ti)]]
+        i_chunks = np.append(i_chunks, chunk_index, axis=0)
+
         # append all other data
-        times = np.append(times, ti)
-        sap_signal = np.append(sap_signal, s_fl)
-        signal = np.append(signal, fl)
-        signal_err = np.append(signal_err, err)
+        time = np.append(time, ti)
+        flux = np.append(flux, fl)
+        flux_err = np.append(flux_err, err)
         qual_flags = np.append(qual_flags, qf)
-        sectors = np.append(sectors, sec)
-        crowdsap = np.append(crowdsap, cro)
-    t_sectors = np.array(t_sectors)
-    # sort by sector (and merges duplicate sectors as byproduct)
-    if np.any(np.diff(times) < 0):
-        sec_sorter = np.argsort(sectors)
-        time_sorter = np.argsort(times)
-        times = times[time_sorter]
-        sap_signal = sap_signal[time_sorter]
-        signal = signal[time_sorter]
-        signal_err = signal_err[time_sorter]
-        sectors = sectors[sec_sorter]
-        t_sectors = t_sectors[sec_sorter]
-        crowdsap = crowdsap[sec_sorter]
+
+    # sort chunks by time
+    t_start = time[i_chunks[:0]]
+    if np.any(np.diff(t_start) < 0):
+        chunk_sorter = np.argsort(t_start)  # sort on chunk start time
+        time_sorter, i_chunks = sort_chunks(chunk_sorter, i_chunks)
+        time = time[time_sorter]
+        flux = flux[time_sorter]
+        flux_err = flux_err[time_sorter]
+        qual_flags = qual_flags[time_sorter]
+
     # apply quality flags
     if apply_flags:
         # convert quality flags to boolean mask
         quality = (qual_flags == 0)
-        times = times[quality]
-        sap_signal = sap_signal[quality]
-        signal = signal[quality]
-        signal_err = signal_err[quality]
-    # clean up (only on times and signal, sap_signal assumed to be the same)
-    finite = np.isfinite(times) & np.isfinite(signal)
-    times = times[finite].astype(np.float_)
-    sap_signal = sap_signal[finite].astype(np.float_)
-    signal = signal[finite].astype(np.float_)
-    signal_err = signal_err[finite].astype(np.float_)
-    return times, sap_signal, signal, signal_err, sectors, t_sectors, crowdsap
+        time = time[quality]
+        flux = flux[quality]
+        flux_err = flux_err[quality]
 
+    # clean up (on time and flux)
+    finite = np.isfinite(time) & np.isfinite(flux)
+    time = time[finite].astype(np.float_)
+    flux = flux[finite].astype(np.float_)
+    flux_err = flux_err[finite].astype(np.float_)
 
-def stitch_tess_sectors(times, signal, signal_err, i_sectors):
-    """Stitches the different TESS sectors of a light curve together.
-    
-    Parameters
-    ----------
-    times: numpy.ndarray[float]
-        Timestamps of the time series
-    signal: numpy.ndarray[float]
-        Measurement values of the time series
-    signal_err: numpy.ndarray[float]
-        Errors in the measurement values
-    i_sectors: numpy.ndarray[int]
-        Pair(s) of indices indicating the TESS observing sectors
-    
-    Returns
-    -------
-    times: numpy.ndarray[float]
-        Timestamps of the time series (shifted start at zero)
-    signal: numpy.ndarray[float]
-        Measurement values of the time series (normalised)
-    signal_err: numpy.ndarray[float]
-        Errors in the measurement values (normalised)
-    medians: numpy.ndarray[float]
-        Median flux counts per sector
-    t_combined: numpy.ndarray[float]
-        Pair(s) of times indicating the timespans of each half sector
-    i_half_s: numpy.ndarray[int]
-        Pair(s) of indices indicating the timespans of each half sector
-    
-    Notes
-    -----
-    The flux/counts are median-normalised per sector. The median values are returned.
-    Each sector is divided in two and the timestamps are provided, since the
-    momentum dump happens in the middle of each sector, which can cause a jump in the flux.
-    It is recommended that these half-sector timestamps be used in the further analysis.
-    The time of first observation is subtracted from all other times, for better numerical
-    performance when deriving sinusoidal phase information. The original start point is given.
-    """
     # median normalise
-    signal, medians, signal_err = normalise_counts(signal, i_sectors=i_sectors, flux_counts_err=signal_err)
-    # times of sector mid-point and resulting half-sectors
-    dt = np.median(np.diff(times))
-    t_start = times[i_sectors[:, 0]] - dt / 2
-    t_end = times[i_sectors[:, 1] - 1] + dt / 2
-    t_mid = (t_start + t_end) / 2
-    t_combined = np.column_stack((np.append(t_start, t_mid + dt / 2), np.append(t_mid - dt / 2, t_end)))
-    i_half_s = convert_tess_t_sectors(times, t_combined)
-    return times, signal, signal_err, medians, t_combined, i_half_s
+    flux, flux_err, medians = normalise_counts(flux, flux_err, i_chunks)
+
+    return time, flux, flux_err, i_chunks, medians
 
 
 def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
@@ -1417,11 +1345,7 @@ def plot_all_from_tic(tic, all_files, load_dir=None, save_dir=None, show=True):
     if load_dir is None:
         load_dir = os.path.dirname(all_files[0])
     # load the data
-    lc_data = load_tess_lc(tic, all_files, apply_flags=True)
-    times, sap_signal, signal, signal_err, sectors, t_sectors, crowdsap = lc_data
-    i_sectors = convert_tess_t_sectors(times, t_sectors)
-    lc_processed = stitch_tess_sectors(times, signal, signal_err, i_sectors)
-    times, signal, signal_err, sector_medians, t_combined, i_half_s = lc_processed
+    time, flux, flux_err, i_chunks, medians = load_light_curve(all_files, apply_flags=True)
     # do the plotting
-    sequential_plotting(times, signal, signal_err, i_sectors, tic, load_dir, save_dir=save_dir, show=show)
+    sequential_plotting(time, flux, flux_err, i_chunks, tic, load_dir, save_dir=save_dir, show=show)
     return None

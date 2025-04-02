@@ -17,10 +17,136 @@ from . import timeseries_fitting as tsfit
 from . import mcmc_functions as mcf
 from . import analysis_functions as af
 from . import utility as ut
+from .. import config
 
 
 # initialize logger
 logger = logging.getLogger(__name__)
+
+
+class Data:
+    """A class to handle light curve data.
+
+    Attributes
+    ----------
+    file_list: list[str]
+        List of ascii light curve files or (TESS) data product '.fits' files.
+    data_dir: str, None
+        Root directory where the data files are stored.
+    target_id: int
+        User defined identification integer for the target under investigation.
+    data_id: str
+        User defined identification for the dataset used.
+    """
+
+    def __init__(self, file_list, data_dir=None, target_id=0, data_id='none'):
+        """Initialises the Data object.
+
+        The data is loaded from the given file(s) and some basic processing is done.
+        Either a file name, or target id plus file list must be given.
+
+        Parameters
+        ----------
+        file_list: list[str]
+            List of ascii light curve files or (TESS) data product '.fits' files. Exclude the path given to 'data_dir'.
+            If only one file is given, its file name is used for target_id (if 0).
+        data_dir: str, None
+            Root directory where the data files are stored. Added to the file name. If None, it is loaded from config.
+        target_id: int
+            User defined identification number for the target under investigation.
+        data_id: str
+            User defined identification for the dataset used.
+        """
+        # guard against empty list
+        if len(file_list) == 0:
+            logger.info(f'Empty file list provided.')
+            return
+
+        # set the file list and data directory
+        self.file_list = file_list
+        if data_dir is None:
+            data_dir = config.DATA_DIR
+        self.data_dir = data_dir
+
+        # Check if the file(s) exist(s)
+        self.check_file_existence()
+        if len(self.file_list) == 0:
+            logger.info('No existing files in file list')
+            return
+
+        # set the target and data ID
+        if (target_id == 0) & (len(file_list) == 1):
+            target_id = os.path.splitext(os.path.basename(file_list[0]))[0]  # file name is used as target identifier
+        self.target_id = target_id
+        self.data_id = data_id
+
+        # initialise the data attributes
+        self.time = None
+        self.flux = None
+        self.flux_err = None
+        self.i_chunks = None
+        self.flux_counts_medians = None
+
+        # load and process the data
+        self.load_data()
+        return
+
+    def check_file_existence(self):
+        """Checks whether the given file(s) exist."""
+        # check for missing files in the list
+        missing = []
+        for i, file in enumerate(self.file_list):
+            if not os.path.exists(os.path.join(self.data_dir, file)):
+                missing.append(i)
+
+        # log a message if files are missing
+        if len(missing) > 0:
+            missing_files = [self.file_list[i] for i in missing]
+
+            # add directory to message
+            dir_text = ''
+            if self.data_dir is not None:
+                dir_text = f' in directory {self.data_dir}'
+            message = f'Missing files {missing_files}{dir_text}, removing from list.'
+            logger.info(message)
+
+            # remove the files
+            for i in missing:
+                del self.file_list[i]
+        return None
+
+    def load_data(self):
+        """Load light curve data from the file(s)."""
+
+        lc_data = ut.load_light_curve(self.file_list, apply_flags=config.APPLY_Q_FLAGS)
+        time, flux, flux_err, i_chunks, medians = lc_data
+        self.time = None
+        self.flux = None
+        self.flux_err = None
+        self.i_chunks = None
+        self.flux_counts_medians = None
+        # todo: might need to be a class function that returns the data?
+        # Check for np.diff(time) == 0 (can I not do everything with not-perfectly-sorted time array?)
+
+        return None
+
+    def plot_data(self):
+        """Plot the light curve data."""
+        if self.data is None:
+            print('No data to plot. Please load the data first.')
+            return
+
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=(10, 6))
+        plt.errorbar(self.data['time'], self.data['flux'], yerr=self.data['error'], fmt='o', markersize=3)
+        plt.title('Light Curve')
+        plt.xlabel('Time')
+        plt.ylabel('Flux')
+        plt.grid(True)
+        plt.show()
+        return None
+
 
 
 def iterative_prewhitening(times, signal, signal_err, i_sectors, t_stats, file_name, data_id='none', overwrite=False,
@@ -47,7 +173,7 @@ def iterative_prewhitening(times, signal, signal_err, i_sectors, t_stats, file_n
     file_name: str
         File name (including path) for saving the results. Also used to
         load previous analysis results if found.
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     overwrite: bool
         If set to True, overwrite old results in the same directory as
@@ -151,7 +277,7 @@ def optimise_sinusoid(times, signal, signal_err, const, slope, f_n, a_n, ph_n, i
         load previous analysis results if found.
     method: str
         Method of optimisation. Can be 'sampler' or 'fitter'.
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     overwrite: bool
         If set to True, overwrite old results in the same directory as
@@ -271,7 +397,7 @@ def couple_harmonics(times, signal, signal_err, p_orb, const, slope, f_n, a_n, p
     file_name: str
         File name (including path) for saving the results. Also used to
         load previous analysis results if found.
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     overwrite: bool
         If set to True, overwrite old results in the same directory as
@@ -403,7 +529,7 @@ def add_sinusoids(times, signal, signal_err, p_orb, f_n, a_n, ph_n, i_sectors, t
     file_name: str
         File name (including path) for saving the results. Also used to
         load previous analysis results if found.
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     overwrite: bool
         If set to True, overwrite old results in the same directory as
@@ -522,7 +648,7 @@ def optimise_sinusoid_h(times, signal, signal_err, p_orb, const, slope, f_n, a_n
         load previous analysis results if found.
     method: str
         Method of optimisation. Can be 'sampler' or 'fitter'.
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     overwrite: bool
         If set to True, overwrite old results in the same directory as
@@ -647,7 +773,7 @@ def analyse_frequencies(times, signal, signal_err, i_sectors, t_stats, target_id
     save_dir: str
         Path to a directory for saving the results. Also used to load
         previous analysis results.
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     overwrite: bool
         If set to True, overwrite old results in the same directory as
@@ -752,7 +878,7 @@ def analyse_harmonics(times, signal, signal_err, i_sectors, p_orb, t_stats, targ
     save_dir: str
         Path to a directory for saving the results. Also used to load
         previous analysis results.
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     overwrite: bool
         If set to True, overwrite old results in the same directory as
@@ -946,7 +1072,7 @@ def analyse_light_curve(times, signal, signal_err, p_orb, i_sectors, target_id, 
         Method of EB light curve model optimisation. Can be 'sampler' or 'fitter'.
         Sampler gives extra error estimates on the eclipse parameters
         Fitter is much faster and still accurate
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     overwrite: bool
         If set to True, overwrite old results in the same directory as
@@ -982,8 +1108,6 @@ def analyse_light_curve(times, signal, signal_err, p_orb, i_sectors, target_id, 
                'verbose': verbose}
     # define the lists of stages to compare against
     stg_1 = ['harmonics', 'harm', 'h', 'timings', 't', 'all', 'a']
-    stg_2 = ['timings', 't', 'all', 'a']
-    stg_3 = ['all', 'a']
     # do the analysis -------------------------------------------------------------------------------
     out_a = analyse_frequencies(times, signal, signal_err, i_sectors, t_stats, target_id, **kw_args)
     # need outputs of len 2 to continue
@@ -1025,7 +1149,7 @@ def analyse_lc_from_file(file_name, p_orb=0, i_sectors=None, stage='all', method
         Method of EB light curve model optimisation. Can be 'sampler' or 'fitter'.
         Sampler gives extra error estimates on the eclipse parameters
         Fitter is much faster and still accurate
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     save_dir: str
         Path to a directory for saving the results. Also used to load
@@ -1088,7 +1212,7 @@ def analyse_lc_from_tic(tic, all_files, p_orb=0, stage='all', method='fitter', d
         Method of EB light curve model optimisation. Can be 'sampler' or 'fitter'.
         Sampler gives extra error estimates on the eclipse parameters
         Fitter is much faster and still accurate
-    data_id: int, str
+    data_id: str
         User defined identification for the dataset used
     save_dir: str
         Path to a directory for saving the results. Also used to load
@@ -1114,10 +1238,10 @@ def analyse_lc_from_tic(tic, all_files, p_orb=0, stage='all', method='fitter', d
     if save_dir is None:
         save_dir = os.path.dirname(all_files[0])
     # load the data
-    lc_data = ut.load_tess_lc(tic, all_files, apply_flags=True)
+    lc_data = ut.load_light_curve(tic, all_files, apply_flags=config.APPLY_Q_FLAGS)
     times, sap_signal, signal, signal_err, sectors, t_sectors, crowdsap = lc_data
     i_sectors = ut.convert_tess_t_sectors(times, t_sectors)
-    lc_processed = ut.stitch_tess_sectors(times, signal, signal_err, i_sectors)
+    lc_processed = ut.stitch_chunks(times, signal, signal_err, i_sectors)
     times, signal, signal_err, sector_medians, t_combined, i_half_s = lc_processed
     # do the analysis
     analyse_light_curve(times, signal, signal_err, p_orb, i_half_s, tic, save_dir, stage=stage, method=method,

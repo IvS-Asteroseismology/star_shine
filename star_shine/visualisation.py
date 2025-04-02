@@ -11,7 +11,10 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
-import arviz as az
+try:
+    import arviz as az  # optional functionality
+except ImportError:
+    pass
 
 from . import timeseries_functions as tsf
 from . import analysis_functions as af

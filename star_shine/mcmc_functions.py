@@ -12,18 +12,16 @@ import numpy as np
 import scipy as sp
 import scipy.stats
 
-import arviz as az
 try:
     # optional functionality
     import pymc3 as pm
     import theano.tensor as tt
+    import arviz as az
     from fastprogress import fastprogress
 except (ImportError, AttributeError) as e:
     if e == AttributeError:
         print('PyMC3 functionality unavailable, likely incompatible numpy version')
-    pm = None
-    tt = None
-    fastprogress = None
+    pass
 
 from . import analysis_functions as af
 
