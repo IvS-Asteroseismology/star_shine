@@ -6,8 +6,10 @@ This Python module contains the main functions that link together all functional
 Code written by: Luc IJspeert
 """
 import os
-import time
+import time as systime
+import datetime
 import logging
+import h5py
 import numpy as np
 import functools as fct
 import multiprocessing as mp
@@ -17,6 +19,7 @@ from . import timeseries_fitting as tsfit
 from . import mcmc_functions as mcf
 from . import analysis_functions as af
 from . import utility as ut
+from . import visualisation as vis
 from .. import config
 
 
@@ -37,9 +40,28 @@ class Data:
         User defined identification integer for the target under investigation.
     data_id: str
         User defined identification for the dataset used.
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    flux_err: numpy.ndarray[Any, dtype[float]]
+        Errors in the measurement values
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    flux_counts_medians: numpy.ndarray[Any, dtype[float]]
+        Median flux counts per chunk
+    t_tot: float
+        Total time base of observations
+    t_mean: float
+        Time reference (zero) point of the full light curve
+    t_mean_chunk: numpy.ndarray[Any, dtype[float]]
+        Time reference (zero) point per chunk
+    t_int: float
+        Integration time of observations
     """
 
-    def __init__(self, file_list, data_dir=None, target_id=0, data_id='none'):
+    def __init__(self, file_list, data_dir=None, target_id='none', data_id='none'):
         """Initialises the Data object.
 
         The data is loaded from the given file(s) and some basic processing is done.
@@ -49,18 +71,24 @@ class Data:
         ----------
         file_list: list[str]
             List of ascii light curve files or (TESS) data product '.fits' files. Exclude the path given to 'data_dir'.
-            If only one file is given, its file name is used for target_id (if 0).
-        data_dir: str, None
+            If only one file is given, its file name is used for target_id (if 'none').
+        data_dir: str, optional
             Root directory where the data files are stored. Added to the file name. If None, it is loaded from config.
-        target_id: int
-            User defined identification number for the target under investigation.
-        data_id: str
-            User defined identification for the dataset used.
+        target_id: str, optional
+            User defined identification number or name for the target under investigation.
+        data_id: str, optional
+            User defined identification name for the dataset used.
         """
-        # guard against empty list
-        if len(file_list) == 0:
-            logger.info(f'Empty file list provided.')
-            return
+        # initialise attributes before they are assigned values
+        self.time = np.zeros((0,), dtype=np.float_)
+        self.flux = np.zeros((0,), dtype=np.float_)
+        self.flux_err = np.zeros((0,), dtype=np.float_)
+        self.i_chunks = np.zeros((0, 2), dtype=np.int_)
+        self.flux_counts_medians = np.zeros((0,), dtype=np.float_)
+        self.t_tot = 0.
+        self.t_mean = 0.
+        self.t_mean_chunk = np.zeros((0,), dtype=np.float_)
+        self.t_int = 0.
 
         # set the file list and data directory
         self.file_list = file_list
@@ -68,31 +96,39 @@ class Data:
             data_dir = config.DATA_DIR
         self.data_dir = data_dir
 
-        # Check if the file(s) exist(s)
-        self.check_file_existence()
-        if len(self.file_list) == 0:
-            logger.info('No existing files in file list')
-            return
-
-        # set the target and data ID
-        if (target_id == 0) & (len(file_list) == 1):
-            target_id = os.path.splitext(os.path.basename(file_list[0]))[0]  # file name is used as target identifier
+        # set IDs
         self.target_id = target_id
         self.data_id = data_id
 
-        # initialise the data attributes
-        self.time = None
-        self.flux = None
-        self.flux_err = None
-        self.i_chunks = None
-        self.flux_counts_medians = None
+        # guard against empty list
+        if len(file_list) == 0:
+            logger.info(f"Empty file list provided.")
+            return
+
+        # Check if the file(s) exist(s)
+        self._check_file_existence()
+        if len(self.file_list) == 0:
+            logger.info("No existing files in file list")
+            return
+
+        # set the target and data ID
+        if (self.target_id == 'none') & (len(file_list) == 1):
+            self.target_id = os.path.splitext(os.path.basename(file_list[0]))[0]  # file name is used as identifier
 
         # load and process the data
-        self.load_data()
+        self._load_data()
+
         return
 
-    def check_file_existence(self):
-        """Checks whether the given file(s) exist."""
+    def _check_file_existence(self):
+        """Checks whether the given file(s) exist.
+
+        Removes missing files from the file list
+
+        Returns
+        -------
+        None
+        """
         # check for missing files in the list
         missing = []
         for i, file in enumerate(self.file_list):
@@ -104,10 +140,11 @@ class Data:
             missing_files = [self.file_list[i] for i in missing]
 
             # add directory to message
-            dir_text = ''
+            dir_text = ""
             if self.data_dir is not None:
-                dir_text = f' in directory {self.data_dir}'
-            message = f'Missing files {missing_files}{dir_text}, removing from list.'
+                dir_text = f" in directory {self.data_dir}"
+            message = f"Missing files {missing_files}{dir_text}, removing from list."
+
             logger.info(message)
 
             # remove the files
@@ -115,38 +152,460 @@ class Data:
                 del self.file_list[i]
         return None
 
-    def load_data(self):
-        """Load light curve data from the file(s)."""
+    def _load_data(self):
+        """Load light curve data from the file list.
 
-        lc_data = ut.load_light_curve(self.file_list, apply_flags=config.APPLY_Q_FLAGS)
+        Returns
+        -------
+        None
+        """
+        # add data_dir if not None
+        if self.data_dir is None:
+            file_list_dir = self.file_list
+        else:
+            file_list_dir = [os.path.join(self.data_dir, file) for file in self.file_list]
+
+        # load the data from the list of files
+        lc_data = ut.load_light_curve(file_list_dir, apply_flags=config.APPLY_Q_FLAGS)
         time, flux, flux_err, i_chunks, medians = lc_data
-        self.time = None
-        self.flux = None
-        self.flux_err = None
-        self.i_chunks = None
-        self.flux_counts_medians = None
-        # todo: might need to be a class function that returns the data?
-        # Check for np.diff(time) == 0 (can I not do everything with not-perfectly-sorted time array?)
+
+        self.time = time
+        self.flux = flux
+        self.flux_err = flux_err
+        self.i_chunks = i_chunks
+        self.flux_counts_medians = medians
+
+        # set derived attributes
+        self.t_tot = np.ptp(self.time)
+        self.t_mean = np.mean(self.time)
+        self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
+
+        # check for overlapping time stamps
+        if np.any(np.diff(self.time) <= 0):
+            logger.info("The time array chunks include overlap.")
 
         return None
 
-    def plot_data(self):
-        """Plot the light curve data."""
-        if self.data is None:
-            print('No data to plot. Please load the data first.')
-            return
+    def load(self):
+        """Load a data file."""
 
-        import matplotlib.pyplot as plt
+    def save(self):
+        """Save a data file."""
 
-        plt.figure(figsize=(10, 6))
-        plt.errorbar(self.data['time'], self.data['flux'], yerr=self.data['error'], fmt='o', markersize=3)
-        plt.title('Light Curve')
-        plt.xlabel('Time')
-        plt.ylabel('Flux')
-        plt.grid(True)
-        plt.show()
+    def plot_light_curve(self, file_name=None, show=True):
+        """Plot the light curve data.
+
+        Parameters
+        ----------
+        file_name: str, optional
+            File path to save the plot
+        show: bool, optional
+            If True, display the plot
+
+        Returns
+        -------
+        None
+        """
+        vis.plot_lc(self.time, self.flux, self.flux_err, self.i_chunks, file_name=file_name, show=show)
         return None
 
+
+class Result:
+    """A class to handle analysis results.
+
+    Attributes
+    ----------
+    file_name: str
+        File name for the result in question, for saving and loading.
+    target_id: str, optional
+        User defined identification number or name for the target under investigation.
+    data_id: str, optional
+        User defined identification name for the dataset used.
+    description: str, optional
+        User defined description of the result in question.
+    n_param: int
+        Number of free parameters in the model
+    bic: float
+        Bayesian Information Criterion of the residuals
+    noise_level: float
+        The noise level (standard deviation of the residuals)
+    const: numpy.ndarray[Any, dtype[float]]
+        The y-intercepts of a piece-wise linear curve
+    slope: numpy.ndarray[Any, dtype[float]]
+        The slopes of a piece-wise linear curve
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    c_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the constant for each sector
+    sl_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the slope for each sector
+    f_n_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the frequency for each sine wave
+    a_n_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the amplitude for each sine wave (these are identical)
+    ph_n_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the phase for each sine wave
+    c_hdi: numpy.ndarray[Any, dtype[float]]
+        HDI bounds for the constant for each sector
+    sl_hdi: numpy.ndarray[Any, dtype[float]]
+        HDI bounds for the slope for each sector
+    f_n_hdi: numpy.ndarray[Any, dtype[float]]
+        HDI bounds for the frequency for each sine wave
+    a_n_hdi: numpy.ndarray[Any, dtype[float]]
+        HDI bounds for the amplitude for each sine wave (these are identical)
+    ph_n_hdi: numpy.ndarray[Any, dtype[float]]
+        HDI bounds for the phase for each sine wave
+    passed_sigma: numpy.ndarray[bool]
+        Sinusoids that passed the sigma check
+    passed_snr: numpy.ndarray[bool]
+        Sinusoids that passed the signal-to-noise check
+    passed_both: numpy.ndarray[bool]
+        Sinusoids that passed both checks
+    passed_harmonic: numpy.ndarray[bool]
+        Harmonic sinusoids that passed
+    """
+
+    def __init__(self):
+        """Initialises the Result object."""
+        self.file_name = 'none'
+
+        # descriptive
+        self.target_id = 'none'
+        self.data_id = 'none'
+        self.description = 'none'
+
+        # summary statistics
+        self.n_param = -1
+        self.bic = -1
+        self.noise_level = -1
+
+        # linear model parameters
+        # y-intercepts
+        self.const = np.zeros(0)
+        self.c_err = np.zeros(0)
+        self.c_hdi = np.zeros((0, 2))
+        # slopes
+        self.slope = np.zeros(0)
+        self.sl_err = np.zeros(0)
+        self.sl_hdi = np.zeros((0, 2))
+
+        # sinusoid model parameters
+        # frequencies
+        self.f_n = np.zeros(0)
+        self.f_n_err = np.zeros(0)
+        self.f_n_hdi = np.zeros((0, 2))
+        # amplitudes
+        self.a_n = np.zeros(0)
+        self.a_n_err = np.zeros(0)
+        self.a_n_hdi = np.zeros((0, 2))
+        # phases
+        self.ph_n = np.zeros(0)
+        self.ph_n_err = np.zeros(0)
+        self.ph_n_hdi = np.zeros((0, 2))
+        # passing criteria
+        self.passed_sigma = np.zeros(0, dtype=bool)
+        self.passed_snr = np.zeros(0, dtype=bool)
+        self.passed_both = np.zeros(0, dtype=bool)
+
+        # harmonic model
+        self.p_orb = np.zeros(4)
+        self.passed_harmonic = np.zeros(0, dtype=bool)
+
+        return
+
+    def setter(self, **kwargs):
+        """Fill in the attributes with results.
+
+        Parameters
+        ----------
+        kwargs:
+            Accepts any of the class attributes as keyword input and sets them accordingly
+
+        Returns
+        -------
+        None
+        """
+        # file name must have hdf5 extension
+        if 'file_name' in kwargs.keys():
+            ext = os.path.splitext(os.path.basename(kwargs['file_name']))[1]
+            if ext != '.hdf5':
+                kwargs['file_name'] = kwargs['file_name'].replace(ext, '.hdf5')
+
+        # set any attribute that exists if it is in the kwargs
+        for key in kwargs.keys():
+            setattr(self, key, kwargs[key])
+
+        return None
+
+    @classmethod
+    def load(cls, file_name, h5py_file_kwargs=None):
+        """Load a result file in hdf5 format.
+
+        Parameters
+        ----------
+        file_name: str
+            File name to load the results from
+        h5py_file_kwargs: dict, optional
+            Keyword arguments for opening the h5py file.
+            Example: {'locking': False}, for a drive that does not support locking.
+
+        Returns
+        -------
+        instance: Result object
+            Instance of the Result class with the loaded results.
+        """
+        # to avoid dict in function defaults
+        if h5py_file_kwargs is None:
+            h5py_file_kwargs = {}
+
+        # add everything to a dict
+        result_dict = {'file_name': file_name}
+
+        # load the results from the file
+        with h5py.File(file_name, 'r', **h5py_file_kwargs) as file:
+            # file description
+            result_dict['target_id'] = file.attrs['target_id']
+            result_dict['data_id'] = file.attrs['data_id']
+            result_dict['description'] = file.attrs['description']
+            result_dict['date_time'] = file.attrs['date_time']
+
+            # summary statistics
+            result_dict['n_param'] = file.attrs['n_param']
+            result_dict['bic'] = file.attrs['bic']
+            result_dict['noise_level'] = file.attrs['noise_level']
+
+            # linear model parameters
+            # y-intercepts
+            result_dict['const'] = np.copy(file['const'])
+            result_dict['c_err'] = np.copy(file['c_err'])
+            result_dict['c_hdi'] = np.copy(file['c_hdi'])
+            # slopes
+            result_dict['slope'] = np.copy(file['slope'])
+            result_dict['sl_err'] = np.copy(file['sl_err'])
+            result_dict['sl_hdi'] = np.copy(file['sl_hdi'])
+
+            # sinusoid model parameters
+            # frequencies
+            result_dict['f_n'] = np.copy(file['f_n'])
+            result_dict['f_n_err'] = np.copy(file['f_n_err'])
+            result_dict['f_n_hdi'] = np.copy(file['f_n_hdi'])
+            # amplitudes
+            result_dict['a_n'] = np.copy(file['a_n'])
+            result_dict['a_n_err'] = np.copy(file['a_n_err'])
+            result_dict['a_n_hdi'] = np.copy(file['a_n_hdi'])
+            # phases
+            result_dict['ph_n'] = np.copy(file['ph_n'])
+            result_dict['ph_n_err'] = np.copy(file['ph_n_err'])
+            result_dict['ph_n_hdi'] = np.copy(file['ph_n_hdi'])
+            # passing criteria
+            result_dict['passed_sigma'] = np.copy(file['passed_sigma'])
+            result_dict['passed_snr'] = np.copy(file['passed_snr'])
+            result_dict['passed_both'] = np.copy(file['passed_both'])
+
+            # harmonic model
+            result_dict['p_orb'] = np.copy(file['p_orb'])
+            result_dict['passed_harmonic'] = np.copy(file['passed_harmonic'])
+
+        # initiate the Results instance and fill in the results
+        instance = cls()
+        instance.setter(**result_dict)
+
+        if config.VERBOSE:
+            print(f'Loaded analysis file with target identifier: {result_dict['target_id']}, '
+                  f'created on {result_dict['date_time']}. \n'
+                  f'Data identifier: {result_dict['data_id']}. Description: {result_dict['description']} \n')
+
+        return instance
+
+    @classmethod
+    def load_conditional(cls, file_name):
+        """Load a result file into a Result instance only if it exists and if no overwriting.
+
+        Returns
+        -------
+        instance: Result object, None
+            Instance of the Result class with the loaded results.
+            Returns None if condition not met.
+        """
+        # guard for existing file when not overwriting
+        if (not os.path.isfile(file_name)) | config.OVERWRITE:
+            return None
+
+        # make the Data instance and load the data
+        instance = cls()
+        instance.load(file_name)
+
+        return instance
+
+    def save(self):
+        """Save the results to a file in hdf5 format.
+
+        Returns
+        -------
+        None
+        """
+        with h5py.File(self.file_name, 'w') as file:
+            file.attrs['target_id'] = self.target_id
+            file.attrs['data_id'] = self.data_id
+            file.attrs['description'] = self.description
+            file.attrs['date_time'] = str(datetime.datetime.now())
+            file.attrs['n_param'] = self.n_param  # number of free parameters
+            file.attrs['bic'] = self.bic  # Bayesian Information Criterion of the residuals
+            file.attrs['noise_level'] = self.noise_level  # standard deviation of the residuals
+            # orbital period
+            file.create_dataset('p_orb', data=self.p_orb)
+            file['p_orb'].attrs['unit'] = 'd'
+            file['p_orb'].attrs['description'] = 'Orbital period and error estimates.'
+            # the linear model
+            # y-intercepts
+            file.create_dataset('const', data=self.const)
+            file['const'].attrs['unit'] = 'median normalised flux'
+            file['const'].attrs['description'] = 'y-intercept per analysed sector'
+            file.create_dataset('c_err', data=self.c_err)
+            file['c_err'].attrs['unit'] = 'median normalised flux'
+            file['c_err'].attrs['description'] = 'errors in the y-intercept per analysed sector'
+            file.create_dataset('c_hdi', data=self.c_hdi)
+            file['c_hdi'].attrs['unit'] = 'median normalised flux'
+            file['c_hdi'].attrs['description'] = 'HDI for the y-intercept per analysed sector'
+            # slopes
+            file.create_dataset('slope', data=self.slope)
+            file['slope'].attrs['unit'] = 'median normalised flux / d'
+            file['slope'].attrs['description'] = 'slope per analysed sector'
+            file.create_dataset('sl_err', data=self.sl_err)
+            file['sl_err'].attrs['unit'] = 'median normalised flux / d'
+            file['sl_err'].attrs['description'] = 'error in the slope per analysed sector'
+            file.create_dataset('sl_hdi', data=self.sl_hdi)
+            file['sl_hdi'].attrs['unit'] = 'median normalised flux / d'
+            file['sl_hdi'].attrs['description'] = 'HDI for the slope per analysed sector'
+            # the sinusoid model
+            # frequencies
+            file.create_dataset('f_n', data=self.f_n)
+            file['f_n'].attrs['unit'] = '1 / d'
+            file['f_n'].attrs['description'] = 'frequencies of a number of sine waves'
+            file.create_dataset('f_n_err', data=self.f_n_err)
+            file['f_n_err'].attrs['unit'] = '1 / d'
+            file['f_n_err'].attrs['description'] = 'errors in the frequencies of a number of sine waves'
+            file.create_dataset('f_n_hdi', data=self.f_n_hdi)
+            file['f_n_hdi'].attrs['unit'] = '1 / d'
+            file['f_n_hdi'].attrs['description'] = 'HDI for the frequencies of a number of sine waves'
+            # amplitudes
+            file.create_dataset('a_n', data=self.a_n)
+            file['a_n'].attrs['unit'] = 'median normalised flux'
+            file['a_n'].attrs['description'] = 'amplitudes of a number of sine waves'
+            file.create_dataset('a_n_err', data=self.a_n_err)
+            file['a_n_err'].attrs['unit'] = 'median normalised flux'
+            file['a_n_err'].attrs['description'] = 'errors in the amplitudes of a number of sine waves'
+            file.create_dataset('a_n_hdi', data=self.a_n_hdi)
+            file['a_n_hdi'].attrs['unit'] = 'median normalised flux'
+            file['a_n_hdi'].attrs['description'] = 'HDI for the amplitudes of a number of sine waves'
+            # phases
+            file.create_dataset('ph_n', data=self.ph_n)
+            file['ph_n'].attrs['unit'] = 'radians'
+            file['ph_n'].attrs['description'] = 'phases of a number of sine waves, with reference point t_mean'
+            file.create_dataset('ph_n_err', data=self.ph_n_err)
+            file['ph_n_err'].attrs['unit'] = 'radians'
+            file['ph_n_err'].attrs['description'] = 'errors in the phases of a number of sine waves'
+            file.create_dataset('ph_n_hdi', data=self.ph_n_hdi)
+            file['ph_n_hdi'].attrs['unit'] = 'radians'
+            file['ph_n_hdi'].attrs['description'] = 'HDI for the phases of a number of sine waves'
+            # selection criteria
+            file.create_dataset('passed_sigma', data=self.passed_sigma)
+            file['passed_sigma'].attrs['description'] = 'sinusoids passing the sigma criterion'
+            file.create_dataset('passed_snr', data=self.passed_snr)
+            file['passed_snr'].attrs['description'] = 'sinusoids passing the signal to noise criterion'
+            file.create_dataset('passed_both', data=self.passed_both)
+            file['passed_both'].attrs[
+                'description'] = 'sinusoids passing both the sigma and the signal to noise criteria'
+            file.create_dataset('passed_harmonic', data=self.passed_harmonic)
+            file['passed_harmonic'].attrs['description'] = 'harmonic sinusoids passing the sigma criterion'
+
+        return None
+
+    def save_conditional(self):
+        """Save a result file only if it doesn't exist or if it exists and if no overwriting.
+
+        Returns
+        -------
+        None
+        """
+        if (not os.path.isfile(self.file_name)) | config.OVERWRITE:
+            self.save()
+
+        return None
+
+    def save_as_csv(self):
+        """Write multiple ascii csv files for human readability.
+
+        Returns
+        -------
+        None
+        """
+        # file extension
+        ext = os.path.splitext(os.path.basename(self.file_name))[1]
+
+        # linear model parameters
+        data = np.column_stack((self.const, self.c_err, self.c_hdi[:, 0], self.c_hdi[:, 1],
+                                self.slope, self.sl_err, self.sl_hdi[:, 0], self.sl_hdi[:, 1]))
+        hdr = 'const, c_err, c_hdi_l, c_hdi_r, slope, sl_err, sl_hdi_l, sl_hdi_r'
+        file_name_lin = self.file_name.replace(ext, '_linear.csv')
+        np.savetxt(file_name_lin, data, delimiter=',', header=hdr)
+
+        # sinusoid model parameters
+        data = np.column_stack((self.f_n, self.f_n_err, self.f_n_hdi[:, 0], self.f_n_hdi[:, 1],
+                                self.a_n, self.a_n_err, self.a_n_hdi[:, 0], self.a_n_hdi[:, 1],
+                                self.ph_n, self.ph_n_err, self.ph_n_hdi[:, 0], self.ph_n_hdi[:, 1],
+                                self.passed_sigma, self.passed_snr, self.passed_both, self.passed_harmonic))
+        hdr = ('f_n, f_n_err, f_n_hdi_l, f_n_hdi_r, a_n, a_n_err, a_n_hdi_l, a_n_hdi_r, '
+               'ph_n, ph_n_err, ph_n_hdi_l, ph_n_hdi_r, passed_sigma, passed_snr, passed_b, passed_h')
+        file_name_sin = self.file_name.replace(ext, '_sinusoid.csv')
+        np.savetxt(file_name_sin, data, delimiter=',', header=hdr)
+
+        # period and statistics
+        names = ('p_orb', 'p_err', 'p_hdi_l', 'p_hdi_r'  'n_param', 'bic', 'noise_level')
+        stats = (self.p_orb[0], self.p_orb[1], self.p_orb[2], self.p_orb[3], self.n_param, self.bic, self.noise_level)
+        desc = ['Orbital period', 'Error in the orbital period', 'Left bound HDI of the orbital period',
+                'Right bound HDI of the orbital period', 'Number of free parameters',
+                'Bayesian Information Criterion of the residuals', 'Standard deviation of the residuals']
+        data = np.column_stack((names, stats, desc))
+        hdr = f'{self.target_id}, {self.data_id}, Model statistics\nname, value, description'
+        file_name_stats = self.file_name.replace(ext, '_stats.csv')
+        np.savetxt(file_name_stats, data, delimiter=',', header=hdr, fmt='%s')
+
+        return None
+
+
+class Pipeline:
+    """A class to analyze light curve data.
+
+    Handles the full analysis pipeline of Star Shine.
+
+    Attributes
+    ----------
+    data: Data object
+        Instance of the Data class holding the light curve data.
+    """
+
+    def __init__(self, data):
+        """Initialises the Pipeline object.
+
+        Parameters
+        ----------
+        data: Data object
+        """
+        self.data = data
+        # self.result = Result()
+
+        # check the input data
+        if not isinstance(data, Data):
+            logger.info("Input `data` should be a Data object.")
+        elif len(data.time) == 0:
+            logger.info("Data object does not contain time series data.")
+
+        return
 
 
 def iterative_prewhitening(times, signal, signal_err, i_sectors, t_stats, file_name, data_id='none', overwrite=False,
@@ -156,13 +615,13 @@ def iterative_prewhitening(times, signal, signal_err, i_sectors, t_stats, file_n
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -183,15 +642,15 @@ def iterative_prewhitening(times, signal, signal_err, i_sectors, t_stats, file_n
 
     Returns
     -------
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     
     Notes
@@ -199,10 +658,10 @@ def iterative_prewhitening(times, signal, signal_err, i_sectors, t_stats, file_n
     After extraction, a final check is done to see whether some
     groups of frequencies are better replaced by one frequency.
     """
-    t_a = time.time()
+    t_a = systime.time()
     # guard for existing file when not overwriting
     if os.path.isfile(file_name) & (not overwrite):
-        results = ut.read_parameters_hdf5(file_name, verbose=verbose)
+        results = ut.read_result_hdf5(file_name, verbose=verbose)
         const, slope, f_n, a_n, ph_n = results['sin_mean']
         return const, slope, f_n, a_n, ph_n
     
@@ -231,10 +690,10 @@ def iterative_prewhitening(times, signal, signal_err, i_sectors, t_stats, file_n
     sin_select = [passed_sigma, passed_snr, passed_h]
     stats = (*t_stats, n_param, bic, noise_level)
     desc = 'Frequency extraction results.'
-    ut.save_parameters_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_select=sin_select, stats=stats,
-                            i_sectors=i_sectors, description=desc, data_id=data_id)
+    ut.save_result_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_select=sin_select, stats=stats,
+                        i_sectors=i_sectors, description=desc, data_id=data_id)
     # print some useful info
-    t_b = time.time()
+    t_b = systime.time()
     if verbose:
         print(f'\033[1;32;48mExtraction of sinusoids complete.\033[0m')
         print(f'\033[0;32;48m{len(f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. '
@@ -248,23 +707,23 @@ def optimise_sinusoid(times, signal, signal_err, const, slope, f_n, a_n, ph_n, i
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -287,21 +746,21 @@ def optimise_sinusoid(times, signal, signal_err, const, slope, f_n, a_n, ph_n, i
 
     Returns
     -------
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     """
-    t_a = time.time()
+    t_a = systime.time()
     # guard for existing file when not overwriting
     if os.path.isfile(file_name) & (not overwrite):
-        results = ut.read_parameters_hdf5(file_name, verbose=verbose)
+        results = ut.read_result_hdf5(file_name, verbose=verbose)
         const, slope, f_n, a_n, ph_n = results['sin_mean']
         return const, slope, f_n, a_n, ph_n
     
@@ -350,11 +809,11 @@ def optimise_sinusoid(times, signal, signal_err, const, slope, f_n, a_n, ph_n, i
     sin_select = [passed_sigma, passed_snr, passed_h]
     stats = (t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level)
     desc = 'Multi-sinusoid NL-LS optimisation results.'
-    ut.save_parameters_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_hdi=sin_hdi, sin_select=sin_select,
-                            stats=stats, i_sectors=i_sectors, description=desc, data_id=data_id)
+    ut.save_result_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_hdi=sin_hdi, sin_select=sin_select,
+                        stats=stats, i_sectors=i_sectors, description=desc, data_id=data_id)
     ut.save_inference_data(file_name, inf_data)
     # print some useful info
-    t_b = time.time()
+    t_b = systime.time()
     if verbose:
         print(f'\033[1;32;48mOptimisation of sinusoids complete.\033[0m')
         print(f'\033[0;32;48m{len(f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. '
@@ -368,25 +827,25 @@ def couple_harmonics(times, signal, signal_err, p_orb, const, slope, f_n, a_n, p
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
     p_orb: float
         Orbital period of the eclipsing binary in days
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -409,15 +868,15 @@ def couple_harmonics(times, signal, signal_err, p_orb, const, slope, f_n, a_n, p
     -------
     p_orb: float
         Orbital period of the eclipsing binary in days
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     
     Notes
@@ -430,10 +889,10 @@ def couple_harmonics(times, signal, signal_err, p_orb, const, slope, f_n, a_n, p
     
     Removes any frequencies that end up not making the statistical cut.
     """
-    t_a = time.time()
+    t_a = systime.time()
     # guard for existing file when not overwriting
     if os.path.isfile(file_name) & (not overwrite):
-        results = ut.read_parameters_hdf5(file_name, verbose=verbose)
+        results = ut.read_result_hdf5(file_name, verbose=verbose)
         const, slope, f_n, a_n, ph_n = results['sin_mean']
         p_orb, _ = results['ephem']
         return p_orb, const, slope, f_n, a_n, ph_n
@@ -485,10 +944,10 @@ def couple_harmonics(times, signal, signal_err, p_orb, const, slope, f_n, a_n, p
     ephem_err = np.array([p_err, -1])
     stats = [t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level]
     desc = 'Harmonic frequencies coupled.'
-    ut.save_parameters_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_select=sin_select, ephem=ephem,
-                            ephem_err=ephem_err, stats=stats, i_sectors=i_sectors, description=desc, data_id=data_id)
+    ut.save_result_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_select=sin_select, ephem=ephem,
+                        ephem_err=ephem_err, stats=stats, i_sectors=i_sectors, description=desc, data_id=data_id)
     # print some useful info
-    t_b = time.time()
+    t_b = systime.time()
     if verbose:
         rnd_p_orb = max(ut.decimal_figures(p_err, 2), ut.decimal_figures(p_orb, 2))
         print(f'\033[1;32;48mOrbital harmonic frequencies coupled.\033[0m')
@@ -504,21 +963,21 @@ def add_sinusoids(times, signal, signal_err, p_orb, f_n, a_n, ph_n, i_sectors, t
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
     p_orb: float
         Orbital period of the eclipsing binary in days
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -539,15 +998,15 @@ def add_sinusoids(times, signal, signal_err, p_orb, f_n, a_n, ph_n, i_sectors, t
 
     Returns
     -------
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
 
     Notes
@@ -560,10 +1019,10 @@ def add_sinusoids(times, signal, signal_err, p_orb, f_n, a_n, ph_n, i_sectors, t
 
     Finally, removes any frequencies that end up not making the statistical cut.
     """
-    t_a = time.time()
+    t_a = systime.time()
     # guard for existing file when not overwriting
     if os.path.isfile(file_name) & (not overwrite):
-        results = ut.read_parameters_hdf5(file_name, verbose=verbose)
+        results = ut.read_result_hdf5(file_name, verbose=verbose)
         const, slope, f_n, a_n, ph_n = results['sin_mean']
         return const, slope, f_n, a_n, ph_n
     
@@ -600,10 +1059,10 @@ def add_sinusoids(times, signal, signal_err, p_orb, f_n, a_n, ph_n, i_sectors, t
     ephem_err = np.array([p_err, -1])
     stats = [t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level]
     desc = 'Additional non-harmonic extraction.'
-    ut.save_parameters_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_select=sin_select, ephem=ephem,
-                            ephem_err=ephem_err, stats=stats, i_sectors=i_sectors, description=desc, data_id=data_id)
+    ut.save_result_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_select=sin_select, ephem=ephem,
+                        ephem_err=ephem_err, stats=stats, i_sectors=i_sectors, description=desc, data_id=data_id)
     # print some useful info
-    t_b = time.time()
+    t_b = systime.time()
     if verbose:
         print(f'\033[1;32;48mExtraction of {len(f_n) - n_f_init} additional sinusoids complete.\033[0m')
         print(f'\033[0;32;48m{len(f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. '
@@ -617,25 +1076,25 @@ def optimise_sinusoid_h(times, signal, signal_err, p_orb, const, slope, f_n, a_n
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
     p_orb: float
         Orbital period of the eclipsing binary in days
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -660,21 +1119,21 @@ def optimise_sinusoid_h(times, signal, signal_err, p_orb, const, slope, f_n, a_n
     -------
     p_orb: float
         Orbital period of the eclipsing binary in days
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     """
-    t_a = time.time()
+    t_a = systime.time()
     # guard for existing file when not overwriting
     if os.path.isfile(file_name) & (not overwrite):
-        results = ut.read_parameters_hdf5(file_name, verbose=verbose)
+        results = ut.read_result_hdf5(file_name, verbose=verbose)
         const, slope, f_n, a_n, ph_n = results['sin_mean']
         p_orb, _ = results['ephem']
         return p_orb, const, slope, f_n, a_n, ph_n
@@ -732,12 +1191,12 @@ def optimise_sinusoid_h(times, signal, signal_err, p_orb, const, slope, f_n, a_n
     ephem_err = np.array([p_err, -1])
     stats = [t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level]
     desc = 'Multi-sine NL-LS optimisation results with coupled harmonics.'
-    ut.save_parameters_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_hdi=sin_hdi, sin_select=sin_select,
-                            ephem=ephem, ephem_err=ephem_err, ephem_hdi=ephem_hdi, stats=stats, i_sectors=i_sectors,
-                            description=desc, data_id=data_id)
+    ut.save_result_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_hdi=sin_hdi, sin_select=sin_select,
+                        ephem=ephem, ephem_err=ephem_err, ephem_hdi=ephem_hdi, stats=stats, i_sectors=i_sectors,
+                        description=desc, data_id=data_id)
     ut.save_inference_data(file_name, inf_data)
     # print some useful info
-    t_b = time.time()
+    t_b = systime.time()
     if verbose:
         rnd_p_orb = max(ut.decimal_figures(p_err, 2), ut.decimal_figures(p_orb, 2))
         print(f'\033[1;32;48mOptimisation with coupled harmonics complete.\033[0m')
@@ -753,13 +1212,13 @@ def analyse_frequencies(times, signal, signal_err, i_sectors, t_stats, target_id
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -785,15 +1244,15 @@ def analyse_frequencies(times, signal, signal_err, i_sectors, t_stats, target_id
 
     Returns
     -------
-    const_i: list[numpy.ndarray[float]]
+    const_i: list[numpy.ndarray[Any, dtype[float]]]
         y-intercepts of a piece-wise linear curve for each stage of the analysis
-    slope_i: list[numpy.ndarray[float]]
+    slope_i: list[numpy.ndarray[Any, dtype[float]]]
         slopes of a piece-wise linear curve for each stage of the analysis
-    f_n_i: list[numpy.ndarray[float]]
+    f_n_i: list[numpy.ndarray[Any, dtype[float]]]
         Frequencies of a number of sine waves for each stage of the analysis
-    a_n_i: list[numpy.ndarray[float]]
+    a_n_i: list[numpy.ndarray[Any, dtype[float]]]
         Amplitudes of a number of sine waves for each stage of the analysis
-    ph_n_i: list[numpy.ndarray[float]]
+    ph_n_i: list[numpy.ndarray[Any, dtype[float]]]
         Phases of a number of sine waves for each stage of the analysis
 
     Notes
@@ -809,7 +1268,7 @@ def analyse_frequencies(times, signal, signal_err, i_sectors, t_stats, target_id
         The sinusoid parameters are optimised with a non-linear least-squares method,
         using groups of frequencies to limit the number of free parameters.
     """
-    t_a = time.time()
+    t_a = systime.time()
     # signal_err = # signal errors are largely ignored for now. The likelihood assumes the same errors and uses the MLE
     arg_dict = {'data_id': data_id, 'overwrite': overwrite, 'verbose': verbose}  # these stay the same
     # -------------------------------------------------------
@@ -843,7 +1302,7 @@ def analyse_frequencies(times, signal, signal_err, i_sectors, t_stats, target_id
     a_n_i = [a_n_1, a_n_2]
     ph_n_i = [ph_n_1, ph_n_2]
     # final timing and message
-    t_b = time.time()
+    t_b = systime.time()
     logger.info(f'Frequency extraction done. Total time elapsed: {t_b - t_a:1.1f}s.')
     return const_i, slope_i, f_n_i, a_n_i, ph_n_i
 
@@ -854,13 +1313,13 @@ def analyse_harmonics(times, signal, signal_err, i_sectors, p_orb, t_stats, targ
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -892,15 +1351,15 @@ def analyse_harmonics(times, signal, signal_err, i_sectors, p_orb, t_stats, targ
     -------
     p_orb_i: list[float]
         Orbital period at each stage of the analysis
-    const_i: list[numpy.ndarray[float]]
+    const_i: list[numpy.ndarray[Any, dtype[float]]]
         y-intercepts of a piece-wise linear curve for each stage of the analysis
-    slope_i: list[numpy.ndarray[float]]
+    slope_i: list[numpy.ndarray[Any, dtype[float]]]
         slopes of a piece-wise linear curve for each stage of the analysis
-    f_n_i: list[numpy.ndarray[float]]
+    f_n_i: list[numpy.ndarray[Any, dtype[float]]]
         Frequencies of a number of sine waves for each stage of the analysis
-    a_n_i: list[numpy.ndarray[float]]
+    a_n_i: list[numpy.ndarray[Any, dtype[float]]]
         Amplitudes of a number of sine waves for each stage of the analysis
-    ph_n_i: list[numpy.ndarray[float]]
+    ph_n_i: list[numpy.ndarray[Any, dtype[float]]]
         Phases of a number of sine waves for each stage of the analysis
 
     Notes
@@ -927,7 +1386,7 @@ def analyse_harmonics(times, signal, signal_err, i_sectors, p_orb, t_stats, targ
         using groups of frequencies to limit the number of free parameters
         and including the orbital period and the coupled harmonics.
     """
-    t_a = time.time()
+    t_a = systime.time()
     # signal_err = # signal errors are largely ignored for now. The likelihood assumes the same errors and uses the MLE
     t_tot, t_mean, t_mean_s, t_int = t_stats
     freq_res = 1.5 / t_tot  # Rayleigh criterion
@@ -938,7 +1397,7 @@ def analyse_harmonics(times, signal, signal_err, i_sectors, p_orb, t_stats, targ
         if verbose:
             print(f'No frequency analysis results found ({file_name})')
         return [], [], [], [], [], []
-    results_2 = ut.read_parameters_hdf5(file_name, verbose=verbose)
+    results_2 = ut.read_result_hdf5(file_name, verbose=verbose)
     const_2, slope_2, f_n_2, a_n_2, ph_n_2 = results_2['sin_mean']
     # --------------------------------------------------------------------------
     # --- [3] --- Measure the orbital period and couple the harmonic frequencies
@@ -992,7 +1451,7 @@ def analyse_harmonics(times, signal, signal_err, i_sectors, p_orb, t_stats, targ
     a_n_i = [a_n_3, a_n_4, a_n_5]
     ph_n_i = [ph_n_3, ph_n_4, ph_n_5]
     # final timing and message
-    t_b = time.time()
+    t_b = systime.time()
     logger.info(f'Harmonic analysis done. Total time elapsed: {t_b - t_a:1.1f}s.')
     return p_orb_i, const_i, slope_i, f_n_i, a_n_i, ph_n_i
 
@@ -1043,15 +1502,15 @@ def analyse_light_curve(times, signal, signal_err, p_orb, i_sectors, target_id, 
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
     p_orb: float
         Orbital period of the eclipsing binary in days (set zero if unkown)
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -1090,7 +1549,7 @@ def analyse_light_curve(times, signal, signal_err, p_orb, i_sectors, target_id, 
     -----
     If only an orbital period is desired, go for stage='harmonics'.
     """
-    t_a = time.time()
+    t_a = systime.time()
     # for saving, make a folder if not there yet
     if not os.path.isdir(os.path.join(save_dir, f'{target_id}_analysis')):
         os.mkdir(os.path.join(save_dir, f'{target_id}_analysis'))  # create the subdir
@@ -1117,7 +1576,7 @@ def analyse_light_curve(times, signal, signal_err, p_orb, i_sectors, target_id, 
         out_b = ([], [], [], [], [], [])
     # create summary file
     ut.save_summary(target_id, save_dir, data_id=data_id)
-    t_b = time.time()
+    t_b = systime.time()
     logger.info(f'End of analysis. Total time elapsed: {t_b - t_a:1.1f}s.')  # info to save to log
     return None
 
@@ -1134,7 +1593,7 @@ def analyse_lc_from_file(file_name, p_orb=0, i_sectors=None, stage='all', method
         first three columns, respectively.
     p_orb: float
         Orbital period of the eclipsing binary in days
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -1283,10 +1742,10 @@ def analyse_set(target_list, function='analyse_lc_from_tic', n_threads=os.cpu_co
         # Use mp.Pool.starmap for this
         raise NotImplementedError('keyword i_sectors found in kwargs: this functionality is not yet implemented')
     
-    t1 = time.time()
+    t1 = systime.time()
     with mp.Pool(processes=n_threads) as pool:
         pool.map(fct.partial(eval(function), **kwargs), target_list, chunksize=1)
-    t2 = time.time()
+    t2 = systime.time()
     print(f'Finished analysing set in: {(t2 - t1):1.2} s ({(t2 - t1) / 3600:1.2} h) for {len(target_list)} targets,\n'
           f'using {n_threads} threads ({(t2 - t1) * n_threads / len(target_list):1.2} s '
           f'average per target single threaded).')

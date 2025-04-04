@@ -23,14 +23,14 @@ def f_within_rayleigh(i, f_n, rayleigh):
     ----------
     i: int
         Index of the frequency around which to search
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
     rayleigh: float
         The appropriate frequency resolution (usually 1.5/T)
     
     Returns
     -------
-    i_close_unsorted: numpy.ndarray[int]
+    i_close_unsorted: numpy.ndarray[Any, dtype[int]]
         Indices of close frequencies in the chain
     """
     indices = np.arange((len(f_n)))
@@ -69,14 +69,14 @@ def chains_within_rayleigh(f_n, rayleigh):
     
     Parameters
     ----------
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
     rayleigh: float
         The appropriate frequency resolution (usually 1.5/T)
     
     Returns
     -------
-    groups: list[numpy.ndarray[int]]
+    groups: list[numpy.ndarray[Any, dtype[int]]]
         Indices of close frequencies in all found chains
     
     See Also
@@ -101,13 +101,13 @@ def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3., sigma_f=1
     
     Parameters
     ----------
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[float]
+    f_n_err: numpy.ndarray[Any, dtype[float]]
         Formal errors in the frequencies
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    a_n_err: numpy.ndarray[float]
+    a_n_err: numpy.ndarray[Any, dtype[float]]
         Formal errors in the amplitudes
     sigma_a: float
         Number of times the error to use for check of significant amplitude
@@ -117,7 +117,7 @@ def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3., sigma_f=1
     
     Returns
     -------
-    remove: numpy.ndarray[int]
+    remove: numpy.ndarray[Any, dtype[int]]
         Indices of frequencies deemed insignificant
     
     Notes
@@ -145,16 +145,16 @@ def remove_insignificant_snr(a_n, noise_at_f, n_points):
     
     Parameters
     ----------
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    noise_at_f: numpy.ndarray[float]
+    noise_at_f: numpy.ndarray[Any, dtype[float]]
         The noise level at each frequency
     n_points: int
         Number of data points
     
     Returns
     -------
-    remove: numpy.ndarray[int]
+    remove: numpy.ndarray[Any, dtype[int]]
         Indices of frequencies deemed insignificant
     
     Notes
@@ -181,9 +181,9 @@ def find_harmonics(f_n, f_n_err, p_orb, sigma=1.):
     
     Parameters
     ----------
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[float]
+    f_n_err: numpy.ndarray[Any, dtype[float]]
         Formal errors in the frequencies
     p_orb: float
         The orbital period
@@ -226,15 +226,15 @@ def construct_harmonic_range(f_0, domain):
     ----------
     f_0: float
         Base frequency in the range, from where the rest of the pattern is built.
-    domain: list[float], numpy.ndarray[float]
+    domain: list[float], numpy.ndarray[Any, dtype[float]]
         Two values that give the borders of the range.
         Sensible values could be the Rayleigh criterion and the Nyquist frequency
     
     Returns
     -------
-    harmonics: numpy.ndarray[float]
+    harmonics: numpy.ndarray[Any, dtype[float]]
         Frequencies of the harmonic series in the domain
-    n_range: numpy.ndarray[int]
+    n_range: numpy.ndarray[Any, dtype[int]]
         Corresponding harmonic numbers (base frequency is 1)
     """
     # determine where the range of harmonics starts and ends
@@ -251,7 +251,7 @@ def find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9):
     
     Parameters
     ----------
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
     p_orb: float
         The orbital period
@@ -260,9 +260,9 @@ def find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9):
     
     Returns
     -------
-    harmonics: numpy.ndarray[int]
+    harmonics: numpy.ndarray[Any, dtype[int]]
         Indices of the frequencies in f_n that are deemed harmonics
-    harmonic_n: numpy.ndarray[int]
+    harmonic_n: numpy.ndarray[Any, dtype[int]]
         Corresponding harmonic numbers (base frequency is 1)
     
     Notes
@@ -303,7 +303,7 @@ def find_harmonics_tolerance(f_n, p_orb, f_tol):
     
     Parameters
     ----------
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
     p_orb: float
         The orbital period
@@ -312,9 +312,9 @@ def find_harmonics_tolerance(f_n, p_orb, f_tol):
     
     Returns
     -------
-     harmonics: numpy.ndarray[int]
+     harmonics: numpy.ndarray[Any, dtype[int]]
         Indices of the frequencies in f_n that are deemed harmonics
-     harmonic_n: numpy.ndarray[int]
+     harmonic_n: numpy.ndarray[Any, dtype[int]]
         Corresponding harmonic numbers (base frequency is 1)
     
     Notes
@@ -341,9 +341,9 @@ def select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol, sigma_f=3):
 
     Parameters
     ----------
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[float]
+    f_n_err: numpy.ndarray[Any, dtype[float]]
         Formal errors in the frequencies
     p_orb: float
         The orbital period
@@ -355,9 +355,9 @@ def select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol, sigma_f=3):
     
     Returns
     -------
-     harmonics_passed: numpy.ndarray[int]
+     harmonics_passed: numpy.ndarray[Any, dtype[int]]
         Indices of the frequencies in f_n that are harmonics
-     harmonic_n: numpy.ndarray[int]
+     harmonic_n: numpy.ndarray[Any, dtype[int]]
         Corresponding harmonic numbers (base frequency is 1)
 
     Notes
@@ -387,9 +387,9 @@ def find_combinations(f_n, f_n_err, sigma=1.):
     
     Parameters
     ----------
-    f_n: list[float], numpy.ndarray[float]
+    f_n: list[float], numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[float]
+    f_n_err: numpy.ndarray[Any, dtype[float]]
         Formal errors on the frequencies
     sigma: float
         Number of times the error to use for check of significance
@@ -430,9 +430,9 @@ def find_unknown_harmonics(f_n, f_n_err, sigma=1., n_max=5, f_tol=None):
     
     Parameters
     ----------
-    f_n: list[float], numpy.ndarray[float]
+    f_n: list[float], numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[float]
+    f_n_err: numpy.ndarray[Any, dtype[float]]
         Formal errors on the frequencies
     sigma: float
         Number of times the error to use for check of significance
@@ -558,9 +558,9 @@ def harmonic_series_length(f_test, f_n, freq_res, f_nyquist):
     
     Parameters
     ----------
-    f_test: numpy.ndarray[float]
+    f_test: numpy.ndarray[Any, dtype[float]]
         Frequencies to test at
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
     freq_res: float
         Frequency resolution
@@ -569,11 +569,11 @@ def harmonic_series_length(f_test, f_n, freq_res, f_nyquist):
     
     Returns
     -------
-    n_harm: numpy.ndarray[float]
+    n_harm: numpy.ndarray[Any, dtype[float]]
         Number of harmonics per pattern
-    completeness: numpy.ndarray[float]
+    completeness: numpy.ndarray[Any, dtype[float]]
         Completeness factor of each pattern
-    distance: numpy.ndarray[float]
+    distance: numpy.ndarray[Any, dtype[float]]
         Sum of squared distances between harmonics
     """
     n_harm = np.zeros(len(f_test))

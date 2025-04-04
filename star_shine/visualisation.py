@@ -11,6 +11,8 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+from astropy.constants.codata2018 import alpha
+
 try:
     import arviz as az  # optional functionality
 except ImportError:
@@ -30,27 +32,27 @@ def plot_pd_single_output(times, signal, signal_err, p_orb, p_err, const, slope,
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
     p_orb: float
         Orbital period
     p_err: float
         Error associated with the orbital period
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -121,25 +123,25 @@ def plot_pd_full_output(times, signal, signal_err, models, p_orb_i, p_err_i, f_n
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[float]
+    signal_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
-    models: list[numpy.ndarray[float]]
+    models: list[numpy.ndarray[Any, dtype[float]]]
         List of model signals for different stages of the analysis
     p_orb_i: list[float]
         Orbital periods for different stages of the analysis
     p_err_i: list[float]
         Errors associated with the orbital periods
         for different stages of the analysis
-    f_n_i: list[numpy.ndarray[float]]
+    f_n_i: list[numpy.ndarray[Any, dtype[float]]]
         List of extracted frequencies for different stages of the analysis
-    a_n_i: list[numpy.ndarray[float]]
+    a_n_i: list[numpy.ndarray[Any, dtype[float]]]
         List of amplitudes corresponding to the extracted frequencies
         for different stages of the analysis
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -224,26 +226,71 @@ def plot_pd_full_output(times, signal, signal_err, models, p_orb_i, p_err_i, f_n
     return
 
 
+def plot_lc(time, flux, flux_err, i_chunks, file_name=None, show=True):
+    """Shows the light curve data
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    flux_err: numpy.ndarray[Any, dtype[float]]
+        Errors in the measurement values
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    file_name: str, optional
+        File path to save the plot
+    show: bool, optional
+        If True, display the plot
+
+    Returns
+    -------
+    None
+    """
+    # plot the light curve data with different colours for each chunk
+    fig, ax = plt.subplots(figsize=(16, 9))
+    for ch in i_chunks:
+        t_mean = np.mean(time[ch[0], ch[1]])
+        f_min = np.min(flux[ch[0], ch[1]])
+        f_max = np.max(flux[ch[0], ch[1]])
+        ax.plot([t_mean, t_mean], [f_min, f_max], alpha=0.3)
+        ax.errorbar(time[ch[0], ch[1]], flux[ch[0], ch[1]], yerr=flux_err[ch[0], ch[1]], color='grey', alpha=0.3)
+        ax.scatter(time[ch[0], ch[1]], flux[ch[0], ch[1]], marker='.', label='dataset')
+    ax.set_xlabel('time')
+    ax.set_ylabel('flux')
+    ax.legend()
+    plt.tight_layout()
+    if file_name is not None:
+        plt.savefig(file_name, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
+    if show:
+        plt.show()
+    else:
+        plt.close()
+    return None
+
+
 def plot_lc_sinusoids(times, signal, const, slope, f_n, a_n, ph_n, i_sectors, save_file=None, show=True):
     """Shows the separated harmonics in several ways
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -291,25 +338,25 @@ def plot_lc_harmonics(times, signal, p_orb, p_err, const, slope, f_n, a_n, ph_n,
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     p_orb: float
         Orbital period of the system
     p_err: float
         Error in the orbital period
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
@@ -365,15 +412,15 @@ def plot_trace_sinusoids(inf_data, const, slope, f_n, a_n, ph_n):
     ----------
     inf_data: object
         Arviz inference data object
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
 
     Returns
@@ -397,15 +444,15 @@ def plot_pair_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n, save_file
         Arviz inference data object
     p_orb: float
         Orbital period
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     save_file: str, optional
         File path to save the plot
@@ -449,15 +496,15 @@ def plot_trace_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n):
         Arviz inference data object
     p_orb: float
         Orbital period
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
 
     Returns

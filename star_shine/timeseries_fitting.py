@@ -32,7 +32,7 @@ def dsin_dx(two_pi_t, f, a, ph, d='f', p_orb=0):
 
     Parameters
     ----------
-    two_pi_t: numpy.ndarray[float]
+    two_pi_t: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series times two pi
     f: float
         The frequency of a sine wave
@@ -48,7 +48,7 @@ def dsin_dx(two_pi_t, f, a, ph, d='f', p_orb=0):
 
     Returns
     -------
-    model_deriv: numpy.ndarray[float]
+    model_deriv: numpy.ndarray[Any, dtype[float]]
         Model time series of the derivative of a sine wave to f.
 
     Notes
@@ -76,16 +76,16 @@ def objective_sinusoids(params, times, signal, i_sectors):
 
     Parameters
     ----------
-    params: numpy.ndarray[float]
+    params: numpy.ndarray[Any, dtype[float]]
         The parameters of a set of sine waves and linear curve(s)
         Has to be a flat array and are ordered in the following way:
         [constant1, constant2, ..., slope1, slope2, ...,
          freq1, freg2, ..., ampl1, ampl2, ..., phase1, phase2, ...]
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
@@ -122,16 +122,16 @@ def jacobian_sinusoids(params, times, signal, i_sectors):
     
     Parameters
     ----------
-    params: numpy.ndarray[float]
+    params: numpy.ndarray[Any, dtype[float]]
         The parameters of a set of sine waves and linear curve(s)
         Has to be a flat array and are ordered in the following way:
         [constant1, constant2, ..., slope1, slope2, ...,
          freq1, freg2, ..., ampl1, ampl2, ..., phase1, phase2, ...]
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
@@ -191,21 +191,21 @@ def fit_multi_sinusoid(times, signal, const, slope, f_n, a_n, ph_n, i_sectors, v
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
@@ -214,15 +214,15 @@ def fit_multi_sinusoid(times, signal, const, slope, f_n, a_n, ph_n, i_sectors, v
 
     Returns
     -------
-    res_const: numpy.ndarray[float]
+    res_const: numpy.ndarray[Any, dtype[float]]
         Updated y-intercepts of a piece-wise linear curve
-    res_slope: numpy.ndarray[float]
+    res_slope: numpy.ndarray[Any, dtype[float]]
         Updated slopes of a piece-wise linear curve
-    res_freqs: numpy.ndarray[float]
+    res_freqs: numpy.ndarray[Any, dtype[float]]
         Updated frequencies of a number of sine waves
-    res_ampls: numpy.ndarray[float]
+    res_ampls: numpy.ndarray[Any, dtype[float]]
         Updated amplitudes of a number of sine waves
-    res_phases: numpy.ndarray[float]
+    res_phases: numpy.ndarray[Any, dtype[float]]
         Updated phases of a number of sine waves
 
     Notes
@@ -269,21 +269,21 @@ def fit_multi_sinusoid_per_group(times, signal, const, slope, f_n, a_n, ph_n, i_
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
@@ -292,15 +292,15 @@ def fit_multi_sinusoid_per_group(times, signal, const, slope, f_n, a_n, ph_n, i_
 
     Returns
     -------
-    res_const: numpy.ndarray[float]
+    res_const: numpy.ndarray[Any, dtype[float]]
         Updated y-intercepts of a piece-wise linear curve
-    res_slope: numpy.ndarray[float]
+    res_slope: numpy.ndarray[Any, dtype[float]]
         Updated slopes of a piece-wise linear curve
-    res_freqs: numpy.ndarray[float]
+    res_freqs: numpy.ndarray[Any, dtype[float]]
         Updated frequencies of a number of sine waves
-    res_ampls: numpy.ndarray[float]
+    res_ampls: numpy.ndarray[Any, dtype[float]]
         Updated amplitudes of a number of sine waves
-    res_phases: numpy.ndarray[float]
+    res_phases: numpy.ndarray[Any, dtype[float]]
         Updated phases of a number of sine waves
 
     Notes
@@ -349,21 +349,21 @@ def objective_sinusoids_harmonics(params, times, signal, harmonic_n, i_sectors):
 
     Parameters
     ----------
-    params: numpy.ndarray[float]
+    params: numpy.ndarray[Any, dtype[float]]
         The parameters of a set of sine waves and linear curve(s).
         Has to be a flat array and are ordered in the following way:
         [p_orb, constant1, constant2, ..., slope1, slope2, ...,
          freq1, freg2, ..., ampl1, ampl2, ..., phase1, phase2, ...,
          ampl_h1, ampl_h2, ..., phase_h1, phase_h2, ...]
         where _hi indicates harmonics.
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    harmonic_n: numpy.ndarray[int]
+    harmonic_n: numpy.ndarray[Any, dtype[int]]
         Integer indicating which harmonic each index in 'harmonics'
         points to. n=1 for the base frequency (=orbital frequency)
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
@@ -410,21 +410,21 @@ def jacobian_sinusoids_harmonics(params, times, signal, harmonic_n, i_sectors):
 
     Parameters
     ----------
-    params: numpy.ndarray[float]
+    params: numpy.ndarray[Any, dtype[float]]
         The parameters of a set of sine waves and linear curve(s).
         Has to be a flat array and are ordered in the following way:
         [p_orb, constant1, constant2, ..., slope1, slope2, ...,
          freq1, freg2, ..., ampl1, ampl2, ..., phase1, phase2, ...,
          ampl_h1, ampl_h2, ..., phase_h1, phase_h2, ...]
         where _hi indicates harmonics.
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    harmonic_n: numpy.ndarray[int]
+    harmonic_n: numpy.ndarray[Any, dtype[int]]
         Integer indicating which harmonic each index in 'harmonics'
         points to. n=1 for the base frequency (=orbital frequency)
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
@@ -500,23 +500,23 @@ def fit_multi_sinusoid_harmonics(times, signal, p_orb, const, slope, f_n, a_n, p
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     p_orb: float
         Orbital period of the eclipsing binary in days
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
@@ -527,15 +527,15 @@ def fit_multi_sinusoid_harmonics(times, signal, p_orb, const, slope, f_n, a_n, p
     -------
     res_p_orb: float
         Updated Orbital period in days
-    res_const: numpy.ndarray[float]
+    res_const: numpy.ndarray[Any, dtype[float]]
         Updated y-intercepts of a piece-wise linear curve
-    res_slope: numpy.ndarray[float]
+    res_slope: numpy.ndarray[Any, dtype[float]]
         Updated slopes of a piece-wise linear curve
-    res_freqs: numpy.ndarray[float]
+    res_freqs: numpy.ndarray[Any, dtype[float]]
         Updated frequencies of a number of sine waves
-    res_ampls: numpy.ndarray[float]
+    res_ampls: numpy.ndarray[Any, dtype[float]]
         Updated amplitudes of a number of sine waves
-    res_phases: numpy.ndarray[float]
+    res_phases: numpy.ndarray[Any, dtype[float]]
         Updated phases of a number of sine waves
 
     Notes
@@ -593,23 +593,23 @@ def fit_multi_sinusoid_harmonics_per_group(times, signal, p_orb, const, slope, f
 
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     p_orb: float
         Orbital period of the eclipsing binary in days
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
@@ -620,15 +620,15 @@ def fit_multi_sinusoid_harmonics_per_group(times, signal, p_orb, const, slope, f
     -------
     res_p_orb: float
         Updated Orbital period in days
-    res_const: numpy.ndarray[float]
+    res_const: numpy.ndarray[Any, dtype[float]]
         Updated y-intercepts of a piece-wise linear curve
-    res_slope: numpy.ndarray[float]
+    res_slope: numpy.ndarray[Any, dtype[float]]
         Updated slopes of a piece-wise linear curve
-    res_freqs: numpy.ndarray[float]
+    res_freqs: numpy.ndarray[Any, dtype[float]]
         Updated frequencies of a number of sine waves
-    res_ampls: numpy.ndarray[float]
+    res_ampls: numpy.ndarray[Any, dtype[float]]
         Updated amplitudes of a number of sine waves
-    res_phases: numpy.ndarray[float]
+    res_phases: numpy.ndarray[Any, dtype[float]]
         Updated phases of a number of sine waves
 
     Notes

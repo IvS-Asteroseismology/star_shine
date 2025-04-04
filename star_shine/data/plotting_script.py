@@ -781,7 +781,7 @@ case = '026'
 sin_true = np.loadtxt(syn_dir + f'/pulse_data/sim_{case}_lc_pulse_info.dat', delimiter=',')
 times, signal, signal_err = np.loadtxt(all_files[int(case)], usecols=(0, 1, 2), unpack=True)
 freqs, ampls = sts.tsf.scargle(times, signal)
-results = sts.ut.read_parameters_hdf5(syn_dir + f'/sim_{case}_lc_analysis/sim_{case}_lc_analysis_8.hdf5', verbose=False)
+results = sts.ut.read_result_hdf5(syn_dir + f'/sim_{case}_lc_analysis/sim_{case}_lc_analysis_8.hdf5', verbose=False)
 const, slope, f_n, a_n, ph_n = results['sin_mean']
 c_err, sl_err, f_n_err, a_n_err, ph_n_err = results['sin_err']
 passed_sigma, passed_snr, passed_both, passed_h = results['sin_select']
