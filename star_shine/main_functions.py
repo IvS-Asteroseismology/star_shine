@@ -41,27 +41,27 @@ class Data:
     data_id: str
         User defined identification for the dataset used.
     time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
+        Timestamps of the time series.
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     flux_err: numpy.ndarray[Any, dtype[float]]
-        Errors in the measurement values
+        Errors in the measurement values.
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     flux_counts_medians: numpy.ndarray[Any, dtype[float]]
-        Median flux counts per chunk
+        Median flux counts per chunk.
     t_tot: float
-        Total time base of observations
+        Total time base of observations.
     t_mean: float
-        Time reference (zero) point of the full light curve
+        Time reference (zero) point of the full light curve.
     t_mean_chunk: numpy.ndarray[Any, dtype[float]]
-        Time reference (zero) point per chunk
+        Time reference (zero) point per chunk.
     t_int: float
-        Integration time of observations
+        Integration time of observations (taken to be the median time step by default, may be changed).
     """
 
-    def __init__(self, file_list, data_dir=None, target_id='none', data_id='none'):
+    def __init__(self, file_list, data_dir='', target_id='', data_id=''):
         """Initialises the Data object.
 
         The data is loaded from the given file(s) and some basic processing is done.
@@ -73,9 +73,10 @@ class Data:
             List of ascii light curve files or (TESS) data product '.fits' files. Exclude the path given to 'data_dir'.
             If only one file is given, its file name is used for target_id (if 'none').
         data_dir: str, optional
-            Root directory where the data files are stored. Added to the file name. If None, it is loaded from config.
+            Root directory where the data files are stored. Added to the file name. If empty, it is loaded from config.
         target_id: str, optional
-            User defined identification number or name for the target under investigation.
+            User defined identification number or name for the target under investigation. If empty, the file name
+            of the first file in file_list is used.
         data_id: str, optional
             User defined identification name for the dataset used.
         """
@@ -92,7 +93,7 @@ class Data:
 
         # set the file list and data directory
         self.file_list = file_list
-        if data_dir is None:
+        if data_dir == '':
             data_dir = config.DATA_DIR
         self.data_dir = data_dir
 
@@ -111,8 +112,8 @@ class Data:
             logger.info("No existing files in file list")
             return
 
-        # set the target and data ID
-        if (self.target_id == 'none') & (len(file_list) == 1):
+        # set the target ID
+        if self.target_id == '':
             self.target_id = os.path.splitext(os.path.basename(file_list[0]))[0]  # file name is used as identifier
 
         # load and process the data
@@ -179,6 +180,7 @@ class Data:
         self.t_tot = np.ptp(self.time)
         self.t_mean = np.mean(self.time)
         self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
+        self.t_int = np.median(np.diff(self.time))  # integration time, taken to be the median time step
 
         # check for overlapping time stamps
         if np.any(np.diff(self.time) <= 0):
@@ -587,17 +589,34 @@ class Pipeline:
     ----------
     data: Data object
         Instance of the Data class holding the light curve data.
+    result
+    save_dir
+    save_subdir
     """
 
-    def __init__(self, data):
+    def __init__(self, data, save_dir=''):
         """Initialises the Pipeline object.
 
         Parameters
         ----------
         data: Data object
+            Instance of the Data class with the data tto be analysed.
+        save_dir: str, optional
+            Root directory where the data files are stored. Added to the file name. If empty, it is loaded from config.
+
+        Notes
+        -----
+        Creates a directory where all the analysis result files will be stored.
         """
-        self.data = data
-        # self.result = Result()
+        # set the data and result objects
+        self.data = data  # the data to be analysed
+        self.result = Result()  # an empty result instance
+
+        # the files will be stored here
+        if save_dir == '':
+            save_dir = config.SAVE_DIR
+        self.save_dir = save_dir
+        self.save_subdir = f'{self.data.target_id}_analysis'
 
         # check the input data
         if not isinstance(data, Data):
@@ -605,7 +624,79 @@ class Pipeline:
         elif len(data.time) == 0:
             logger.info("Data object does not contain time series data.")
 
+        # for saving, make a folder if not there yet
+        if not os.path.isdir(os.path.join(save_dir, self.save_subdir)):
+            os.mkdir(os.path.join(save_dir, self.save_subdir))  # create the subdir
+
         return
+
+    def iterative_prewhitening(self):
+        """Iterative prewhitening of the input flux time series
+        in the form of sine waves and a piece-wise linear curve
+
+        After extraction, a final check is done to see whether some
+        frequencies are better removed or groups of frequencies are
+        better replaced by one frequency.
+
+        Returns
+        -------
+        self.result: Result object
+            Instance of the Result class containing the analysis results
+
+        """
+        t_a = systime.time()
+        file_name = os.path.join(self.save_dir, self.save_subdir, f'{self.data.target_id}_iterative_prewhitening.hdf5')
+
+        # guard for existing file when not overwriting
+        if os.path.isfile(file_name) & (not config.OVERWRITE):
+            self.result = Result.load_conditional(file_name)
+            return self.result
+        self.result = Result()  # otherwise empty the results in case it was filled
+
+        if config.VERBOSE:
+            print(f'Looking for frequencies')
+
+        # extract all frequencies with the iterative scheme
+        out_a = tsf.extract_sinusoids(self.data.time, self.data.flux, self.data.i_chunks, select=config.SELECT,
+                                      verbose=config.VERBOSE)
+
+        # remove any frequencies that end up not making the statistical cut
+        out_b = tsf.reduce_sinusoids(self.data.time, self.data.flux, 0, *out_a, self.data.i_chunks,
+                                     verbose=config.VERBOSE)
+        const, slope, f_n, a_n, ph_n = out_b
+
+        # select frequencies based on some significance criteria
+        out_c = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, 0,
+                                     const, slope, f_n, a_n, ph_n, self.data.i_chunks, verbose=config.VERBOSE)
+        passed_sigma, passed_snr, passed_both, passed_h = out_c
+
+        # main function done, do the rest for this step
+        model_linear = tsf.linear_curve(self.data.time, const, slope, self.data.i_chunks)
+        model_sinusoid = tsf.sum_sines(self.data.time, f_n, a_n, ph_n)
+        resid = self.data.flux - model_linear - model_sinusoid
+        n_param = 2 * len(const) + 3 * len(f_n)
+        bic = tsf.calc_bic(resid, n_param)
+        noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
+        c_err, sl_err, f_n_err, a_n_err, ph_n_err = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err,
+                                                                             a_n, self.data.i_chunks)
+
+        # save the result
+        sin_mean = [const, slope, f_n, a_n, ph_n]
+        sin_err = [c_err, sl_err, f_n_err, a_n_err, ph_n_err]
+        sin_select = [passed_sigma, passed_snr, passed_h]
+        stats = (*t_stats, n_param, bic, noise_level)
+        desc = 'Frequency extraction results.'
+        ut.save_result_hdf5(file_name, sin_mean=sin_mean, sin_err=sin_err, sin_select=sin_select, stats=stats,
+                            i_sectors=i_sectors, description=desc, data_id=data_id)
+
+        # print some useful info
+        t_b = systime.time()
+        if config.VERBOSE:
+            print(f'\033[1;32;48mExtraction of sinusoids complete.\033[0m')
+            print(f'\033[0;32;48m{len(f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. '
+                  f'Time taken: {t_b - t_a:1.1f}s\033[0m\n')
+
+        return self.result
 
 
 def iterative_prewhitening(times, signal, signal_err, i_sectors, t_stats, file_name, data_id='none', overwrite=False,

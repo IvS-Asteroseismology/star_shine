@@ -5,13 +5,15 @@
 OVERWRITE = False                      # Overwrite existing result files
 VERBOSE = False                        # Print information during runtime
 STOP_AT_STAGE = 0                      # Stage of the analysis to terminate at, 0 means all stages are run
+# extraction
+SELECT = 'hybrid'                      # What the next frequency selected in the extraction is based on (see docs)
 # optimisation
 OPTIMISE = 'fitter'                    # 'fitter' or 'sampler' method is used for model optimisation
 OPTIMISE_STEP = True                   # Optimise at every step (T) or only at the end (F)
 ########################################################################################################################
 # data and file defaults
-DATA_DIR = None                        # Root directory of the data, None will use the unaltered file name path
-SAVE_DIR = None                        # Save directory for analysis results, None will use the current directory
+DATA_DIR = ''                          # Root directory of the data, if empty will use current dir
+SAVE_DIR = ''                          # Save directory for analysis results, if empty will use current dir
 SAVE_ASCII = False                     # Save ascii variants of the HDF5 result files
 # tabulated data
 CN_TIME = 'time'                       # Column name for the time stamps
