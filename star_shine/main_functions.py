@@ -11,8 +11,6 @@ import datetime
 import logging
 import h5py
 import numpy as np
-import functools as fct
-import multiprocessing as mp
 
 from . import timeseries_functions as tsf
 from . import timeseries_fitting as tsfit
@@ -546,23 +544,6 @@ class Result:
 
         return None
 
-    def save_conditional(self, file_name):
-        """Save a result file only if it doesn't exist or if it exists and if no overwriting.
-
-        Parameters
-        ----------
-        file_name: str
-            File name to load the results from
-
-        Returns
-        -------
-        None
-        """
-        if (not os.path.isfile(file_name)) | config.OVERWRITE:
-            self.save(file_name)
-
-        return None
-
     def save_as_csv(self, file_name):
         """Write multiple ascii csv files for human readability.
 
@@ -600,6 +581,27 @@ class Result:
         hdr = f'{self.target_id}, {self.data_id}, Model statistics\nname, value, description'
         file_name_stats = file_name.replace(ext, '_stats.csv')
         np.savetxt(file_name_stats, data, delimiter=',', header=hdr, fmt='%s')
+
+        return None
+
+    def save_conditional(self, file_name):
+        """Save a result file only if it doesn't exist or if it exists and if no overwriting.
+
+        Parameters
+        ----------
+        file_name: str
+            File name to load the results from
+
+        Returns
+        -------
+        None
+        """
+        if (not os.path.isfile(file_name)) | config.OVERWRITE:
+            self.save(file_name)
+
+            # save csv files if configured
+            if config.SAVE_ASCII:
+                self.save_as_csv(file_name)
 
         return None
 
@@ -807,7 +809,7 @@ class Pipeline:
 
             # formal linear and sinusoid parameter errors
             c_err, sl_err, f_n_err, a_n_err, ph_n_err = tsf.formal_uncertainties(self.data.time, resid,
-                                                                                 self.data.signal_err, self.result.a_n,
+                                                                                 self.data.flux_err, self.result.a_n,
                                                                                  self.data.i_chunks)
 
             # do not include those frequencies that have too big uncertainty
@@ -826,7 +828,7 @@ class Pipeline:
                            ph_n_hdi=par_hdi[4])
 
         # select frequencies based on some significance criteria
-        out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.signal_err, 0, self.result.const,
+        out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, 0, self.result.const,
                                      self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
                                      self.data.i_chunks, verbose=config.VERBOSE)
         self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
@@ -911,6 +913,7 @@ class Pipeline:
         n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
         bic = tsf.calc_bic(resid, n_param)
         noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
+        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
 
         # calculate formal uncertainties
         out_d = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
@@ -969,7 +972,7 @@ class Pipeline:
 
             # formal linear and sinusoid parameter errors
             c_err, sl_err, f_n_err, a_n_err, ph_n_err = tsf.formal_uncertainties(self.data.time, resid,
-                                                                                 self.data.signal_err, self.result.a_n,
+                                                                                 self.data.flux_err, self.result.a_n,
                                                                                  self.data.i_chunks)
             p_err, _, _ = af.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot,
                                                            sigma_t=self.data.t_int/2)
@@ -991,7 +994,7 @@ class Pipeline:
                            a_n_hdi=par_hdi[4], ph_n_hdi=par_hdi[5])
 
         # select frequencies based on some significance criteria
-        out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.signal_err, self.result.p_orb,
+        out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
                                      self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
                                      self.result.ph_n, self.data.i_chunks, verbose=config.VERBOSE)
         self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
@@ -1099,9 +1102,6 @@ class Pipeline:
             # save the results if conditions are met
             self.result.save_conditional(file_name)
 
-        # create summary file
-        ut.save_summary(self.data.target_id, self.result.save_dir, data_id=self.data.data_id)
-
         # final message and timing
         t_b = systime.time()
         self.logger.info(f'End of analysis. Total time elapsed: {t_b - t_a:1.1f}s.')  # info to save to log
@@ -1129,23 +1129,28 @@ def customize_logger(logger, save_dir, target_id, verbose):
     """
     # customize the logger
     logger.setLevel(logging.INFO)  # set base activation level for logger
+
     # make formatters for the handlers
     s_format = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     f_format = logging.Formatter(fmt='%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
                                  datefmt='%Y-%m-%d %H:%M:%S')
+
     # remove existing handlers to avoid duplicate messages
     if logger.hasHandlers():
         logger.handlers.clear()
+
     # make stream handler
     if verbose:
         s_handler = logging.StreamHandler()  # for printing
         s_handler.setLevel(logging.INFO)  # print everything with level 20 or above
         s_handler.setFormatter(s_format)
         logger.addHandler(s_handler)
+
     # file handler
     logname = os.path.join(save_dir, f'{target_id}_analysis', f'{target_id}.log')
     f_handler = logging.FileHandler(logname, mode='a')  # for saving
     f_handler.setLevel(logging.INFO)  # save everything with level 20 or above
     f_handler.setFormatter(f_format)
     logger.addHandler(f_handler)
+
     return None

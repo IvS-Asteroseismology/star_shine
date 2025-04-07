@@ -26,17 +26,17 @@ script_dir = os.path.dirname(os.path.abspath(__file__))  # absolute dir the scri
 plt.style.use(os.path.join(script_dir, 'data', 'mpl_stylesheet.dat'))
 
 
-def plot_pd_single_output(times, signal, signal_err, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_sectors,
+def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_chunks,
                           annotate=True, save_file=None, show=True):
     """Plot the periodogram with one output of the analysis recipe.
 
     Parameters
     ----------
-    times: numpy.ndarray[Any, dtype[float]]
+    time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[Any, dtype[float]]
+    flux_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
     p_orb: float
         Orbital period
@@ -52,12 +52,12 @@ def plot_pd_single_output(times, signal, signal_err, p_orb, p_err, const, slope,
         The amplitudes of a number of sine waves
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[Any, dtype[int]]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
         If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(times)]]).
+        i_half_s = np.array([[0, len(time)]]).
     annotate: bool, optional
         If True, annotate the plot with the frequencies.
     save_file: str, optional
@@ -72,15 +72,15 @@ def plot_pd_single_output(times, signal, signal_err, p_orb, p_err, const, slope,
     # separate harmonics
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     # make model
-    model_linear = tsf.linear_curve(times, const, slope, i_sectors)
-    model_sinusoid = tsf.sum_sines(times, f_n, a_n, ph_n)
+    model_linear = tsf.linear_curve(time, const, slope, i_chunks)
+    model_sinusoid = tsf.sum_sines(time, f_n, a_n, ph_n)
     model = model_linear + model_sinusoid
     # make periodograms
-    freqs, ampls = tsf.astropy_scargle(times, signal)
+    freqs, ampls = tsf.astropy_scargle(time, flux)
     freq_range = np.ptp(freqs)
-    freqs_r, ampls_r = tsf.astropy_scargle(times, signal - model)
+    freqs_r, ampls_r = tsf.astropy_scargle(time, flux - model)
     # get error values
-    errors = tsf.formal_uncertainties(times, signal - model, signal_err, a_n, i_sectors)
+    errors = tsf.formal_uncertainties(time, flux - model, flux_err, a_n, i_chunks)
     # max plot value
     y_max = max(np.max(ampls), np.max(a_n))
     # plot
@@ -91,7 +91,7 @@ def plot_pd_single_output(times, signal, signal_err, p_orb, p_err, const, slope,
         for i in range(2, np.max(harmonic_n) + 1):
             ax.plot([i / p_orb, i / p_orb], [0, y_max], linestyle='-', c='tab:grey', alpha=0.3)
         ax.errorbar([], [], xerr=[], yerr=[], linestyle='-', capsize=2, c='tab:red', label='extracted harmonics')
-    ax.plot(freqs, ampls, c='tab:blue', label='signal')
+    ax.plot(freqs, ampls, c='tab:blue', label='flux')
     ax.plot(freqs_r, ampls_r, c='tab:orange', label='residual')
     for i in range(len(f_n)):
         if i in harmonics:
@@ -117,20 +117,20 @@ def plot_pd_single_output(times, signal, signal_err, p_orb, p_err, const, slope,
     return
 
 
-def plot_pd_full_output(times, signal, signal_err, models, p_orb_i, p_err_i, f_n_i, a_n_i, i_sectors, save_file=None,
+def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a_n_i, i_chunks, save_file=None,
                         show=True):
     """Plot the periodogram with the full output of the analysis recipe.
 
     Parameters
     ----------
-    times: numpy.ndarray[Any, dtype[float]]
+    time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[Any, dtype[float]]
+    flux_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
     models: list[numpy.ndarray[Any, dtype[float]]]
-        List of model signals for different stages of the analysis
+        List of model fluxs for different stages of the analysis
     p_orb_i: list[float]
         Orbital periods for different stages of the analysis
     p_err_i: list[float]
@@ -141,12 +141,12 @@ def plot_pd_full_output(times, signal, signal_err, models, p_orb_i, p_err_i, f_n
     a_n_i: list[numpy.ndarray[Any, dtype[float]]]
         List of amplitudes corresponding to the extracted frequencies
         for different stages of the analysis
-    i_sectors: numpy.ndarray[Any, dtype[int]]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
         If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(times)]]).
+        i_half_s = np.array([[0, len(time)]]).
     save_file: str, optional
         File path to save the plot
     show: bool, optional
@@ -157,19 +157,19 @@ def plot_pd_full_output(times, signal, signal_err, models, p_orb_i, p_err_i, f_n
     None
     """
     # make periodograms
-    freqs, ampls = tsf.astropy_scargle(times, signal - np.mean(signal))
+    freqs, ampls = tsf.astropy_scargle(time, flux - np.mean(flux))
     freq_range = np.ptp(freqs)
-    freqs_1, ampls_1 = tsf.astropy_scargle(times, signal - models[0] - np.all(models[0] == 0) * np.mean(signal))
-    freqs_2, ampls_2 = tsf.astropy_scargle(times, signal - models[1] - np.all(models[1] == 0) * np.mean(signal))
-    freqs_3, ampls_3 = tsf.astropy_scargle(times, signal - models[2] - np.all(models[2] == 0) * np.mean(signal))
-    freqs_4, ampls_4 = tsf.astropy_scargle(times, signal - models[3] - np.all(models[3] == 0) * np.mean(signal))
-    freqs_5, ampls_5 = tsf.astropy_scargle(times, signal - models[4] - np.all(models[4] == 0) * np.mean(signal))
+    freqs_1, ampls_1 = tsf.astropy_scargle(time, flux - models[0] - np.all(models[0] == 0) * np.mean(flux))
+    freqs_2, ampls_2 = tsf.astropy_scargle(time, flux - models[1] - np.all(models[1] == 0) * np.mean(flux))
+    freqs_3, ampls_3 = tsf.astropy_scargle(time, flux - models[2] - np.all(models[2] == 0) * np.mean(flux))
+    freqs_4, ampls_4 = tsf.astropy_scargle(time, flux - models[3] - np.all(models[3] == 0) * np.mean(flux))
+    freqs_5, ampls_5 = tsf.astropy_scargle(time, flux - models[4] - np.all(models[4] == 0) * np.mean(flux))
     # get error values
-    err_1 = tsf.formal_uncertainties(times, signal - models[0], signal_err, a_n_i[0], i_sectors)
-    err_2 = tsf.formal_uncertainties(times, signal - models[1], signal_err, a_n_i[1], i_sectors)
-    err_3 = tsf.formal_uncertainties(times, signal - models[2], signal_err, a_n_i[2], i_sectors)
-    err_4 = tsf.formal_uncertainties(times, signal - models[3], signal_err, a_n_i[3], i_sectors)
-    err_5 = tsf.formal_uncertainties(times, signal - models[4], signal_err, a_n_i[4], i_sectors)
+    err_1 = tsf.formal_uncertainties(time, flux - models[0], flux_err, a_n_i[0], i_chunks)
+    err_2 = tsf.formal_uncertainties(time, flux - models[1], flux_err, a_n_i[1], i_chunks)
+    err_3 = tsf.formal_uncertainties(time, flux - models[2], flux_err, a_n_i[2], i_chunks)
+    err_4 = tsf.formal_uncertainties(time, flux - models[3], flux_err, a_n_i[3], i_chunks)
+    err_5 = tsf.formal_uncertainties(time, flux - models[4], flux_err, a_n_i[4], i_chunks)
     # max plot value
     if (len(f_n_i[4]) > 0):
         y_max = max(np.max(ampls), np.max(a_n_i[4]))
@@ -177,7 +177,7 @@ def plot_pd_full_output(times, signal, signal_err, models, p_orb_i, p_err_i, f_n
         y_max = np.max(ampls)
     # plot
     fig, ax = plt.subplots()
-    ax.plot(freqs, ampls, label='signal')
+    ax.plot(freqs, ampls, label='flux')
     if (len(f_n_i[0]) > 0):
         ax.plot(freqs_1, ampls_1, label='extraction residual')
     if (len(f_n_i[1]) > 0):
@@ -271,14 +271,14 @@ def plot_lc(time, flux, flux_err, i_chunks, file_name=None, show=True):
     return None
 
 
-def plot_lc_sinusoids(times, signal, const, slope, f_n, a_n, ph_n, i_sectors, save_file=None, show=True):
+def plot_lc_sinusoids(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, save_file=None, show=True):
     """Shows the separated harmonics in several ways
 
     Parameters
     ----------
-    times: numpy.ndarray[Any, dtype[float]]
+    time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
@@ -290,12 +290,12 @@ def plot_lc_sinusoids(times, signal, const, slope, f_n, a_n, ph_n, i_sectors, sa
         The amplitudes of a number of sine waves
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[Any, dtype[int]]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
         If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(times)]]).
+        i_half_s = np.array([[0, len(time)]]).
     save_file: str, optional
         File path to save the plot
     show: bool, optional
@@ -305,19 +305,19 @@ def plot_lc_sinusoids(times, signal, const, slope, f_n, a_n, ph_n, i_sectors, sa
     -------
     None
     """
-    t_mean = np.mean(times)
+    t_mean = np.mean(time)
     # make models
-    model_linear = tsf.linear_curve(times, const, slope, i_sectors)
-    model_sines = tsf.sum_sines(times, f_n, a_n, ph_n)
-    resid = signal - (model_linear + model_sines)
+    model_linear = tsf.linear_curve(time, const, slope, i_chunks)
+    model_sines = tsf.sum_sines(time, f_n, a_n, ph_n)
+    resid = flux - (model_linear + model_sines)
     # plot the full model light curve
     fig, ax = plt.subplots(nrows=2, sharex=True)
-    ax[0].plot([t_mean, t_mean], [np.min(signal), np.max(signal)], c='grey', alpha=0.3)
-    ax[0].scatter(times, signal, marker='.', label='signal')
-    ax[0].plot(times, model_linear + model_sines, c='tab:orange', label='full model (linear + sinusoidal)')
+    ax[0].plot([t_mean, t_mean], [np.min(flux), np.max(flux)], c='grey', alpha=0.3)
+    ax[0].scatter(time, flux, marker='.', label='flux')
+    ax[0].plot(time, model_linear + model_sines, c='tab:orange', label='full model (linear + sinusoidal)')
     ax[1].plot([t_mean, t_mean], [np.min(resid), np.max(resid)], c='grey', alpha=0.3)
-    ax[1].scatter(times, resid, marker='.')
-    ax[0].set_ylabel('signal/model')
+    ax[1].scatter(time, resid, marker='.')
+    ax[0].set_ylabel('flux/model')
     ax[0].legend()
     ax[1].set_ylabel('residual')
     ax[1].set_xlabel('time (d)')
@@ -332,15 +332,15 @@ def plot_lc_sinusoids(times, signal, const, slope, f_n, a_n, ph_n, i_sectors, sa
     return
 
 
-def plot_lc_harmonics(times, signal, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_sectors, save_file=None,
+def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_chunks, save_file=None,
                       show=True):
     """Shows the separated harmonics in several ways
 
     Parameters
     ----------
-    times: numpy.ndarray[Any, dtype[float]]
+    time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     p_orb: float
         Orbital period of the system
@@ -356,12 +356,12 @@ def plot_lc_harmonics(times, signal, p_orb, p_err, const, slope, f_n, a_n, ph_n,
         The amplitudes of a number of sine waves
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_sectors: numpy.ndarray[Any, dtype[int]]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
         If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(times)]]).
+        i_half_s = np.array([[0, len(time)]]).
     save_file: str, optional
         File path to save the plot
     show: bool, optional
@@ -371,24 +371,24 @@ def plot_lc_harmonics(times, signal, p_orb, p_err, const, slope, f_n, a_n, ph_n,
     -------
     None
     """
-    t_mean = np.mean(times)
+    t_mean = np.mean(time)
     # make models
-    model_line = tsf.linear_curve(times, const, slope, i_sectors)
+    model_line = tsf.linear_curve(time, const, slope, i_chunks)
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
-    model_h = tsf.sum_sines(times, f_n[harmonics], a_n[harmonics], ph_n[harmonics])
-    model_nh = tsf.sum_sines(times, np.delete(f_n, harmonics), np.delete(a_n, harmonics),
+    model_h = tsf.sum_sines(time, f_n[harmonics], a_n[harmonics], ph_n[harmonics])
+    model_nh = tsf.sum_sines(time, np.delete(f_n, harmonics), np.delete(a_n, harmonics),
                              np.delete(ph_n, harmonics))
-    resid_nh = signal - model_nh
-    resid_h = signal - model_h
+    resid_nh = flux - model_nh
+    resid_h = flux - model_h
     # plot the harmonic model and non-harmonic model
     fig, ax = plt.subplots(nrows=2, sharex=True)
     ax[0].plot([t_mean, t_mean], [np.min(resid_nh), np.max(resid_nh)], c='grey', alpha=0.3)
-    ax[0].scatter(times, resid_nh, marker='.', c='tab:blue', label='signal - non-harmonics')
-    ax[0].plot(times, model_line + model_h, c='tab:orange', label='linear + harmonic model, '
+    ax[0].scatter(time, resid_nh, marker='.', c='tab:blue', label='flux - non-harmonics')
+    ax[0].plot(time, model_line + model_h, c='tab:orange', label='linear + harmonic model, '
                                                                   f'p={p_orb:1.4f}d (+-{p_err:1.4f})')
     ax[1].plot([t_mean, t_mean], [np.min(resid_h), np.max(resid_h)], c='grey', alpha=0.3)
-    ax[1].scatter(times, resid_h, marker='.', c='tab:blue', label='signal - harmonics')
-    ax[1].plot(times, model_line + model_nh, c='tab:orange', label='linear + non-harmonic model')
+    ax[1].scatter(time, resid_h, marker='.', c='tab:blue', label='flux - harmonics')
+    ax[1].plot(time, model_line + model_nh, c='tab:orange', label='linear + non-harmonic model')
     ax[0].set_ylabel('residual/model')
     ax[0].legend()
     ax[1].set_ylabel('residual/model')

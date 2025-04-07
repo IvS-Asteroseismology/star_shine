@@ -26,15 +26,15 @@ except (ImportError, AttributeError) as e:
 from . import analysis_functions as af
 
 
-def sample_sinusoid(times, signal, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
-                    i_sectors, verbose=False):
+def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
+                    i_chunks, verbose=False):
     """NUTS sampling of a linear + sinusoid + eclipse model
     
     Parameters
     ----------
-    times: numpy.ndarray[Any, dtype[float]]
+    time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
@@ -58,10 +58,10 @@ def sample_sinusoid(times, signal, const, slope, f_n, a_n, ph_n, c_err, sl_err, 
         Uncertainty in the phases of a number of sine waves
     noise_level: float
         The noise level (standard deviation of the residuals)
-    i_sectors: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[int]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
-        set i_sectors = np.array([[0, len(times)]]).
+        set i_chunks = np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 
@@ -76,9 +76,9 @@ def sample_sinusoid(times, signal, const, slope, f_n, a_n, ph_n, c_err, sl_err, 
         Parameter HDI error values, same order as par_means
     """
     # setup
-    times_t = times.reshape(-1, 1)  # transposed times
-    t_mean = tt.as_tensor_variable(np.mean(times))
-    t_mean_s = tt.as_tensor_variable(np.array([np.mean(times[s[0]:s[1]]) for s in i_sectors]))
+    time_t = time.reshape(-1, 1)  # transposed time
+    t_mean = tt.as_tensor_variable(np.mean(time))
+    t_mean_s = tt.as_tensor_variable(np.array([np.mean(time[s[0]:s[1]]) for s in i_chunks]))
     lin_shape = (len(const),)
     sin_shape = (len(f_n),)
     # progress bar
@@ -96,18 +96,18 @@ def sample_sinusoid(times, signal, const, slope, f_n, a_n, ph_n, c_err, sl_err, 
         const_pm = pm.Normal('const', mu=const, sigma=c_err, shape=lin_shape, testval=const)
         slope_pm = pm.Normal('slope', mu=slope, sigma=sl_err, shape=lin_shape, testval=slope)
         # piece-wise linear curve
-        linear_curves = [const_pm[k] + slope_pm[k] * (times[s[0]:s[1]] - t_mean_s[k]) for k, s in enumerate(i_sectors)]
+        linear_curves = [const_pm[k] + slope_pm[k] * (time[s[0]:s[1]] - t_mean_s[k]) for k, s in enumerate(i_chunks)]
         model_linear = tt.concatenate(linear_curves)
         # sinusoid parameter models
         f_n_pm = pm.TruncatedNormal('f_n', mu=f_n, sigma=f_n_err, lower=0, shape=sin_shape, testval=f_n)
         a_n_pm = pm.TruncatedNormal('a_n', mu=a_n, sigma=a_n_err, lower=0, shape=sin_shape, testval=a_n)
         ph_n_pm = pm.VonMises('ph_n', mu=ph_n, kappa=1 / ph_n_err**2, shape=sin_shape, testval=ph_n)
         # sum of sinusoids
-        model_sinusoid = pm.math.sum(a_n_pm * pm.math.sin((2 * np.pi * f_n_pm * (times_t - t_mean)) + ph_n_pm), axis=1)
+        model_sinusoid = pm.math.sum(a_n_pm * pm.math.sin((2 * np.pi * f_n_pm * (time_t - t_mean)) + ph_n_pm), axis=1)
         # full light curve model
         model = model_linear + model_sinusoid
         # observed distribution
-        pm.Normal('obs', mu=model, sigma=noise_level, observed=signal)
+        pm.Normal('obs', mu=model, sigma=noise_level, observed=flux)
     
     # do the sampling
     with lc_model:
@@ -145,15 +145,15 @@ def sample_sinusoid(times, signal, const, slope, f_n, a_n, ph_n, c_err, sl_err, 
     return inf_data, par_means, par_hdi
 
 
-def sample_sinusoid_h(times, signal, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_err, sl_err, f_n_err, a_n_err,
-                      ph_n_err, noise_level, i_sectors, verbose=False):
+def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_err, sl_err, f_n_err, a_n_err,
+                      ph_n_err, noise_level, i_chunks, verbose=False):
     """NUTS sampling of a linear + sinusoid + eclipse model
     
     Parameters
     ----------
-    times: numpy.ndarray[Any, dtype[float]]
+    time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     p_orb: float
         Orbital period of the eclipsing binary in days
@@ -181,10 +181,10 @@ def sample_sinusoid_h(times, signal, p_orb, const, slope, f_n, a_n, ph_n, p_err,
         Uncertainty in the phases of a number of sine waves
     noise_level: float
         The noise level (standard deviation of the residuals)
-    i_sectors: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[int]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
-        set i_sectors = np.array([[0, len(times)]]).
+        set i_chunks = np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 
@@ -199,9 +199,9 @@ def sample_sinusoid_h(times, signal, p_orb, const, slope, f_n, a_n, ph_n, p_err,
         Parameter HDI error values, same order as par_means
     """
     # setup
-    times_t = times.reshape(-1, 1)  # transposed times
-    t_mean = tt.as_tensor_variable(np.mean(times))
-    t_mean_s = tt.as_tensor_variable(np.array([np.mean(times[s[0]:s[1]]) for s in i_sectors]))
+    time_t = time.reshape(-1, 1)  # transposed time
+    t_mean = tt.as_tensor_variable(np.mean(time))
+    t_mean_s = tt.as_tensor_variable(np.array([np.mean(time[s[0]:s[1]]) for s in i_chunks]))
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(len(f_n)), harmonics)
     lin_shape = (len(const),)
@@ -222,7 +222,7 @@ def sample_sinusoid_h(times, signal, p_orb, const, slope, f_n, a_n, ph_n, p_err,
         const_pm = pm.Normal('const', mu=const, sigma=c_err, shape=lin_shape, testval=const)
         slope_pm = pm.Normal('slope', mu=slope, sigma=sl_err, shape=lin_shape, testval=slope)
         # piece-wise linear curve
-        linear_curves = [const_pm[k] + slope_pm[k] * (times[s[0]:s[1]] - t_mean_s[k]) for k, s in enumerate(i_sectors)]
+        linear_curves = [const_pm[k] + slope_pm[k] * (time[s[0]:s[1]] - t_mean_s[k]) for k, s in enumerate(i_chunks)]
         model_linear = tt.concatenate(linear_curves)
         # sinusoid parameter models
         f_n_pm = pm.TruncatedNormal('f_n', mu=f_n[non_harm], sigma=f_n_err[non_harm], lower=0, shape=sin_shape,
@@ -232,7 +232,7 @@ def sample_sinusoid_h(times, signal, p_orb, const, slope, f_n, a_n, ph_n, p_err,
         ph_n_pm = pm.VonMises('ph_n', mu=ph_n[non_harm], kappa=1 / ph_n_err[non_harm]**2, shape=sin_shape,
                               testval=ph_n[non_harm])
         # sum of sinusoids
-        model_sinusoid = pm.math.sum(a_n_pm * pm.math.sin((2 * np.pi * f_n_pm * (times_t - t_mean)) + ph_n_pm), axis=1)
+        model_sinusoid = pm.math.sum(a_n_pm * pm.math.sin((2 * np.pi * f_n_pm * (time_t - t_mean)) + ph_n_pm), axis=1)
         # harmonic parameter models
         p_orb_pm = pm.TruncatedNormal('p_orb', mu=p_orb, sigma=p_err, lower=0, testval=p_orb)
         f_h_pm = pm.Deterministic('f_h', harmonic_n / p_orb_pm)
@@ -241,11 +241,11 @@ def sample_sinusoid_h(times, signal, p_orb, const, slope, f_n, a_n, ph_n, p_err,
         ph_h_pm = pm.VonMises('ph_h', mu=ph_n[harmonics], kappa=1 / ph_n_err[harmonics]**2, shape=harm_shape,
                               testval=ph_n[harmonics])
         # sum of harmonic sinusoids
-        model_harmonic = pm.math.sum(a_h_pm * pm.math.sin((2 * np.pi * f_h_pm * (times_t - t_mean)) + ph_h_pm), axis=1)
+        model_harmonic = pm.math.sum(a_h_pm * pm.math.sin((2 * np.pi * f_h_pm * (time_t - t_mean)) + ph_h_pm), axis=1)
         # full light curve model
         model = model_linear + model_sinusoid + model_harmonic
         # observed distribution
-        pm.Normal('obs', mu=model, sigma=noise_level, observed=signal)
+        pm.Normal('obs', mu=model, sigma=noise_level, observed=flux)
     
     # do the sampling
     with lc_model:

@@ -121,8 +121,8 @@ def decimal_figures(x, n_sf):
 
 
 @nb.njit(cache=True)
-def signal_to_noise_threshold(n_points):
-    """Determine the signal-to-noise threshold for accepting frequencies
+def flux_to_noise_threshold(n_points):
+    """Determine the flux-to-noise threshold for accepting frequencies
     based on the number of points
     
     Parameters
@@ -133,7 +133,7 @@ def signal_to_noise_threshold(n_points):
     Returns
     -------
     sn_thr: float
-        Signal-to-noise threshold for this data set
+        flux-to-noise threshold for this data set
     
     Notes
     -----
@@ -173,7 +173,7 @@ def normalise_counts(flux_counts, flux_counts_err, i_chunks):
     Notes
     -----
     The result is positive and varies around one.
-    The signal is processed per chunk.
+    The flux is processed per chunk.
     """
     medians = np.zeros(len(i_chunks))
     flux_norm = np.zeros(len(flux_counts))
@@ -430,24 +430,24 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
 
 
 @nb.njit(cache=True)
-def correct_for_crowdsap(signal, crowdsap, i_sectors):
-    """Correct the signal for flux contribution of a third source
+def correct_for_crowdsap(flux, crowdsap, i_chunks):
+    """Correct the flux for flux contribution of a third source
     
     Parameters
     ----------
-    signal: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     crowdsap: list[float], numpy.ndarray[Any, dtype[float]]
         Light contamination parameter (1-third_light) listed per sector
-    i_sectors: numpy.ndarray[Any, dtype[int]]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans.
         These can indicate the TESS observation sectors, but taking
         half the sectors is recommended. If only a single curve is
-        wanted, set i_half_s = np.array([[0, len(times)]]).
+        wanted, set i_half_s = np.array([[0, len(time)]]).
     
     Returns
     -------
-    cor_signal: numpy.ndarray[Any, dtype[float]]
+    cor_flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series corrected for
         contaminating light
     
@@ -459,43 +459,43 @@ def correct_for_crowdsap(signal, crowdsap, i_sectors):
     This corresponds to subtracting a fraction of (1 - crowdsap) of third light
     from the (non-median-normalised) flux measurements.
     """
-    cor_signal = np.zeros(len(signal))
-    for i, s in enumerate(i_sectors):
+    cor_flux = np.zeros(len(flux))
+    for i, s in enumerate(i_chunks):
         crowd = min(max(0, crowdsap[i]), 1)  # clip to avoid unphysical output
-        cor_signal[s[0]:s[1]] = (signal[s[0]:s[1]] - 1 + crowd) / crowd
-    return cor_signal
+        cor_flux[s[0]:s[1]] = (flux[s[0]:s[1]] - 1 + crowd) / crowd
+    return cor_flux
 
 
 @nb.njit(cache=True)
-def model_crowdsap(signal, crowdsap, i_sectors):
-    """Incorporate flux contribution of a third source into the signal
+def model_crowdsap(flux, crowdsap, i_chunks):
+    """Incorporate flux contribution of a third source into the flux
 
     Parameters
     ----------
-    signal: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     crowdsap: list[float], numpy.ndarray[Any, dtype[float]]
         Light contamination parameter (1-third_light) listed per sector
-    i_sectors: numpy.ndarray[Any, dtype[int]]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans.
         These can indicate the TESS observation sectors, but taking
         half the sectors is recommended. If only a single curve is
-        wanted, set i_half_s = np.array([[0, len(times)]]).
+        wanted, set i_half_s = np.array([[0, len(time)]]).
 
     Returns
     -------
     model: numpy.ndarray[Any, dtype[float]]
-        Model of the signal incorporating light contamination
+        Model of the flux incorporating light contamination
 
     Notes
     -----
     Does the opposite as correct_for_crowdsap, to be able to model the effect of
     third light to some degree (can only achieve an upper bound on CROWDSAP).
     """
-    model = np.zeros(len(signal))
-    for i, s in enumerate(i_sectors):
+    model = np.zeros(len(flux))
+    for i, s in enumerate(i_chunks):
         crowd = min(max(0, crowdsap[i]), 1)  # clip to avoid unphysical output
-        model[s[0]:s[1]] = signal[s[0]:s[1]] * crowd + 1 - crowd
+        model[s[0]:s[1]] = flux[s[0]:s[1]] * crowd + 1 - crowd
     return model
 
 
@@ -541,220 +541,24 @@ def read_inference_data(file_name):
     return inf_data
 
 
-def save_summary(target_id, save_dir, data_id='none'):
-    """Create a summary file from the results of the analysis
-    
-    Parameters
-    ----------
-    target_id: int, str
-        The TESS Input Catalog number for saving and loading.
-        Use the name of the input light curve file if not available.
-    save_dir: str
-        Path to a directory for saving the results.
-    data_id: int, str
-        Identification for the dataset used
-    
-    Returns
-    -------
-    None
-    
-    Notes
-    -----
-    Meant both as a quick overview of the results and to facilitate
-    the compilation of a catalogue of a set of results
-    """
-    prew_par = -np.ones(7)
-    timings_par = -np.ones(36)
-    form_par = -np.ones(48)
-    fit_par = -np.ones(39)
-    freqs_par = -np.ones(5, dtype=int)
-    level_par = -np.ones(12)
-    t_tot, t_mean = 0, 0
-    # read results
-    if not save_dir.endswith(f'{target_id}_analysis'):
-        save_dir = os.path.join(save_dir, f'{target_id}_analysis')  # add subdir
-    # get period from last prewhitening step
-    file_name_3 = os.path.join(save_dir, f'{target_id}_analysis_3.hdf5')
-    file_name_5 = os.path.join(save_dir, f'{target_id}_analysis_5.hdf5')
-    if os.path.isfile(file_name_5):
-        results = read_result_hdf5(file_name_5, verbose=False)
-        p_orb, _ = results['ephem']
-        p_err, _ = results['ephem_err']
-        p_hdi, _ = results['ephem_hdi']
-        t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level = results['stats']
-        prew_par = [p_orb, p_err, p_hdi[0], p_hdi[1], n_param, bic, noise_level]
-    elif os.path.isfile(file_name_3):
-        results = read_result_hdf5(file_name_3, verbose=False)
-        p_orb, _ = results['ephem']
-        p_err, _ = results['ephem_err']
-        p_hdi, _ = results['ephem_hdi']
-        t_tot, t_mean, t_mean_s, t_int, n_param, bic, noise_level = results['stats']
-        prew_par = [p_orb, p_err, p_hdi[0], p_hdi[1], n_param, bic, noise_level]
-    # todo: needs update
-    # file header with all variable names
-    hdr = ['id', 'stage', 't_tot', 't_mean', 'period', 'p_err', 'p_err_l', 'p_err_u',
-           'n_param_prew', 'bic_prew', 'noise_level_prew',
-           't_1', 't_2', 't_1_1', 't_1_2', 't_2_1', 't_2_2',
-           't_b_1_1', 't_b_1_2', 't_b_2_1', 't_b_2_2', 'depth_1', 'depth_2',
-           't_1_err', 't_2_err', 't_1_1_err', 't_1_2_err', 't_2_1_err', 't_2_2_err',
-           't_b_1_1_err', 't_b_1_2_err', 't_b_2_1_err', 't_b_2_2_err', 'd_1_err', 'd_2_err',
-           't_1_ind_err', 't_2_ind_err', 't_1_1_ind_err', 't_1_2_ind_err', 't_2_1_ind_err', 't_2_2_ind_err',
-           't_b_1_1_ind_err', 't_b_1_2_ind_err', 't_b_2_1_ind_err', 't_b_2_2_ind_err', 'd_1_ind_err', 'd_2_ind_err',
-           'ecosw_form', 'esinw_form', 'cosi_form', 'phi_0_form', 'log_rr_form', 'log_sb_form',
-           'e_form', 'w_form', 'i_form', 'r_sum_form', 'r_rat_form', 'sb_rat_form',
-           'ecosw_sig', 'esinw_sig', 'cosi_sig', 'phi_0_sig', 'log_rr_sig', 'log_sb_sig',
-           'e_sig', 'w_sig', 'i_sig', 'r_sum_sig', 'r_rat_sig', 'sb_rat_sig',
-           'ecosw_low', 'ecosw_upp', 'esinw_low', 'esinw_upp', 'cosi_low', 'cosi_upp',
-           'phi_0_low', 'phi_0_upp', 'log_rr_low', 'log_rr_upp', 'log_sb_low', 'log_sb_upp',
-           'e_low', 'e_upp', 'w_low', 'w_upp', 'i_low', 'i_upp',
-           'r_sum_low', 'r_sum_upp', 'r_rat_low', 'r_rat_upp', 'sb_rat_low', 'sb_rat_upp',
-           'ecosw_phys', 'esinw_phys', 'cosi_phys', 'phi_0_phys', 'log_rr_phys', 'log_sb_phys',
-           'e_phys', 'w_phys', 'i_phys', 'r_sum_phys', 'r_rat_phys', 'sb_rat_phys',
-           'ecosw_err_l', 'ecosw_err_u', 'esinw_err_l', 'esinw_err_u', 'cosi_err_l', 'cosi_err_u',
-           'phi_0_err_l', 'phi_0_err_u', 'log_rr_err_l', 'log_rr_err_u', 'log_sb_err_l', 'log_sb_err_u',
-           'e_err_l', 'e_err_u', 'w_err_l', 'w_err_u', 'i_err_l', 'i_err_u', 'r_sum_err_l', 'r_sum_err_u',
-           'r_rat_err_l', 'r_rat_err_u', 'sb_rat_err_l', 'sb_rat_err_u',
-           'n_param_phys', 'bic_phys', 'noise_level_phys',
-           'total_freqs', 'passed_sigma', 'passed_snr', 'passed_both', 'passed_harmonics',
-           'std_1', 'std_2', 'std_3', 'std_4', 'ratio_1_1', 'ratio_1_2', 'ratio_2_1', 'ratio_2_2',
-           'ratio_3_1', 'ratio_3_2', 'ratio_4_1', 'ratio_4_2']
-    # descriptions of all variables
-    desc = ['target identifier', 'furthest stage the analysis reached', 'total time base of observations in days',
-            'time series mean time reference point', 'orbital period in days', 'error in the orbital period',
-            'lower HDI error estimate in period', 'upper HDI error estimate in period',
-            'number of free parameters after the prewhitening phase', 'BIC after the prewhitening phase',
-            'noise level after the prewhitening phase',
-            'time of primary minimum with respect to the mean time',
-            'time of secondary minimum with respect to the mean time',
-            'time of primary first contact with respect to the mean time',
-            'time of primary last contact with respect to the mean time',
-            'time of secondary first contact with respect to the mean time',
-            'time of secondary last contact with respect to the mean time',
-            'start of (flat) eclipse bottom left of primary minimum',
-            'end of (flat) eclipse bottom right of primary minimum',
-            'start of (flat) eclipse bottom left of secondary minimum',
-            'end of (flat) eclipse bottom right of secondary minimum',
-            'depth of primary minimum', 'depth of secondary minimum',
-            'error in time of primary minimum (t_1)', 'error in time of secondary minimum (t_2)',
-            'error in time of primary first contact (t_1_1)', 'error in time of primary last contact (t_1_2)',
-            'error in time of secondary first contact (t_2_1)', 'error in time of secondary last contact (t_2_2)',
-            'error in start of (flat) eclipse bottom left of primary minimum',
-            'error in end of (flat) eclipse bottom right of primary minimum',
-            'error in start of (flat) eclipse bottom left of secondary minimum',
-            'error in end of (flat) eclipse bottom right of secondary minimum',
-            'error in depth of primary minimum', 'error in depth of secondary minimum',
-            'individual error in time of primary minimum (t_1)', 'individual error in time of secondary minimum (t_2)',
-            'individual error in time of primary first contact (t_1_1)',
-            'individual error in time of primary last contact (t_1_2)',
-            'individual error in time of secondary first contact (t_2_1)',
-            'individual error in time of secondary last contact (t_2_2)',
-            'individual error in start of (flat) eclipse bottom left of primary minimum',
-            'individual error in end of (flat) eclipse bottom right of primary minimum',
-            'individual error in start of (flat) eclipse bottom left of secondary minimum',
-            'individual error in end of (flat) eclipse bottom right of secondary minimum',
-            'individual error in depth of primary minimum', 'individual error in depth of secondary minimum',
-            'e*cos(w) from timing formulae', 'e*sin(w) from timing formulae',
-            'cosine of inclination from timing formulae', 'phi_0 angle (Kopal 1959) from timing formulae',
-            'logarithm of the radius ratio r2/r1 from timing formulae',
-            'logarithm of the surface brightness ratio sb2/sb1 from timing formulae',
-            'eccentricity from timing formulae', 'argument of periastron (radians) from timing formulae',
-            'inclination (radians) from timing formulae',
-            'sum of radii divided by the semi-major axis of the relative orbit from timing formulae',
-            'radius ratio r2/r1 from timing formulae', 'surface brightness ratio sb2/sb1 from timing formulae',
-            'formal uncorrelated error in ecosw', 'formal uncorrelated error in esinw',
-            'error estimate for cosi used for formal errors', 'formal uncorrelated error in phi_0',
-            'scaled error formal estimate for log_rr', 'scaled formal error estimate for log_sb',
-            'formal uncorrelated error in e', 'formal uncorrelated error in w',
-            'error estimate for i used for formal errors', 'formal uncorrelated error in r_sum',
-            'scaled error formal estimate for r_rat', 'scaled error formal estimate for sb_rat',
-            'lower error estimate in ecosw', 'upper error estimate in ecosw',
-            'lower error estimate in esinw', 'upper error estimate in esinw',
-            'lower error estimate in cosi', 'upper error estimate in cosi',
-            'lower error estimate in phi_0', 'upper error estimate in phi_0',
-            'lower error estimate in log_rr', 'upper error estimate in log_rr',
-            'lower error estimate in log_sb', 'upper error estimate in log_sb',
-            'lower error estimate in e', 'upper error estimate in e',
-            'lower error estimate in w', 'upper error estimate in w',
-            'lower error estimate in i', 'upper error estimate in i',
-            'lower error estimate in r_sum', 'upper error estimate in r_sum',
-            'lower error estimate in r_rat', 'upper error estimate in r_rat',
-            'lower error estimate in sb_rat', 'upper error estimate in sb_rat',
-            'e cos(w) of the physical model', 'e sin(w) of the physical model',
-            'cos(i) of the physical model', 'phi_0 of the physical model',
-            'log of radius ratio of the physical model', 'log of surface brightness ratio of the physical model',
-            'eccentricity of the physical model', 'argument of periastron of the physical model',
-            'inclination (radians) of the physical model', 'sum of fractional radii of the physical model',
-            'radius ratio of the physical model', 'surface brightness ratio of the physical model',
-            'lower HDI error estimate in ecosw', 'upper HDI error estimate in ecosw',
-            'lower HDI error estimate in esinw', 'upper HDI error estimate in esinw',
-            'lower HDI error estimate in cosi', 'upper HDI error estimate in cosi',
-            'lower HDI error estimate in phi_0', 'upper HDI error estimate in phi_0',
-            'lower HDI error estimate in log_rr', 'upper HDI error estimate in log_rr',
-            'lower HDI error estimate in log_sb', 'upper HDI error estimate in log_sb',
-            'lower HDI error estimate in e', 'upper HDI error estimate in e',
-            'lower HDI error estimate in w', 'upper HDI error estimate in w',
-            'lower HDI error estimate in i', 'upper HDI error estimate in i',
-            'lower HDI error estimate in r_sum', 'upper HDI error estimate in r_sum',
-            'lower HDI error estimate in r_rat', 'upper HDI error estimate in r_rat',
-            'lower HDI error estimate in sb_rat', 'upper HDI error estimate in sb_rat',
-            'number of parameters after physical model optimisation',
-            'BIC after physical model optimisation', 'noise level after physical model optimisation',
-            'total number of frequencies', 'number of frequencies that passed the sigma test',
-            'number of frequencies that passed the S/R test', 'number of frequencies that passed both tests',
-            'number of harmonics that passed both tests',
-            'Standard deviation of the residuals of the linear+sinusoid+eclipse model',
-            'Standard deviation of the residuals of the linear+eclipse model',
-            'Standard deviation of the residuals of the linear+harmonic 1 and 2+eclipse model',
-            'Standard deviation of the residuals of the linear+non-harmonic sinusoid+eclipse model',
-            'Ratio of the first eclipse depth to std_1', 'Ratio of the second eclipse depth to std_1',
-            'Ratio of the first eclipse depth to std_2', 'Ratio of the second eclipse depth to std_2',
-            'Ratio of the first eclipse depth to std_3', 'Ratio of the second eclipse depth to std_3',
-            'Ratio of the first eclipse depth to std_4', 'Ratio of the second eclipse depth to std_4']
-    # record the stage where the analysis finished
-    stage = ''
-    files_in_dir = []
-    for root, dirs, files in os.walk(save_dir):
-        for file_i in files:
-            files_in_dir.append(os.path.join(root, file_i))
-    for i in range(19, 0, -1):
-        match_b = [fnmatch.fnmatch(file_i, f'*_analysis_{i}b*') for file_i in files_in_dir]
-        if np.any(match_b):
-            stage = str(i) + 'b'  # b variant
-            break
-        else:
-            match_a = [fnmatch.fnmatch(file_i, f'*_analysis_{i}*') for file_i in files_in_dir]
-            if np.any(match_a):
-                stage = str(i)
-                break
-    stage = stage.rjust(3)  # make the string 3 long
-    # compile all results
-    obs_par = np.concatenate(([target_id], [stage], [t_tot], [t_mean], prew_par, timings_par, form_par, fit_par,
-                              freqs_par, level_par)).reshape((-1, 1))
-    data = np.column_stack((hdr, obs_par, desc))
-    file_hdr = f'{target_id}, {data_id}\nname, value'  # the actual header used for numpy savetxt
-    save_name = os.path.join(save_dir, f'{target_id}_analysis_summary.csv')
-    np.savetxt(save_name, data, delimiter=',', fmt='%s', header=file_hdr)
-    return None
-
-
-def sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_dir, save_dir=None, show=True):
+def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, save_dir=None, show=True):
     """Due to plotting not working under multiprocessing this function is
     made to make plots after running the analysis in parallel.
     
     Parameters
     ----------
-    times: numpy.ndarray[Any, dtype[float]]
+    time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    signal_err: numpy.ndarray[Any, dtype[float]]
+    flux_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
-    i_sectors: numpy.ndarray[Any, dtype[int]]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
         If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(times)]]).
+        i_half_s = np.array([[0, len(time)]]).
     target_id: int, str
         In case of using analyse_from_tic:
         The TESS Input Catalog number
@@ -785,45 +589,45 @@ def sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_di
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
         const_1, slope_1, f_n_1, a_n_1, ph_n_1 = results['sin_mean']
-        model_linear = tsf.linear_curve(times, const_1, slope_1, i_sectors)
-        model_sinusoid = tsf.sum_sines(times, f_n_1, a_n_1, ph_n_1)
+        model_linear = tsf.linear_curve(time, const_1, slope_1, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_1, a_n_1, ph_n_1)
         model_1 = model_linear + model_sinusoid
     else:
         const_1, slope_1, f_n_1, a_n_1, ph_n_1 = np.array([[], [], [], [], []])
-        model_1 = np.zeros(len(times))
+        model_1 = np.zeros(len(time))
     file_name = os.path.join(load_dir, f'{target_id}_analysis_2.hdf5')
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
         const_2, slope_2, f_n_2, a_n_2, ph_n_2 = results['sin_mean']
-        model_linear = tsf.linear_curve(times, const_2, slope_2, i_sectors)
-        model_sinusoid = tsf.sum_sines(times, f_n_2, a_n_2, ph_n_2)
+        model_linear = tsf.linear_curve(time, const_2, slope_2, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_2, a_n_2, ph_n_2)
         model_2 = model_linear + model_sinusoid
     else:
         const_2, slope_2, f_n_2, a_n_2, ph_n_2 = np.array([[], [], [], [], []])
-        model_2 = np.zeros(len(times))
+        model_2 = np.zeros(len(time))
     file_name = os.path.join(load_dir, f'{target_id}_analysis_3.hdf5')
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
         const_3, slope_3, f_n_3, a_n_3, ph_n_3 = results['sin_mean']
         p_orb_3, _ = results['ephem']
         p_err_3, _ = results['ephem_err']
-        model_linear = tsf.linear_curve(times, const_3, slope_3, i_sectors)
-        model_sinusoid = tsf.sum_sines(times, f_n_3, a_n_3, ph_n_3)
+        model_linear = tsf.linear_curve(time, const_3, slope_3, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_3, a_n_3, ph_n_3)
         model_3 = model_linear + model_sinusoid
     else:
         const_3, slope_3, f_n_3, a_n_3, ph_n_3 = np.array([[], [], [], [], []])
         p_orb_3, p_err_3 = 0, 0
-        model_3 = np.zeros(len(times))
+        model_3 = np.zeros(len(time))
     file_name = os.path.join(load_dir, f'{target_id}_analysis_4.hdf5')
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
         const_4, slope_4, f_n_4, a_n_4, ph_n_4 = results['sin_mean']
-        model_linear = tsf.linear_curve(times, const_4, slope_4, i_sectors)
-        model_sinusoid = tsf.sum_sines(times, f_n_4, a_n_4, ph_n_4)
+        model_linear = tsf.linear_curve(time, const_4, slope_4, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_4, a_n_4, ph_n_4)
         model_4 = model_linear + model_sinusoid
     else:
         const_4, slope_4, f_n_4, a_n_4, ph_n_4 = np.array([[], [], [], [], []])
-        model_4 = np.zeros(len(times))
+        model_4 = np.zeros(len(time))
     file_name = os.path.join(load_dir, f'{target_id}_analysis_5.hdf5')
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
@@ -831,8 +635,8 @@ def sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_di
         p_orb_5, _ = results['ephem']
         p_err_5, _ = results['ephem_err']
         t_tot, t_mean, t_mean_s, t_int, n_param_5, bic_5, noise_level_5 = results['stats']
-        model_linear = tsf.linear_curve(times, const_5, slope_5, i_sectors)
-        model_sinusoid = tsf.sum_sines(times, f_n_5, a_n_5, ph_n_5)
+        model_linear = tsf.linear_curve(time, const_5, slope_5, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_5, a_n_5, ph_n_5)
         model_5 = model_linear + model_sinusoid
         harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n_5, p_orb_5, f_tol=1e-9)
         f_h_5, a_h_5, ph_h_5 = f_n_5[harmonics], a_n_5[harmonics], ph_n_5[harmonics]
@@ -840,7 +644,7 @@ def sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_di
         const_5, slope_5, f_n_5, a_n_5, ph_n_5 = np.array([[], [], [], [], []])
         p_orb_5, p_err_5 = 0, 0
         n_param_5, bic_5, noise_level_5 = 0, 0, 0
-        model_5 = np.zeros(len(times))
+        model_5 = np.zeros(len(time))
         f_h_5, a_h_5, ph_h_5 = np.array([[], [], []])
     # stick together for sending to plot function
     models = [model_1, model_2, model_3, model_4, model_5]
@@ -855,7 +659,7 @@ def sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_di
             file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_pd_full.png')
         else:
             file_name = None
-        vis.plot_pd_full_output(times, signal, signal_err, models, p_orb_i, p_err_i, f_n_i, a_n_i, i_sectors,
+        vis.plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a_n_i, i_chunks,
                                 save_file=file_name, show=show)
         if np.any([len(fs) != 0 for fs in f_n_i]):
             plot_nr = np.arange(1, len(f_n_i) + 1)[[len(fs) != 0 for fs in f_n_i]][-1]
@@ -865,19 +669,19 @@ def sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_di
                 file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_lc_sinusoids_{plot_nr}.png')
             else:
                 file_name = None
-            vis.plot_lc_sinusoids(times, signal, *plot_data, i_sectors, save_file=file_name, show=show)
+            vis.plot_lc_sinusoids(time, flux, *plot_data, i_chunks, save_file=file_name, show=show)
             if save_dir is not None:
                 file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_pd_output_{plot_nr}.png')
             else:
                 file_name = None
             plot_data = [p_orb_i[plot_nr - 1], p_err_i[plot_nr - 1]] + plot_data
-            vis.plot_pd_single_output(times, signal, signal_err, *plot_data, i_sectors, annotate=False,
+            vis.plot_pd_single_output(time, flux, flux_err, *plot_data, i_chunks, annotate=False,
                                       save_file=file_name, show=show)
             if save_dir is not None:
                 file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_lc_harmonics_{plot_nr}.png')
             else:
                 file_name = None
-            vis.plot_lc_harmonics(times, signal, *plot_data, i_sectors, save_file=file_name, show=show)
+            vis.plot_lc_harmonics(time, flux, *plot_data, i_chunks, save_file=file_name, show=show)
     except NameError:
         pass  # some variable wasn't loaded (file did not exist)
     except ValueError:
@@ -885,7 +689,7 @@ def sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_di
     return None
 
 
-def plot_all_from_file(file_name, i_sectors=None, load_dir=None, save_dir=None, show=True):
+def plot_all_from_file(file_name, i_chunks=None, load_dir=None, save_dir=None, show=True):
     """Plot all diagnostic plots of the results for a given light curve file
 
     Parameters
@@ -894,12 +698,12 @@ def plot_all_from_file(file_name, i_sectors=None, load_dir=None, save_dir=None, 
         Path to a file containing the light curve data, with
         timestamps, normalised flux, error values as the
         first three columns, respectively.
-    i_sectors: numpy.ndarray[Any, dtype[int]]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. These can indicate the TESS
         observation sectors, but taking half the sectors is recommended.
         If only a single curve is wanted, set
-        i_sectors = np.array([[0, len(times)]]).
+        i_chunks = np.array([[0, len(time)]]).
     load_dir: str
         Path to a directory for loading analysis results.
         Will append <target_id> + _analysis automatically.
@@ -919,13 +723,13 @@ def plot_all_from_file(file_name, i_sectors=None, load_dir=None, save_dir=None, 
     if load_dir is None:
         load_dir = os.path.dirname(file_name)
     # load the data
-    times, signal, signal_err = np.loadtxt(file_name, usecols=(0, 1, 2), unpack=True)
+    time, flux, flux_err = np.loadtxt(file_name, usecols=(0, 1, 2), unpack=True)
     # if sectors not given, take full length
-    if i_sectors is None:
-        i_sectors = np.array([[0, len(times)]])  # no sector information
-    # i_half_s = i_sectors  # in this case no differentiation between half or full sectors
+    if i_chunks is None:
+        i_chunks = np.array([[0, len(time)]])  # no sector information
+    # i_half_s = i_chunks  # in this case no differentiation between half or full sectors
     # do the plotting
-    sequential_plotting(times, signal, signal_err, i_sectors, target_id, load_dir, save_dir=save_dir, show=show)
+    sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, save_dir=save_dir, show=show)
     return None
 
 

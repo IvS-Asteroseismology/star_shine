@@ -48,11 +48,11 @@ def f_within_rayleigh(i, f_n, rayleigh):
         right_not_close = indices[sorted_pos + 1:][f_diff[sorted_pos:] > rayleigh]
         left_not_close = indices[:sorted_pos][f_diff[:sorted_pos] > rayleigh]
         # if any freqs to left or right are not close, take the first index where this happens
-        if (len(right_not_close) > 0):
+        if len(right_not_close) > 0:
             i_right_nc = right_not_close[0]
         else:
             i_right_nc = len(f_n)  # else take the right edge of the array
-        if (len(left_not_close) > 0):
+        if len(left_not_close) > 0:
             i_left_nc = left_not_close[-1]
         else:
             i_left_nc = -1  # else take the left edge of the array (minus one)
@@ -89,7 +89,7 @@ def chains_within_rayleigh(f_n, rayleigh):
     for i in indices:
         if i not in used:
             i_close = f_within_rayleigh(i, f_n, rayleigh)
-            if (len(i_close) > 1):
+            if len(i_close) > 1:
                 used.extend(i_close)
                 groups.append(i_close)
     return groups
@@ -226,7 +226,7 @@ def construct_harmonic_range(f_0, domain):
     ----------
     f_0: float
         Base frequency in the range, from where the rest of the pattern is built.
-    domain: list[float], numpy.ndarray[Any, dtype[float]]
+    domain: list[float], numpy.ndarray[2, dtype[float]]
         Two values that give the borders of the range.
         Sensible values could be the Rayleigh criterion and the Nyquist frequency
     
@@ -277,7 +277,7 @@ def find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9):
         return harmonics, harmonic_n
         
     # make the pattern of harmonics
-    domain = (0, np.max(f_n) + 0.5 / p_orb)
+    domain = [0, np.max(f_n) + 0.5 / p_orb]
     harmonic_pattern, harmonic_n = construct_harmonic_range(1 / p_orb, domain)
     # sort the frequencies
     sorter = np.argsort(f_n)
@@ -430,7 +430,7 @@ def find_unknown_harmonics(f_n, f_n_err, sigma=1., n_max=5, f_tol=None):
     
     Parameters
     ----------
-    f_n: list[float], numpy.ndarray[Any, dtype[float]]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
     f_n_err: numpy.ndarray[Any, dtype[float]]
         Formal errors on the frequencies
@@ -466,7 +466,7 @@ def find_unknown_harmonics(f_n, f_n_err, sigma=1., n_max=5, f_tol=None):
                 i_harmonic, _ = find_harmonics_from_pattern(f_n, p_base, f_tol=f_tol)
             else:
                 i_harmonic = find_harmonics(f_n, f_n_err, p_base, sigma=sigma)  # harmonic indices
-            if (len(i_harmonic) > 1):
+            if len(i_harmonic) > 1:
                 # don't allow any gaps of more than 20 + the number of preceding harmonics
                 set_i = np.arange(len(i_harmonic))
                 set_sorter = np.argsort(f_n[i_harmonic])
@@ -499,12 +499,12 @@ def find_unknown_harmonics(f_n, f_n_err, sigma=1., n_max=5, f_tol=None):
             cond_4 = (np.diff(harm_n)[0] > 7)
             # also remove any sets with n>1 that are not longer than the one with n=1
             if cond_1 | cond_2 | cond_3 | cond_4:
-                if ([i, n] not in i_n_remove):
+                if [i, n] not in i_n_remove:
                     i_n_remove.append([i, n])
     # remove entries
     for i, n in i_n_remove:
         candidate_h[i].pop(n, None)
-        if (len(candidate_h[i]) == 0):
+        if len(candidate_h[i]) == 0:
             candidate_h.pop(i, None)
     # check whether a series is fully contained in another (and other criteria involving other sets)
     i_n_redundant = []
@@ -547,7 +547,7 @@ def find_unknown_harmonics(f_n, f_n_err, sigma=1., n_max=5, f_tol=None):
     # remove redundant entries
     for i, n in i_n_redundant:
         candidate_h[i].pop(n, None)
-        if (len(candidate_h[i]) == 0):
+        if len(candidate_h[i]) == 0:
             candidate_h.pop(i, None)
     return candidate_h
 
@@ -582,7 +582,7 @@ def harmonic_series_length(f_test, f_n, freq_res, f_nyquist):
     for i, f in enumerate(f_test):
         harmonics, harmonic_n = find_harmonics_from_pattern(f_n, 1 / f, f_tol=freq_res / 2)
         n_harm[i] = len(harmonics)
-        if (n_harm[i] == 0):
+        if n_harm[i] == 0:
             completeness[i] = 1
             distance[i] = 0
         else:
