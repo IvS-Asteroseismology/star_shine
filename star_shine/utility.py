@@ -550,8 +550,7 @@ def save_summary(target_id, save_dir, data_id='none'):
         The TESS Input Catalog number for saving and loading.
         Use the name of the input light curve file if not available.
     save_dir: str
-        Path to a directory for saving the results. Also used to load
-        previous analysis results.
+        Path to a directory for saving the results.
     data_id: int, str
         Identification for the dataset used
     

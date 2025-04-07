@@ -32,29 +32,29 @@ def sample_sinusoid(times, signal, const, slope, f_n, a_n, ph_n, c_err, sl_err, 
     
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    c_err: numpy.ndarray[float]
+    c_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the y-intercepts of a number of sine waves
-    sl_err: numpy.ndarray[float]
+    sl_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the slopes of a number of sine waves
-    f_n_err: numpy.ndarray[float]
+    f_n_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the frequencies of a number of sine waves
-    a_n_err: numpy.ndarray[float]
+    a_n_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the amplitudes of a number of sine waves
-    ph_n_err: numpy.ndarray[float]
+    ph_n_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the phases of a number of sine waves
     noise_level: float
         The noise level (standard deviation of the residuals)
@@ -151,33 +151,33 @@ def sample_sinusoid_h(times, signal, p_orb, const, slope, f_n, a_n, ph_n, p_err,
     
     Parameters
     ----------
-    times: numpy.ndarray[float]
+    times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    signal: numpy.ndarray[float]
+    signal: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     p_orb: float
         Orbital period of the eclipsing binary in days
-    const: numpy.ndarray[float]
+    const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[float]
+    slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[float]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: numpy.ndarray[float]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[float]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     p_err: float
         Uncertainty in the orbital period
-    c_err: numpy.ndarray[float]
+    c_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the y-intercepts of a number of sine waves
-    sl_err: numpy.ndarray[float]
+    sl_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the slopes of a number of sine waves
-    f_n_err: numpy.ndarray[float]
+    f_n_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the frequencies of a number of sine waves
-    a_n_err: numpy.ndarray[float]
+    a_n_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the amplitudes of a number of sine waves
-    ph_n_err: numpy.ndarray[float]
+    ph_n_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the phases of a number of sine waves
     noise_level: float
         The noise level (standard deviation of the residuals)

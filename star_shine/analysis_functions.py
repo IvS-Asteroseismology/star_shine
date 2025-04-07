@@ -589,3 +589,48 @@ def harmonic_series_length(f_test, f_n, freq_res, f_nyquist):
             completeness[i] = n_harm[i] / (f_nyquist // f)
             distance[i] = np.sum((f_n[harmonics] - harmonic_n * f)**2)
     return n_harm, completeness, distance
+
+
+def linear_regression_uncertainty(p_orb, t_tot, sigma_t=1):
+    """Calculates the linear regression errors on period and t_zero
+
+    Parameters
+    ---------
+    p_orb: float
+        Orbital period of the eclipsing binary in days
+    t_tot: float
+        Total time base of observations
+    sigma_t: float
+        Error in the individual time measurements
+
+    Returns
+    -------
+    p_err: float
+        Error in the period
+    t_err: float
+        Error in t_zero
+    p_t_cov: float
+        Covariance between the period and t_zero
+
+    Notes
+    -----
+    The number of eclipses, computed from the period and
+    time base, is taken to be a contiguous set.
+    var_matrix:
+    [[std[0]**2          , std[0]*std[1]*corr],
+     [std[0]*std[1]*corr,           std[1]**2]]
+    """
+    # number of observed eclipses (technically contiguous)
+    n = int(abs(t_tot // p_orb)) + 1
+    # M
+    matrix = np.column_stack((np.ones(n, dtype=int), np.arange(n, dtype=int)))
+    # M^-1
+    matrix_inv = np.linalg.pinv(matrix)  # inverse (of a general matrix)
+    # M^-1 S M^-1^T, S unit matrix times some sigma (no covariance in the data)
+    var_matrix = matrix_inv @ matrix_inv.T
+    var_matrix = var_matrix * sigma_t ** 2
+    # errors in the period and t_zero
+    t_err = np.sqrt(var_matrix[0, 0])
+    p_err = np.sqrt(var_matrix[1, 1])
+    p_t_corr = var_matrix[0, 1] / (t_err * p_err)  # or [1, 0]
+    return p_err, t_err, p_t_corr

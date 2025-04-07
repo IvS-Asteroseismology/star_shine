@@ -1080,7 +1080,7 @@ def find_orbital_period(times, signal, f_n):
         mask_peak = (h_measure_2 > np.max(h_measure_2) / 1.5)  # constrain the domain of the search
         i_min_dist = np.argmin(distance_r2[mask_peak])
         p_orb = 1 / f_refine_2[mask_peak][i_min_dist]
-    return p_orb, multiple
+    return p_orb
 
 
 @nb.njit(cache=True)
@@ -1510,11 +1510,11 @@ def sum_sines(times, f_n, a_n, ph_n, t_shift=True):
     ----------
     times: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
-    f_n: list[float], numpy.ndarray[Any, dtype[float]]
+    f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    a_n: list[float], numpy.ndarray[Any, dtype[float]]
+    a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    ph_n: list[float], numpy.ndarray[Any, dtype[float]]
+    ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     t_shift: bool
         Mean center the time axis
@@ -1982,18 +1982,18 @@ def extract_sinusoids(times, signal, i_sectors, p_orb=0, f_n=None, a_n=None, ph_
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
-    p_orb: float
+    p_orb: float, optional
         Orbital period of the eclipsing binary in days (can be 0)
-    f_n: None, numpy.ndarray[Any, dtype[float]]
+    f_n: numpy.ndarray[Any, dtype[float]], optional
         The frequencies of a number of sine waves (can be empty or None)
-    a_n: None, numpy.ndarray[Any, dtype[float]]
+    a_n: numpy.ndarray[Any, dtype[float]], optional
         The amplitudes of a number of sine waves (can be empty or None)
-    ph_n: None, numpy.ndarray[Any, dtype[float]]
+    ph_n: numpy.ndarray[Any, dtype[float]], optional
         The phases of a number of sine waves (can be empty or None)
-    select: str
+    select: str, optional
         Select the next frequency based on amplitude ('a'),
         signal-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).
-    verbose: bool
+    verbose: bool, optional
         If set to True, this function will print some information
 
     Returns
@@ -2122,17 +2122,17 @@ def extract_harmonics(times, signal, p_orb, i_sectors, f_n=None, a_n=None, ph_n=
         Measurement values of the time series
     p_orb: float
         Orbital period of the eclipsing binary in days
-    f_n: None, numpy.ndarray[Any, dtype[float]]
+    f_n: numpy.ndarray[Any, dtype[float]], optional
         The frequencies of a number of sine waves (can be empty or None)
-    a_n: None, numpy.ndarray[Any, dtype[float]]
+    a_n: numpy.ndarray[Any, dtype[float]], optional
         The amplitudes of a number of sine waves (can be empty or None)
-    ph_n: None, numpy.ndarray[Any, dtype[float]]
+    ph_n: numpy.ndarray[Any, dtype[float]], optional
         The phases of a number of sine waves (can be empty or None)
-    i_sectors: numpy.ndarray[int]
+    i_sectors: numpy.ndarray[int], optional
         Pair(s) of indices indicating the separately handled timespans
         in the piecewise-linear curve. If only a single curve is wanted,
         set i_sectors = np.array([[0, len(times)]]).
-    verbose: bool
+    verbose: bool, optional
         If set to True, this function will print some information
     
     Returns

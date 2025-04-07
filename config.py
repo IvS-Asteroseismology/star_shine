@@ -4,7 +4,7 @@
 # general
 OVERWRITE = False                      # Overwrite existing result files
 VERBOSE = False                        # Print information during runtime
-STOP_AT_STAGE = 0                      # Stage of the analysis to terminate at, 0 means all stages are run
+STOP_AT_STAGE = 0                      # Run the analysis up to and including this stage, 0 means all stages are run
 # extraction
 SELECT = 'hybrid'                      # What the next frequency selected in the extraction is based on (see docs)
 # optimisation
