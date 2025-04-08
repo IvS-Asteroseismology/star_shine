@@ -120,8 +120,8 @@ def decimal_figures(x, n_sf):
 
 
 @nb.njit(cache=True)
-def flux_to_noise_threshold(n_points):
-    """Determine the flux-to-noise threshold for accepting frequencies
+def signal_to_noise_threshold(n_points):
+    """Determine the signal-to-noise threshold for accepting frequencies
     based on the number of points
     
     Parameters
@@ -132,7 +132,7 @@ def flux_to_noise_threshold(n_points):
     Returns
     -------
     sn_thr: float
-        flux-to-noise threshold for this data set
+        signal-to-noise threshold for this data set
     
     Notes
     -----
