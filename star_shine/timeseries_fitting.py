@@ -111,7 +111,7 @@ def objective_sinusoids(params, time, flux, i_chunks):
     model_sinusoid = tsf.sum_sines(time, freqs, ampls, phases)
     # calculate the likelihood (minus this for minimisation)
     resid = flux - model_linear - model_sinusoid
-    ln_likelihood = tsf.calc_likelihood(resid, time=time, flux_err=None, iid=True)
+    ln_likelihood = tsf.calc_likelihood(residuals=resid, time=time, flux_err=None, func=tsf.calc_iid_normal_likelihood)
     return -ln_likelihood
 
 
@@ -394,7 +394,7 @@ def objective_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
     model_sinusoid = tsf.sum_sines(time, freqs, ampls, phases)
     # calculate the likelihood (minus this for minimisation)
     resid = flux - model_linear - model_sinusoid
-    ln_likelihood = tsf.calc_likelihood(resid, time=time, flux_err=None, iid=True)
+    ln_likelihood = tsf.calc_likelihood(residuals=resid, time=time, flux_err=None, func=tsf.calc_iid_normal_likelihood)
     return -ln_likelihood
 
 

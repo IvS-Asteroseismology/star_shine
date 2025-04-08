@@ -14,11 +14,13 @@ import numba as nb
 try:
     import pandas as pd  # optional functionality
 except ImportError:
+    pd = None
     pass
 import astropy.io.fits as fits
 try:
     import arviz as az  # optional functionality
 except ImportError:
+    az = None
     pass
 
 from . import timeseries_functions as tsf
@@ -112,7 +114,7 @@ def decimal_figures(x, n_sf):
     decimals: int
         Number of decimal places to round to
     """
-    if (x != 0):
+    if x != 0:
         decimals = (n_sf - 1) - int(np.floor(np.log10(abs(x))))
     else:
         decimals = 1
@@ -136,7 +138,7 @@ def signal_to_noise_threshold(n_points):
     
     Notes
     -----
-    Baran & Koen 2021, eq 6.
+    Based on Baran & Koen 2021, eq 6.
     (https://ui.adsabs.harvard.edu/abs/2021AcA....71..113B/abstract)
     """
     sn_thr = 1.201 * np.sqrt(1.05 * np.log(n_points) + 7.184)
@@ -414,8 +416,8 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
     # keep track of which freqs have been used with the sorted indices
     not_used = np.argsort(a_n)[::-1]
     groups = []
-    while (len(not_used) > 0):
-        if (len(not_used) > g_min + 1):
+    while len(not_used) > 0:
+        if len(not_used) > g_min + 1:
             a_diff = np.diff(a_n[not_used[g_min:g_max + 1]])
             i_max = np.argmin(a_diff)  # the diffs are negative so this is max absolute difference
             i_group = g_min + i_max + 1
@@ -458,7 +460,7 @@ def correct_for_crowdsap(flux, crowdsap, i_chunks):
     """
     cor_flux = np.zeros(len(flux))
     for i, s in enumerate(i_chunks):
-        crowd = min(max(0, crowdsap[i]), 1)  # clip to avoid unphysical output
+        crowd = min(max(0., crowdsap[i]), 1.)  # clip to avoid unphysical output
         cor_flux[s[0]:s[1]] = (flux[s[0]:s[1]] - 1 + crowd) / crowd
     return cor_flux
 
@@ -489,7 +491,7 @@ def model_crowdsap(flux, crowdsap, i_chunks):
     """
     model = np.zeros(len(flux))
     for i, s in enumerate(i_chunks):
-        crowd = min(max(0, crowdsap[i]), 1)  # clip to avoid unphysical output
+        crowd = min(max(0., crowdsap[i]), 1.)  # clip to avoid unphysical output
         model[s[0]:s[1]] = flux[s[0]:s[1]] * crowd + 1 - crowd
     return model
 

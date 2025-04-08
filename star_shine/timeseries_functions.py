@@ -1398,7 +1398,7 @@ def linear_curve(time, const, slope, i_chunks, t_shift=True):
         The y-intercepts of a piece-wise linear curve
     slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     t_shift: bool
@@ -1646,7 +1646,7 @@ def formal_uncertainties(time, residuals, flux_err, a_n, i_chunks):
         Errors in the measurement values
     a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     

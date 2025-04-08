@@ -11,11 +11,11 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy.constants.codata2018 import alpha
 
 try:
     import arviz as az  # optional functionality
 except ImportError:
+    az = None
     pass
 
 from . import timeseries_functions as tsf
@@ -147,7 +147,7 @@ def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n,
 
     # plot
     fig, ax = plt.subplots()
-    if (len(harmonics) > 0):
+    if len(harmonics) > 0:
         ax.errorbar([1 / p_orb, 1 / p_orb], [0, y_max], xerr=[0, p_err / p_orb**2],
                     linestyle='-', capsize=2, c='tab:grey', label=f'orbital frequency (p={p_orb:1.4f}d +-{p_err:1.4f})')
         for i in range(2, np.max(harmonic_n) + 1):
@@ -235,7 +235,7 @@ def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a
     err_5 = tsf.formal_uncertainties(time, flux - models[4], flux_err, a_n_i[4], i_chunks)
 
     # max plot value
-    if (len(f_n_i[4]) > 0):
+    if len(f_n_i[4]) > 0:
         y_max = max(np.max(ampls), np.max(a_n_i[4]))
     else:
         y_max = np.max(ampls)
@@ -243,22 +243,22 @@ def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a
     # plot
     fig, ax = plt.subplots()
     ax.plot(freqs, ampls, label='flux')
-    if (len(f_n_i[0]) > 0):
+    if len(f_n_i[0]) > 0:
         ax.plot(freqs_1, ampls_1, label='extraction residual')
-    if (len(f_n_i[1]) > 0):
+    if len(f_n_i[1]) > 0:
         ax.plot(freqs_2, ampls_2, label='NL-LS optimisation residual')
-    if (len(f_n_i[2]) > 0):
+    if len(f_n_i[2]) > 0:
         ax.plot(freqs_3, ampls_3, label='coupled harmonics residual')
-    if (len(f_n_i[3]) > 0):
+    if len(f_n_i[3]) > 0:
         ax.plot(freqs_4, ampls_4, label='additional frequencies residual')
-    if (len(f_n_i[4]) > 0):
+    if len(f_n_i[4]) > 0:
         ax.plot(freqs_5, ampls_5, label='NL-LS fit residual with harmonics residual')
 
     # period
-    if (p_orb_i[4] > 0):
+    if p_orb_i[4] > 0:
         ax.errorbar([1 / p_orb_i[4], 1 / p_orb_i[4]], [0, y_max], xerr=[0, p_err_i[4] / p_orb_i[4]**2],
                     linestyle='--', capsize=2, c='k', label=f'orbital frequency (p={p_orb_i[4]:1.4f}d)')
-    elif (p_orb_i[2] > 0):
+    elif p_orb_i[2] > 0:
         ax.errorbar([1 / p_orb_i[2], 1 / p_orb_i[2]], [0, y_max], xerr=[0, p_err_i[2] / p_orb_i[2]**2],
                     linestyle='--', capsize=2, c='k', label=f'orbital frequency (p={p_orb_i[2]:1.4f}d)')
 
@@ -487,7 +487,7 @@ def plot_trace_sinusoids(inf_data, const, slope, f_n, a_n, ph_n):
 
     Parameters
     ----------
-    inf_data: object
+    inf_data: InferenceData object
         Arviz inference data object
     const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve
@@ -572,7 +572,7 @@ def plot_trace_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n):
 
     Parameters
     ----------
-    inf_data: object
+    inf_data: InferenceData object
         Arviz inference data object
     p_orb: float
         Orbital period
