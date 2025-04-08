@@ -58,7 +58,7 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
         Uncertainty in the phases of a number of sine waves
     noise_level: float
         The noise level (standard deviation of the residuals)
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
@@ -180,7 +180,7 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
         Uncertainty in the phases of a number of sine waves
     noise_level: float
         The noise level (standard deviation of the residuals)
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool

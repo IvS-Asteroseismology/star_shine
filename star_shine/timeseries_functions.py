@@ -1434,7 +1434,7 @@ def linear_pars(time, flux, i_chunks):
         Timestamps of the time series
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     
@@ -1592,7 +1592,7 @@ def formal_uncertainties_linear(time, residuals, i_chunks):
         Timestamps of the time series
     residuals: numpy.ndarray[Any, dtype[float]]
         Residual is flux - model
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
 
@@ -1860,7 +1860,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
         Timestamps of the time series
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    close_f: list[int], numpy.ndarray[int]
+    close_f: list[int], numpy.ndarray[Any, dtype[int]]
         Indices of the subset of frequencies to be refined
     p_orb: float
         Orbital period of the eclipsing binary in days (can be 0)
@@ -1874,7 +1874,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
         The amplitudes of a number of sine waves
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
@@ -1968,7 +1968,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         Timestamps of the time series
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     p_orb: float, optional
@@ -2117,7 +2117,7 @@ def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None
         The amplitudes of a number of sine waves (can be empty or None)
     ph_n: numpy.ndarray[Any, dtype[float]], optional
         The phases of a number of sine waves (can be empty or None)
-    i_chunks: numpy.ndarray[int], optional
+    i_chunks: numpy.ndarray[Any, dtype[int]], optional
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool, optional
@@ -2233,7 +2233,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
         The amplitudes of a number of sine waves
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
@@ -2357,7 +2357,7 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
         The amplitudes of a number of sine waves
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
@@ -2453,7 +2453,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
         The amplitudes of a number of sine waves
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
@@ -2588,7 +2588,7 @@ def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, 
         The amplitudes of a number of sine waves
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
@@ -2648,7 +2648,7 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
         The amplitudes of a number of sine waves
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
-    i_chunks: numpy.ndarray[int]
+    i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
@@ -2662,7 +2662,7 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
         Non-harmonic frequencies that passed the flux-to-noise check
     passed_both: numpy.ndarray[bool]
         Non-harmonic frequencies that passed both checks
-    passed_h: numpy.ndarray[bool]
+    passed_harmonic: numpy.ndarray[bool]
         Harmonic frequencies that passed
     
     Notes
@@ -2674,33 +2674,41 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     t_tot = np.ptp(time)
     n_points = len(time)
     freq_res = 1.5 / t_tot  # Rayleigh criterion
+    
     # obtain the errors on the sine waves (depends on residual and thus model)
     model_lin = linear_curve(time, const, slope, i_chunks)
     model_sin = sum_sines(time, f_n, a_n, ph_n)
     residuals = flux - (model_lin + model_sin)
     errors = formal_uncertainties(time, residuals, flux_err, a_n, i_chunks)
     c_err, sl_err, f_n_err, a_n_err, ph_n_err = errors
+    
     # find the insignificant frequencies
     remove_sigma = af.remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3, sigma_f=3)
+    
     # apply the flux-to-noise threshold
     noise_at_f = scargle_noise_at_freq(f_n, time, residuals, window_width=1.0)
     remove_snr = af.remove_insignificant_snr(a_n, noise_at_f, n_points)
+    
     # frequencies that pass sigma criteria
     passed_sigma = np.ones(len(f_n), dtype=bool)
     passed_sigma[remove_sigma] = False
+    
     # frequencies that pass S/N criteria
     passed_snr = np.ones(len(f_n), dtype=bool)
     passed_snr[remove_snr] = False
+    
     # passing both
     passed_both = (passed_sigma & passed_snr)
+    
     # candidate harmonic frequencies
-    passed_h = np.zeros(len(f_n), dtype=bool)
+    passed_harmonic = np.zeros(len(f_n), dtype=bool)
     if p_orb != 0:
         harmonics, harmonic_n = af.select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol=freq_res / 2, sigma_f=3)
-        passed_h[harmonics] = True
+        passed_harmonic[harmonics] = True
     else:
         harmonics = np.array([], dtype=int)
     if verbose:
         print(f'Number of frequencies passed criteria: {np.sum(passed_both)} of {len(f_n)}. '
-              f'Candidate harmonics: {np.sum(passed_h)}, of which {np.sum(passed_both[harmonics])} passed.')
-    return passed_sigma, passed_snr, passed_both, passed_h
+              f'Candidate harmonics: {np.sum(passed_harmonic)}, of which {np.sum(passed_both[harmonics])} passed.')
+        
+    return passed_sigma, passed_snr, passed_both, passed_harmonic
