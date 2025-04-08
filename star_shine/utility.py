@@ -141,8 +141,12 @@ def signal_to_noise_threshold(n_points):
     Based on Baran & Koen 2021, eq 6.
     (https://ui.adsabs.harvard.edu/abs/2021AcA....71..113B/abstract)
     """
+    # equation 6 from Baran & Koen 2021
     sn_thr = 1.201 * np.sqrt(1.05 * np.log(n_points) + 7.184)
-    sn_thr = np.round(sn_thr, 2)  # round to two decimals
+
+    # round to two decimals
+    sn_thr = np.round(sn_thr, 2)
+
     return sn_thr
 
 
