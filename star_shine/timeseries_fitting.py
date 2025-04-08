@@ -86,9 +86,8 @@ def objective_sinusoids(params, time, flux, i_chunks):
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
 
     Returns
     -------
@@ -132,9 +131,8 @@ def jacobian_sinusoids(params, time, flux, i_chunks):
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
 
     Returns
     -------
@@ -206,9 +204,8 @@ def fit_multi_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, verbo
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 
@@ -284,9 +281,8 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 
@@ -364,9 +360,8 @@ def objective_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
         Integer indicating which harmonic each index in 'harmonics'
         points to. n=1 for the base frequency (=orbital frequency)
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
 
     Returns
     -------
@@ -425,9 +420,8 @@ def jacobian_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
         Integer indicating which harmonic each index in 'harmonics'
         points to. n=1 for the base frequency (=orbital frequency)
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
 
     Returns
     -------
@@ -517,9 +511,8 @@ def fit_multi_sinusoid_harmonics(time, flux, p_orb, const, slope, f_n, a_n, ph_n
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 
@@ -610,9 +603,8 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 

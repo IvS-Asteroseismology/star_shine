@@ -26,8 +26,68 @@ script_dir = os.path.dirname(os.path.abspath(__file__))  # absolute dir the scri
 plt.style.use(os.path.join(script_dir, 'data', 'mpl_stylesheet.dat'))
 
 
+def plot_pd(time, flux, i_chunks, plot_per_chunk=False, file_name=None, show=True):
+    """Plot the periodogram of the data.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    plot_per_chunk: bool
+        If True, plot the periodogram of all time chunks in one plot.
+    file_name: str, optional
+        File path to save the plot
+    show: bool, optional
+        If True, display the plot
+
+    Returns
+    -------
+    None
+    """
+    # make the periodograms
+    freqs, ampls = tsf.astropy_scargle(time, flux)
+    freqs_list, ampls_list = [], []
+    if plot_per_chunk:
+        for ch in i_chunks:
+            f, a = tsf.astropy_scargle(time[ch[0]:ch[1]], flux[ch[0]:ch[1]])
+            freqs_list.append(f)
+            ampls_list.append(a)
+
+    # plot ranges
+    freq_range = np.ptp(freqs)
+
+    # plot
+    fig, ax = plt.subplots()
+
+    if plot_per_chunk:
+        for i in range(len(i_chunks)):
+            ax.plot(freqs_list[i], ampls_list[i])
+    else:
+        ax.plot(freqs, ampls, c='tab:blue', label='flux')
+
+    ax.set_xlim(freqs[0] - freq_range * 0.05, freqs[-1] + freq_range * 0.05)
+    plt.xlabel('frequency (1/d)')
+    plt.ylabel('amplitude')
+    plt.legend()
+    plt.tight_layout()
+
+    # save/show/close
+    if file_name is not None:
+        plt.savefig(file_name, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+    return None
+
 def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_chunks,
-                          annotate=True, save_file=None, show=True):
+                          annotate=True, file_name=None, show=True):
     """Plot the periodogram with one output of the analysis recipe.
 
     Parameters
@@ -53,14 +113,11 @@ def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n,
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. These can indicate the TESS
-        observation sectors, but taking half the sectors is recommended.
-        If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     annotate: bool, optional
         If True, annotate the plot with the frequencies.
-    save_file: str, optional
+    file_name: str, optional
         File path to save the plot
     show: bool, optional
         If True, display the plot
@@ -71,18 +128,23 @@ def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n,
     """
     # separate harmonics
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+
     # make model
     model_linear = tsf.linear_curve(time, const, slope, i_chunks)
     model_sinusoid = tsf.sum_sines(time, f_n, a_n, ph_n)
     model = model_linear + model_sinusoid
+
     # make periodograms
     freqs, ampls = tsf.astropy_scargle(time, flux)
     freq_range = np.ptp(freqs)
     freqs_r, ampls_r = tsf.astropy_scargle(time, flux - model)
+
     # get error values
     errors = tsf.formal_uncertainties(time, flux - model, flux_err, a_n, i_chunks)
+
     # max plot value
     y_max = max(np.max(ampls), np.max(a_n))
+
     # plot
     fig, ax = plt.subplots()
     if (len(harmonics) > 0):
@@ -108,16 +170,19 @@ def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n,
     plt.ylabel('amplitude')
     plt.legend()
     plt.tight_layout()
-    if save_file is not None:
-        plt.savefig(save_file, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
+
+    # save/show/close
+    if file_name is not None:
+        plt.savefig(file_name, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
     if show:
         plt.show()
     else:
         plt.close()
-    return
+
+    return None
 
 
-def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a_n_i, i_chunks, save_file=None,
+def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a_n_i, i_chunks, file_name=None,
                         show=True):
     """Plot the periodogram with the full output of the analysis recipe.
 
@@ -142,12 +207,9 @@ def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a
         List of amplitudes corresponding to the extracted frequencies
         for different stages of the analysis
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. These can indicate the TESS
-        observation sectors, but taking half the sectors is recommended.
-        If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(time)]]).
-    save_file: str, optional
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    file_name: str, optional
         File path to save the plot
     show: bool, optional
         If True, display the plot
@@ -164,17 +226,20 @@ def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a
     freqs_3, ampls_3 = tsf.astropy_scargle(time, flux - models[2] - np.all(models[2] == 0) * np.mean(flux))
     freqs_4, ampls_4 = tsf.astropy_scargle(time, flux - models[3] - np.all(models[3] == 0) * np.mean(flux))
     freqs_5, ampls_5 = tsf.astropy_scargle(time, flux - models[4] - np.all(models[4] == 0) * np.mean(flux))
+
     # get error values
     err_1 = tsf.formal_uncertainties(time, flux - models[0], flux_err, a_n_i[0], i_chunks)
     err_2 = tsf.formal_uncertainties(time, flux - models[1], flux_err, a_n_i[1], i_chunks)
     err_3 = tsf.formal_uncertainties(time, flux - models[2], flux_err, a_n_i[2], i_chunks)
     err_4 = tsf.formal_uncertainties(time, flux - models[3], flux_err, a_n_i[3], i_chunks)
     err_5 = tsf.formal_uncertainties(time, flux - models[4], flux_err, a_n_i[4], i_chunks)
+
     # max plot value
     if (len(f_n_i[4]) > 0):
         y_max = max(np.max(ampls), np.max(a_n_i[4]))
     else:
         y_max = np.max(ampls)
+
     # plot
     fig, ax = plt.subplots()
     ax.plot(freqs, ampls, label='flux')
@@ -188,6 +253,7 @@ def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a
         ax.plot(freqs_4, ampls_4, label='additional frequencies residual')
     if (len(f_n_i[4]) > 0):
         ax.plot(freqs_5, ampls_5, label='NL-LS fit residual with harmonics residual')
+
     # period
     if (p_orb_i[4] > 0):
         ax.errorbar([1 / p_orb_i[4], 1 / p_orb_i[4]], [0, y_max], xerr=[0, p_err_i[4] / p_orb_i[4]**2],
@@ -195,6 +261,7 @@ def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a
     elif (p_orb_i[2] > 0):
         ax.errorbar([1 / p_orb_i[2], 1 / p_orb_i[2]], [0, y_max], xerr=[0, p_err_i[2] / p_orb_i[2]**2],
                     linestyle='--', capsize=2, c='k', label=f'orbital frequency (p={p_orb_i[2]:1.4f}d)')
+
     # frequencies
     for i in range(len(f_n_i[0])):
         ax.errorbar([f_n_i[0][i], f_n_i[0][i]], [0, a_n_i[0][i]], xerr=[0, err_1[2][i]], yerr=[0, err_1[3][i]],
@@ -217,13 +284,16 @@ def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a
     plt.ylabel('amplitude')
     plt.legend()
     plt.tight_layout()
-    if save_file is not None:
-        plt.savefig(save_file, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
+
+    # save/show/close
+    if file_name is not None:
+        plt.savefig(file_name, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
     if show:
         plt.show()
     else:
         plt.close()
-    return
+
+    return None
 
 
 def plot_lc(time, flux, flux_err, i_chunks, file_name=None, show=True):
@@ -262,16 +332,19 @@ def plot_lc(time, flux, flux_err, i_chunks, file_name=None, show=True):
     ax.set_ylabel('flux')
     ax.legend()
     plt.tight_layout()
+
+    # save/show/close
     if file_name is not None:
         plt.savefig(file_name, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
     if show:
         plt.show()
     else:
         plt.close()
+
     return None
 
 
-def plot_lc_sinusoids(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, save_file=None, show=True):
+def plot_lc_sinusoids(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, file_name=None, show=True):
     """Shows the separated harmonics in several ways
 
     Parameters
@@ -291,12 +364,9 @@ def plot_lc_sinusoids(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, save_f
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. These can indicate the TESS
-        observation sectors, but taking half the sectors is recommended.
-        If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(time)]]).
-    save_file: str, optional
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    file_name: str, optional
         File path to save the plot
     show: bool, optional
         If True, display the plot
@@ -306,10 +376,12 @@ def plot_lc_sinusoids(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, save_f
     None
     """
     t_mean = np.mean(time)
+
     # make models
     model_linear = tsf.linear_curve(time, const, slope, i_chunks)
     model_sines = tsf.sum_sines(time, f_n, a_n, ph_n)
     resid = flux - (model_linear + model_sines)
+
     # plot the full model light curve
     fig, ax = plt.subplots(nrows=2, sharex=True)
     ax[0].plot([t_mean, t_mean], [np.min(flux), np.max(flux)], c='grey', alpha=0.3)
@@ -323,16 +395,19 @@ def plot_lc_sinusoids(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, save_f
     ax[1].set_xlabel('time (d)')
     plt.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
-    if save_file is not None:
-        plt.savefig(save_file, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
+
+    # save/show/close
+    if file_name is not None:
+        plt.savefig(file_name, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
     if show:
         plt.show()
     else:
         plt.close()
-    return
+
+    return None
 
 
-def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_chunks, save_file=None,
+def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_chunks, file_name=None,
                       show=True):
     """Shows the separated harmonics in several ways
 
@@ -357,12 +432,9 @@ def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. These can indicate the TESS
-        observation sectors, but taking half the sectors is recommended.
-        If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(time)]]).
-    save_file: str, optional
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    file_name: str, optional
         File path to save the plot
     show: bool, optional
         If True, display the plot
@@ -372,6 +444,7 @@ def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_
     None
     """
     t_mean = np.mean(time)
+
     # make models
     model_line = tsf.linear_curve(time, const, slope, i_chunks)
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
@@ -380,6 +453,7 @@ def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_
                              np.delete(ph_n, harmonics))
     resid_nh = flux - model_nh
     resid_h = flux - model_h
+
     # plot the harmonic model and non-harmonic model
     fig, ax = plt.subplots(nrows=2, sharex=True)
     ax[0].plot([t_mean, t_mean], [np.min(resid_nh), np.max(resid_nh)], c='grey', alpha=0.3)
@@ -396,12 +470,15 @@ def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_
     ax[1].legend()
     plt.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
-    if save_file is not None:
-        plt.savefig(save_file, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
+
+    # save/show/close
+    if file_name is not None:
+        plt.savefig(file_name, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
     if show:
         plt.show()
     else:
         plt.close()
+
     return
 
 
@@ -432,6 +509,7 @@ def plot_trace_sinusoids(inf_data, const, slope, f_n, a_n, ph_n):
     ph_n[above_pi] = ph_n[above_pi] - 2 * np.pi
     par_lines = [('const', {}, const), ('slope', {}, slope), ('f_n', {}, f_n), ('a_n', {}, a_n), ('ph_n', {}, ph_n)]
     az.plot_trace(inf_data, combined=False, compact=True, rug=True, divergences='top', lines=par_lines)
+
     return
 
 
@@ -480,10 +558,12 @@ def plot_pair_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n, save_file
     ax = az.plot_pair(inf_data, var_names=['p_orb', 'const', 'slope', 'f_n', 'a_n', 'ph_n', 'a_h', 'ph_h'],
                       coords={'const_dim_0': [0], 'slope_dim_0': [0], 'f_n_dim_0': [0], 'a_n_dim_0': [0],
                               'ph_n_dim_0': [0], 'a_h_dim_0': [0], 'ph_h_dim_0': [0]}, **kwargs)
+
     # save if wanted (only last plot - most interesting one)
     if save_file is not None:
         fig = ax.ravel()[0].figure
         fig.savefig(save_file, dpi=120, format='png')  # 16 by 9 at 120 dpi is 1080p
+
     return
 
 
@@ -520,4 +600,5 @@ def plot_trace_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n):
                  ('f_n', {}, f_n[non_harm]), ('a_n', {}, a_n[non_harm]), ('ph_n', {}, ph_n[non_harm]),
                  ('f_h', {}, f_n[harmonics]), ('a_h', {}, a_n[harmonics]), ('ph_h', {}, ph_n[harmonics])]
     az.plot_trace(inf_data, combined=False, compact=True, rug=True, divergences='top', lines=par_lines)
+
     return

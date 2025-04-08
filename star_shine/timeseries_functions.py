@@ -1399,9 +1399,8 @@ def linear_curve(time, const, slope, i_chunks, t_shift=True):
     slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     t_shift: bool
         Mean center the time axis
     
@@ -1436,9 +1435,8 @@ def linear_pars(time, flux, i_chunks):
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     
     Returns
     -------
@@ -1595,9 +1593,8 @@ def formal_uncertainties_linear(time, residuals, i_chunks):
     residuals: numpy.ndarray[Any, dtype[float]]
         Residual is flux - model
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
 
     Returns
     -------
@@ -1650,9 +1647,8 @@ def formal_uncertainties(time, residuals, flux_err, a_n, i_chunks):
     a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     
     Returns
     -------
@@ -1879,9 +1875,8 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
     
@@ -1974,9 +1969,8 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     p_orb: float, optional
         Orbital period of the eclipsing binary in days (can be 0)
     f_n: numpy.ndarray[Any, dtype[float]], optional
@@ -2124,9 +2118,8 @@ def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None
     ph_n: numpy.ndarray[Any, dtype[float]], optional
         The phases of a number of sine waves (can be empty or None)
     i_chunks: numpy.ndarray[int], optional
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool, optional
         If set to True, this function will print some information
     
@@ -2241,9 +2234,8 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 
@@ -2366,9 +2358,8 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
     
@@ -2463,9 +2454,8 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 
@@ -2599,9 +2589,8 @@ def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, 
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
     
@@ -2660,11 +2649,8 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. These can indicate the TESS
-        observation sectors, but taking half the sectors is recommended.
-        If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 

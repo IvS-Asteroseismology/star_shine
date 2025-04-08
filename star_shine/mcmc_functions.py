@@ -59,9 +59,8 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
     noise_level: float
         The noise level (standard deviation of the residuals)
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 
@@ -182,9 +181,8 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
     noise_level: float
         The noise level (standard deviation of the residuals)
     i_chunks: numpy.ndarray[int]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. If only a single curve is wanted,
-        set i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     verbose: bool
         If set to True, this function will print some information
 

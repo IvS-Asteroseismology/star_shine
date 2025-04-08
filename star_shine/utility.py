@@ -8,7 +8,6 @@ Code written by: Luc IJspeert
 """
 
 import os
-import fnmatch
 import numpy as np
 import numba as nb
 
@@ -440,10 +439,8 @@ def correct_for_crowdsap(flux, crowdsap, i_chunks):
     crowdsap: list[float], numpy.ndarray[Any, dtype[float]]
         Light contamination parameter (1-third_light) listed per sector
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans.
-        These can indicate the TESS observation sectors, but taking
-        half the sectors is recommended. If only a single curve is
-        wanted, set i_half_s = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     
     Returns
     -------
@@ -477,10 +474,8 @@ def model_crowdsap(flux, crowdsap, i_chunks):
     crowdsap: list[float], numpy.ndarray[Any, dtype[float]]
         Light contamination parameter (1-third_light) listed per sector
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans.
-        These can indicate the TESS observation sectors, but taking
-        half the sectors is recommended. If only a single curve is
-        wanted, set i_half_s = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
 
     Returns
     -------
@@ -554,11 +549,8 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
     flux_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. These can indicate the TESS
-        observation sectors, but taking half the sectors is recommended.
-        If only a single curve is wanted, set
-        i_half_s = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     target_id: int, str
         In case of using analyse_from_tic:
         The TESS Input Catalog number
@@ -660,7 +652,7 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
         else:
             file_name = None
         vis.plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a_n_i, i_chunks,
-                                save_file=file_name, show=show)
+                                file_name=file_name, show=show)
         if np.any([len(fs) != 0 for fs in f_n_i]):
             plot_nr = np.arange(1, len(f_n_i) + 1)[[len(fs) != 0 for fs in f_n_i]][-1]
             plot_data = [eval(f'const_{plot_nr}'), eval(f'slope_{plot_nr}'),
@@ -669,19 +661,19 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
                 file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_lc_sinusoids_{plot_nr}.png')
             else:
                 file_name = None
-            vis.plot_lc_sinusoids(time, flux, *plot_data, i_chunks, save_file=file_name, show=show)
+            vis.plot_lc_sinusoids(time, flux, *plot_data, i_chunks, file_name=file_name, show=show)
             if save_dir is not None:
                 file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_pd_output_{plot_nr}.png')
             else:
                 file_name = None
             plot_data = [p_orb_i[plot_nr - 1], p_err_i[plot_nr - 1]] + plot_data
             vis.plot_pd_single_output(time, flux, flux_err, *plot_data, i_chunks, annotate=False,
-                                      save_file=file_name, show=show)
+                                      file_name=file_name, show=show)
             if save_dir is not None:
                 file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_lc_harmonics_{plot_nr}.png')
             else:
                 file_name = None
-            vis.plot_lc_harmonics(time, flux, *plot_data, i_chunks, save_file=file_name, show=show)
+            vis.plot_lc_harmonics(time, flux, *plot_data, i_chunks, file_name=file_name, show=show)
     except NameError:
         pass  # some variable wasn't loaded (file did not exist)
     except ValueError:
@@ -699,11 +691,8 @@ def plot_all_from_file(file_name, i_chunks=None, load_dir=None, save_dir=None, s
         timestamps, normalised flux, error values as the
         first three columns, respectively.
     i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating the separately handled timespans
-        in the piecewise-linear curve. These can indicate the TESS
-        observation sectors, but taking half the sectors is recommended.
-        If only a single curve is wanted, set
-        i_chunks = np.array([[0, len(time)]]).
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     load_dir: str
         Path to a directory for loading analysis results.
         Will append <target_id> + _analysis automatically.
