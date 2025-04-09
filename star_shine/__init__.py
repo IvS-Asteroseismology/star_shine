@@ -10,4 +10,5 @@ from . import timeseries_fitting as tsfit
 from . import analysis_functions as af
 from . import mcmc_functions as mcf
 from . import utility as ut
+from .utility import update_config
 from . import visualisation as vis

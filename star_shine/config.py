@@ -6,37 +6,6 @@ import os
 import yaml
 
 
-default_settings = {
-    'verbose': False,
-    'stop_at_stage': 0,
-
-    'select': 'hybrid',
-    'stop_crit': 'bic',
-    'bic_thr': 2,
-    'snr_thr': 4,
-
-    'optimise': 'fitter',
-    'optimise_step': True,
-
-    'overwrite': False,
-    'data_dir': '',
-    'save_dir': '',
-    'save_ascii': False,
-
-    'cn_time': 'time',
-    'cn_flux': 'flux',
-    'cn_flux_err': 'flux_err',
-
-    'cf_time': 'TIME',
-    'cf_flux': 'SAP_FLUX',
-    'cf_flux_err': 'SAP_FLUX_ERR',
-    'cf_quality': 'QUALITY',
-
-    'apply_q_flags': True,
-    'halve_chunks': False,
-}
-
-
 class Config:
     """A singleton class that manages application configuration settings.
 
@@ -60,6 +29,40 @@ class Config:
     """
     _instance = None
     _config_path = os.path.join(os.path.dirname(__file__), 'data', 'config.yaml')
+
+    # default settings below
+    # General settings
+    verbose: bool = False
+    stop_at_stage: int = 0
+
+    # Extraction settings
+    select: str = 'hybrid'
+    stop_crit: str = 'bic'
+    bic_thr: float = 2.
+    snr_thr: float = 5.
+
+    # Optimisation settings
+    optimise: str = 'fitter'
+    optimise_step: bool = True
+
+    # Data and file settings
+    overwrite: bool = False
+    data_dir: str = ''
+    save_dir: str = ''
+    save_ascii: bool = False
+
+    # Tabulated data settings
+    cn_time: str = 'time'
+    cn_flux: str = 'flux'
+    cn_flux_err: str = 'flux_err'
+
+    # Fits data settings
+    cf_time: str = 'TIME'
+    cf_flux: str = 'SAP_FLUX'
+    cf_flux_err: str = 'SAP_FLUX_ERR'
+    cf_quality: str = 'QUALITY'
+    apply_q_flags: bool = True
+    halve_chunks: bool = False
 
     def __new__(cls):
         """Ensures that only one instance of the Config class is created.
@@ -94,7 +97,7 @@ class Config:
             If the configuration data is invalid.
         """
         # make sets out of the keywords
-        expected_keys = set(default_settings.keys())
+        expected_keys = set(key for key in dir(cls) if not callable(getattr(cls, key)) and not key.startswith('_'))
         config_keys = set(config_data.keys())
 
         # test whether config_keys is missing items
@@ -103,22 +106,9 @@ class Config:
             raise ValueError(f"Missing keys in configuration file: {missing_keys}")
 
         # test whether config_keys has excess items
-        excess_keys = config_keys - config_keys
+        excess_keys = config_keys - expected_keys
         if len(excess_keys) != 0:
             raise ValueError(f"Excess keys in configuration file: {excess_keys}")
-
-        return None
-
-    @classmethod
-    def _initialize_default_settings(cls):
-        """Initializes default settings if the configuration file is not found or invalid.
-
-        Returns
-        -------
-        None
-        """
-        for key, value in default_settings.items():
-            setattr(cls._instance, key, value)
 
         return None
 
@@ -147,21 +137,18 @@ class Config:
 
         except FileNotFoundError:
             print(f"Configuration file {cls._config_path} not found. Using default settings.")
-            cls._initialize_default_settings()
 
         except yaml.YAMLError as e:
             print(f"Error parsing YAML from {cls._config_path}: {e}. Using default settings.")
-            cls._initialize_default_settings()
 
         except ValueError as e:
-            print(f"Error validating configuration from {cls._config_path}: {e}. Your config file may be out of date."
+            print(f"Error validating configuration from {cls._config_path}: {e}. Your config file may be out of date. "
                   f"Using default settings.")
-            cls._initialize_default_settings()
 
         return None
 
     @classmethod
-    def update_config(cls, new_config_path):
+    def update_from_file(cls, new_config_path):
         """Updates the settings with a user defined configuration file.
 
         Parameters
@@ -175,6 +162,35 @@ class Config:
         """
         cls._config_path = new_config_path
         cls._load_config()
+
+        return None
+
+    @classmethod
+    def update_from_dict(cls, settings):
+        """Updates the settings with user defined keyword arguments.
+
+        Parameters
+        ----------
+        settings: dict
+            Configuration settings.
+
+        Returns
+        -------
+        None
+        """
+        # remember invalid items
+        invalid = dict()
+
+        # set the valid attributes
+        for key, value in settings.items():
+            if hasattr(cls._instance, key):
+                setattr(cls._instance, key, value)
+            else:
+                invalid[key] = value
+
+        # Print a message about items that were invalid
+        if len(invalid) > 0:
+            print(f"Invalid items that were not updated: {invalid}")
 
         return None
 

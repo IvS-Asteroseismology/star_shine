@@ -8,6 +8,7 @@ Code written by: Luc IJspeert
 """
 
 import os
+import logging
 import numpy as np
 import numba as nb
 
@@ -31,6 +32,80 @@ from .config import get_config
 
 # load configuration
 config = get_config()
+
+
+def get_custom_logger(save_dir, target_id, verbose):
+    """Create a custom logger for logging to file and to stdout
+
+    Parameters
+    ----------
+    save_dir: str
+        folder to save the log file
+    target_id: str
+        Identifier to use for the log file
+    verbose: bool
+        If set to True, information will be printed by the logger
+
+    Returns
+    -------
+     : None
+    """
+    # customize the logger
+    logger = logging.getLogger(__name__)  # make an instance of the logging library
+    logger.setLevel(logging.INFO)  # set base activation level for logger
+
+    # make formatters for the handlers
+    s_format = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    f_format = logging.Formatter(fmt='%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
+                                 datefmt='%Y-%m-%d %H:%M:%S')
+
+    # remove existing handlers to avoid duplicate messages
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # make stream handler
+    if verbose:
+        s_handler = logging.StreamHandler()  # for printing
+        s_handler.setLevel(logging.INFO)  # print everything with level 20 or above
+        s_handler.setFormatter(s_format)
+        logger.addHandler(s_handler)
+
+    # file handler
+    logname = os.path.join(save_dir, f'{target_id}_analysis', f'{target_id}.log')
+    f_handler = logging.FileHandler(logname, mode='a')  # for saving
+    f_handler.setLevel(logging.INFO)  # save everything with level 20 or above
+    f_handler.setFormatter(f_format)
+    logger.addHandler(f_handler)
+
+    return None
+
+
+def update_config(file_name='', settings=None):
+    """Update the configuration using a file and/or a dictionary.
+
+    First loads the file, then updates settings, so both could be used simultaneously.
+    This alters the state of the current configuration, not the configuration file.
+
+    Parameters
+    ----------
+    file_name: str, optional
+        Path to the yaml configuration file.
+    settings: dict, optional
+        Dictionary to update specific configuration settings.
+
+    Returns
+    -------
+    None
+    """
+    # load from file
+    if file_name != '':
+        config.update_from_file(file_name)
+
+    # update individual settings
+    if settings is not None:
+        config.update_from_dict(settings)
+
+    return None
 
 
 @nb.njit(cache=True)

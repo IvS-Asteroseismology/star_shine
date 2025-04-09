@@ -8,7 +8,6 @@ Code written by: Luc IJspeert
 import os
 import time as systime
 import datetime
-import logging
 import h5py
 import numpy as np
 
@@ -840,12 +839,12 @@ class Pipeline:
         self.save_subdir = f'{self.data.target_id}_analysis'
 
         # for saving, make a folder if not there yet
-        if not os.path.isdir(os.path.join(save_dir, self.save_subdir)):
-            os.mkdir(os.path.join(save_dir, self.save_subdir))  # create the subdir
+        full_dir = os.path.join(save_dir, self.save_subdir)
+        if not os.path.isdir(full_dir):
+            os.mkdir(full_dir)  # create the subdir
 
         # initialise custom logger
-        self.logger = logging.getLogger(__name__)
-        customize_logger(self.logger, os.path.join(save_dir, self.save_subdir), self.data.target_id, config.verbose)
+        self.logger = ut.get_custom_logger(full_dir, self.data.target_id, config.verbose)
 
         # check the input data
         if not isinstance(data, Data):
@@ -1273,50 +1272,3 @@ class Pipeline:
         self.logger.info(f'End of analysis. Total time elapsed: {t_b - t_a:1.1f}s.')  # info to save to log
 
         return self.result
-
-
-def customize_logger(logger, save_dir, target_id, verbose):
-    """Create a custom logger for logging to file and to stdout
-    
-    Parameters
-    ----------
-    logger: Logger object
-        Instance of the logging library
-    save_dir: str
-        folder to save the log file
-    target_id: str
-        Identifier to use for the log file
-    verbose: bool
-        If set to True, information will be printed by the logger
-    
-    Returns
-    -------
-     : None
-    """
-    # customize the logger
-    logger.setLevel(logging.INFO)  # set base activation level for logger
-
-    # make formatters for the handlers
-    s_format = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    f_format = logging.Formatter(fmt='%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
-                                 datefmt='%Y-%m-%d %H:%M:%S')
-
-    # remove existing handlers to avoid duplicate messages
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    # make stream handler
-    if verbose:
-        s_handler = logging.StreamHandler()  # for printing
-        s_handler.setLevel(logging.INFO)  # print everything with level 20 or above
-        s_handler.setFormatter(s_format)
-        logger.addHandler(s_handler)
-
-    # file handler
-    logname = os.path.join(save_dir, f'{target_id}_analysis', f'{target_id}.log')
-    f_handler = logging.FileHandler(logname, mode='a')  # for saving
-    f_handler.setLevel(logging.INFO)  # save everything with level 20 or above
-    f_handler.setFormatter(f_format)
-    logger.addHandler(f_handler)
-
-    return None
