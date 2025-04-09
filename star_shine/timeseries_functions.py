@@ -39,6 +39,7 @@ def fold_time_series_phase(time, p_orb, zero=None):
     if zero is None:
         zero = -mean_t
     phases = ((time - mean_t - zero) / p_orb + 0.5) % 1 - 0.5
+
     return phases
 
 
@@ -74,10 +75,12 @@ def fold_time_series(time, p_orb, t_zero, t_ext_1=0, t_ext_2=0):
     # reference time is the mean of the time array
     mean_t = np.mean(time)
     t_folded = (time - mean_t - t_zero) % p_orb
+
     # extend to both sides
     ext_left = (t_folded > p_orb + t_ext_1)
     ext_right = (t_folded < t_ext_2)
     t_extended = np.concatenate((t_folded[ext_left] - p_orb, t_folded, t_folded[ext_right] + p_orb))
+
     return t_extended, ext_left, ext_right
 
 
@@ -100,6 +103,7 @@ def mask_timestamps(time, stamps):
     mask = np.zeros(len(time), dtype=np.bool_)
     for ts in stamps:
         mask = mask | ((time >= ts[0]) & (time <= ts[-1]))
+
     return mask
 
 
@@ -138,8 +142,10 @@ def phase_dispersion(phases, flux, n_bins):
             binned_var[i] = var_no_avg(flux[bin_mask])
         else:
             binned_var[i] = 0
+
     total_var = np.sum(binned_var) / len(flux)
     overall_var = np.var(flux)
+
     return total_var / overall_var
 
 
@@ -174,6 +180,7 @@ def phase_dispersion_minimisation(time, flux, f_n, local=False):
         n_bins = 1000
     else:
         n_bins = n_points // 10  # at least 10 data points per bin on average
+
     # determine where to look based on the frequencies, including fractions of the frequencies
     if local:
         periods = 1 / f_n
@@ -181,15 +188,19 @@ def phase_dispersion_minimisation(time, flux, f_n, local=False):
         periods = np.zeros(7 * len(f_n))
         for i, f in enumerate(f_n):
             periods[7*i:7*i+7] = np.arange(1, 8) / f
+
     # stay below the maximum
     periods = periods[periods < np.ptp(time)]
+
     # and above the minimum
     periods = periods[periods > (2 * np.min(time[1:] - time[:-1]))]
+
     # compute the dispersion measures
     pd_all = np.zeros(len(periods))
     for i, p in enumerate(periods):
         fold = fold_time_series_phase(time, p, 0)
         pd_all[i] = phase_dispersion(fold, flux, n_bins)
+
     return periods, pd_all
 
 
@@ -221,16 +232,21 @@ def scargle_noise_spectrum(time, resid, window_width=1.0):
     """
     # calculate the periodogram
     freqs, ampls = astropy_scargle(time, resid)  # use defaults to get full amplitude spectrum
+
     # determine the number of points to extend the spectrum with for convolution
     n_points = int(np.ceil(window_width / np.abs(freqs[1] - freqs[0])))  # .astype(int)
     window = np.full(n_points, 1 / n_points)
+
     # extend the array with mirrors for convolution
     ext_ampls = np.concatenate((ampls[(n_points - 1)::-1], ampls, ampls[:-(n_points + 1):-1]))
     ext_noise = np.convolve(ext_ampls, window, 'same')
+
     # cut back to original interval
     noise = ext_noise[n_points:-n_points]
+
     # extra correction to account for convolve mode='full' instead of 'same' (needed for JIT-ting)
     # noise = noise[n_points//2 - 1:-n_points//2]
+
     return noise
 
 
@@ -264,13 +280,17 @@ def scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0):
     # determine the number of points to extend the spectrum with for convolution
     n_points = int(np.ceil(window_width / np.abs(freqs[1] - freqs[0])))  # .astype(int)
     window = np.full(n_points, 1 / n_points)
+
     # extend the array with mirrors for convolution
     ext_ampls = np.concatenate((ampls[(n_points - 1)::-1], ampls, ampls[:-(n_points + 1):-1]))
     ext_noise = np.convolve(ext_ampls, window, 'same')
+
     # cut back to original interval
     noise = ext_noise[n_points:-n_points]
+
     # extra correction to account for convolve mode='full' instead of 'same' (needed for JIT-ting)
     # noise = noise[n_points//2 - 1:-n_points//2]
+
     return noise
 
 
@@ -304,9 +324,11 @@ def scargle_noise_at_freq(fs, time, resid, window_width=1.0):
     """
     freqs, ampls = astropy_scargle(time, resid)  # use defaults to get full amplitude spectrum
     margin = window_width / 2
+
     # mask the frequency ranges and compute the noise
     f_masks = [(freqs > f - margin) & (freqs <= f + margin) for f in fs]
     noise = np.array([np.mean(ampls[mask]) for mask in f_masks])
+
     return noise
 
 
@@ -337,8 +359,10 @@ def spectral_window(time, freqs):
     cos_term = np.sum(np.cos(2.0 * np.pi * freqs * time.reshape(n_time, 1)), axis=0)
     sin_term = np.sum(np.sin(2.0 * np.pi * freqs * time.reshape(n_time, 1)), axis=0)
     win_kernel = cos_term**2 + sin_term**2
+
     # Normalise such that win_kernel(nu = 0.0) = 1.0
     spec_win = win_kernel / n_time**2
+
     return spec_win
 
 
@@ -392,6 +416,7 @@ def scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
     mean_s = np.mean(flux)
     time_ms = time - mean_t
     flux_ms = flux - mean_s
+
     # setup
     n = len(flux_ms)
     t_tot = np.ptp(time_ms)
@@ -401,11 +426,13 @@ def scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
     if fn == 0:
         fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
     nf = int((fn - f0) / df + 0.001) + 1
+
     # pre-assign some memory
     ss = np.zeros(nf)
     sc = np.zeros(nf)
     ss2 = np.zeros(nf)
     sc2 = np.zeros(nf)
+
     # here is the actual calculation:
     two_pi = 2 * np.pi
     for i in range(n):
@@ -437,9 +464,11 @@ def scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
     
     f1 = f0 + np.arange(nf) * df
     s1 = ((sc**2 * (n - sc2) + ss**2 * (n + sc2) - 2 * ss * sc * ss2) / (n**2 - sc2**2 - ss2**2))
+
     # conversion to amplitude spectrum (or power density or statistical distribution)
     if not np.isfinite(s1[0]):
         s1[0] = 0  # sometimes there can be a nan value
+
     # convert to the wanted normalisation
     if norm == 'distribution':  # statistical distribution
         s1 /= np.var(flux_ms)
@@ -449,6 +478,7 @@ def scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
         s1 = (4 / n) * s1 * t_tot
     else:  # unnormalised (PSD?)
         s1 = s1
+
     return f1, s1
 
 
@@ -490,6 +520,7 @@ def scargle_simple_psd(time, flux):
     mean_s = np.mean(flux)
     time_ms = time - mean_t
     flux_ms = flux - mean_s
+
     # setup
     n = len(flux_ms)
     t_tot = np.ptp(time_ms)
@@ -497,11 +528,13 @@ def scargle_simple_psd(time, flux):
     df = 0.1 / t_tot
     fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
     nf = int((fn - f0) / df + 0.001) + 1
+
     # pre-assign some memory
     ss = np.zeros(nf)
     sc = np.zeros(nf)
     ss2 = np.zeros(nf)
     sc2 = np.zeros(nf)
+
     # here is the actual calculation:
     two_pi = 2 * np.pi
     for i in range(n):
@@ -533,9 +566,11 @@ def scargle_simple_psd(time, flux):
 
     f1 = f0 + np.arange(nf) * df
     s1 = ((sc**2 * (n - sc2) + ss**2 * (n + sc2) - 2 * ss * sc * ss2) / (n**2 - sc2**2 - ss2**2))
+
     # conversion to amplitude spectrum (or power density or statistical distribution)
     if not np.isfinite(s1[0]):
         s1[0] = 0  # sometimes there can be a nan value
+
     return f1, s1
 
 
@@ -572,9 +607,11 @@ def scargle_ampl_single(time, flux, f):
     mean_s = np.mean(flux)
     time_ms = time - mean_t
     flux_ms = flux - mean_s
+
     # multiples of pi
     two_pi = 2 * np.pi
     four_pi = 4 * np.pi
+
     # define tau
     cos_tau = 0
     sin_tau = 0
@@ -582,6 +619,7 @@ def scargle_ampl_single(time, flux, f):
         cos_tau += np.cos(four_pi * f * time_ms[j])
         sin_tau += np.sin(four_pi * f * time_ms[j])
     tau = 1 / (four_pi * f) * np.arctan2(sin_tau, cos_tau)  # tau(f)
+
     # define the general cos and sin functions
     s_cos = 0
     cos_2 = 0
@@ -594,12 +632,15 @@ def scargle_ampl_single(time, flux, f):
         cos_2 += cos**2
         s_sin += flux_ms[j] * sin
         sin_2 += sin**2
+
     # final calculations
     a_cos_2 = s_cos**2 / cos_2
     b_sin_2 = s_sin**2 / sin_2
+
     # amplitude
     ampl = (a_cos_2 + b_sin_2) / 2
     ampl = np.sqrt(4 / len(time_ms)) * np.sqrt(ampl)  # conversion to amplitude
+
     return ampl
 
 
@@ -636,6 +677,7 @@ def scargle_ampl(time, flux, fs):
     mean_s = np.mean(flux)
     time_ms = time - mean_t
     flux_ms = flux - mean_s
+
     # multiples of pi
     two_pi = 2 * np.pi
     four_pi = 4 * np.pi
@@ -649,6 +691,7 @@ def scargle_ampl(time, flux, fs):
             cos_tau += np.cos(four_pi * fs[i] * time_ms[j])
             sin_tau += np.sin(four_pi * fs[i] * time_ms[j])
         tau = 1 / (four_pi * fs[i]) * np.arctan2(sin_tau, cos_tau)  # tau(f)
+
         # define the general cos and sin functions
         s_cos = 0
         cos_2 = 0
@@ -661,12 +704,15 @@ def scargle_ampl(time, flux, fs):
             cos_2 += cos**2
             s_sin += flux_ms[j] * sin
             sin_2 += sin**2
+
         # final calculations
         a_cos_2 = s_cos**2 / cos_2
         b_sin_2 = s_sin**2 / sin_2
+
         # amplitude
         ampl[i] = (a_cos_2 + b_sin_2) / 2
         ampl[i] = np.sqrt(4 / len(time_ms)) * np.sqrt(ampl[i])  # conversion to amplitude
+
     return ampl
 
 
@@ -703,9 +749,11 @@ def scargle_phase_single(time, flux, f):
     mean_s = np.mean(flux)
     time_ms = time - mean_t
     flux_ms = flux - mean_s
+
     # multiples of pi
     two_pi = 2 * np.pi
     four_pi = 4 * np.pi
+
     # define tau
     cos_tau = 0
     sin_tau = 0
@@ -713,6 +761,7 @@ def scargle_phase_single(time, flux, f):
         cos_tau += np.cos(four_pi * f * time_ms[j])
         sin_tau += np.sin(four_pi * f * time_ms[j])
     tau = 1 / (four_pi * f) * np.arctan2(sin_tau, cos_tau)  # tau(f)
+
     # define the general cos and sin functions
     s_cos = 0
     cos_2 = 0
@@ -725,11 +774,14 @@ def scargle_phase_single(time, flux, f):
         cos_2 += cos**2
         s_sin += flux_ms[j] * sin
         sin_2 += sin**2
+
     # final calculations
     a_cos = s_cos / cos_2**(1/2)
     b_sin = s_sin / sin_2**(1/2)
+
     # sine phase (radians)
     phi = np.pi/2 - np.arctan2(b_sin, a_cos) - two_pi * f * tau
+
     return phi
 
 
@@ -769,6 +821,7 @@ def scargle_phase(time, flux, fs):
     mean_s = np.mean(flux)
     time_ms = time - mean_t
     flux_ms = flux - mean_s
+
     # multiples of pi
     two_pi = 2 * np.pi
     four_pi = 4 * np.pi
@@ -782,6 +835,7 @@ def scargle_phase(time, flux, fs):
             cos_tau += np.cos(four_pi * fs[i] * time_ms[j])
             sin_tau += np.sin(four_pi * fs[i] * time_ms[j])
         tau = 1 / (four_pi * fs[i]) * np.arctan2(sin_tau, cos_tau)  # tau(f)
+
         # define the general cos and sin functions
         s_cos = 0
         cos_2 = 0
@@ -794,11 +848,14 @@ def scargle_phase(time, flux, fs):
             cos_2 += cos**2
             s_sin += flux_ms[j] * sin
             sin_2 += sin**2
+
         # final calculations
         a_cos = s_cos / cos_2**(1/2)
         b_sin = s_sin / sin_2**(1/2)
+
         # sine phase (radians)
         phi[i] = np.pi / 2 - np.arctan2(b_sin, a_cos) - two_pi * fs[i] * tau
+
     return phi
 
 
@@ -854,6 +911,7 @@ def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
     mean_s = np.mean(flux)
     time_ms = time - mean_t
     flux_ms = flux - mean_s
+
     # setup
     n = len(flux)
     t_tot = np.ptp(time_ms)
@@ -864,11 +922,14 @@ def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
         fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
     nf = int((fn - f0) / df + 0.001) + 1
     f1 = f0 + np.arange(nf) * df
+
     # use the astropy fast algorithm and normalise afterward
     ls = apy.LombScargle(time_ms, flux_ms, fit_mean=False, center_data=False)
     s1 = ls.power(f1, normalization='psd', method='fast', assume_regular_frequency=True)
+
     # replace negative by zero (just in case - have seen it happen)
     s1[s1 < 0] = 0
+
     # convert to the wanted normalisation
     if norm == 'distribution':  # statistical distribution
         s1 /= np.var(flux_ms)
@@ -878,6 +939,7 @@ def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
         s1 = (4 / n) * s1 * t_tot
     else:  # unnormalised (PSD?)
         s1 = s1
+
     return f1, s1
 
 
@@ -921,6 +983,7 @@ def astropy_scargle_simple_psd(time, flux):
     mean_s = np.mean(flux)
     time_ms = time - mean_t
     flux_ms = flux - mean_s
+
     # setup
     t_tot = np.ptp(time_ms)
     f0 = 0
@@ -928,11 +991,14 @@ def astropy_scargle_simple_psd(time, flux):
     fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
     nf = int((fn - f0) / df + 0.001) + 1
     f1 = np.arange(nf) * df
+
     # use the astropy fast algorithm and normalise afterward
     ls = apy.LombScargle(time_ms, flux_ms, fit_mean=False, center_data=False)
     s1 = ls.power(f1, normalization='psd', method='fast', assume_regular_frequency=True)
+
     # replace negative or nan by zero
     s1[0] = 0
+
     return f1, s1
 
 
@@ -964,6 +1030,7 @@ def refine_orbital_period(p_orb, time, f_n):
     """
     freq_res = 1.5 / np.ptp(time)  # Rayleigh criterion
     f_nyquist = 1 / (2 * np.min(np.diff(time)))  # nyquist frequency
+
     # refine by using a dense sampling and the harmonic distances
     f_refine = np.arange(0.99 / p_orb, 1.01 / p_orb, 0.00001 / p_orb)
     n_harm_r, completeness_r, distance_r = af.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
@@ -971,6 +1038,7 @@ def refine_orbital_period(p_orb, time, f_n):
     mask_peak = (h_measure > np.max(h_measure) / 1.5)  # constrain the domain of the search
     i_min_dist = np.argmin(distance_r[mask_peak])
     p_orb = 1 / f_refine[mask_peak][i_min_dist]
+
     return p_orb
 
 
@@ -1007,15 +1075,19 @@ def find_orbital_period(time, flux, f_n):
     """
     freq_res = 1.5 / np.ptp(time)  # Rayleigh criterion
     f_nyquist = 1 / (2 * np.min(np.diff(time)))  # nyquist frequency
+
     # first to get a global minimum do combined PDM and LS, at select frequencies
     periods, phase_disp = phase_dispersion_minimisation(time, flux, f_n, local=False)
     ampls = scargle_ampl(time, flux, 1 / periods)
     psi_measure = ampls / phase_disp
+
     # also check the number of harmonics at each period and include into best f
     n_harm, completeness, distance = af.harmonic_series_length(1 / periods, f_n, freq_res, f_nyquist)
     psi_h_measure = psi_measure * n_harm * completeness
+
     # select the best period, refine it and check double P
     p_orb = periods[np.argmax(psi_h_measure)]
+
     # refine by using a dense sampling and the harmonic distances
     f_refine = np.arange(0.99 / p_orb, 1.01 / p_orb, 0.00001 / p_orb)
     n_harm_r, completeness_r, distance_r = af.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
@@ -1023,6 +1095,7 @@ def find_orbital_period(time, flux, f_n):
     mask_peak = (h_measure > np.max(h_measure) / 1.5)  # constrain the domain of the search
     i_min_dist = np.argmin(distance_r[mask_peak])
     p_orb = 1 / f_refine[mask_peak][i_min_dist]
+
     # reduce the search space by taking limits in the distance metric
     f_left = f_refine[mask_peak][:i_min_dist]
     f_right = f_refine[mask_peak][i_min_dist:]
@@ -1038,15 +1111,18 @@ def find_orbital_period(time, flux, f_n):
     else:
         f_r_bound = f_refine[mask_peak][-1]
     bound_interval = f_r_bound - f_l_bound
+
     # decide on the multiple of the period
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=freq_res / 2)
     completeness_p = (len(harmonics) / (f_nyquist // (1 / p_orb)))
     completeness_p_l = (len(harmonics[harmonic_n <= 15]) / (f_nyquist // (1 / p_orb)))
+
     # check these (commonly missed) multiples
     n_multiply = np.array([1/2, 2, 3, 4, 5])
     p_multiples = p_orb * n_multiply
     n_harm_r_m, completeness_r_m, distance_r_m = af.harmonic_series_length(1/p_multiples, f_n, freq_res, f_nyquist)
     h_measure_m = n_harm_r_m * completeness_r_m  # compute h_measure for constraining a domain
+
     # if there are very high numbers, add double that fraction for testing
     test_frac = h_measure_m / h_measure[mask_peak][i_min_dist]
     if np.any(test_frac[2:] > 3):
@@ -1054,19 +1130,23 @@ def find_orbital_period(time, flux, f_n):
         p_multiples = p_orb * n_multiply
         n_harm_r_m, completeness_r_m, distance_r_m = af.harmonic_series_length(1/p_multiples, f_n, freq_res, f_nyquist)
         h_measure_m = n_harm_r_m * completeness_r_m  # compute h_measure for constraining a domain
+
     # compute diagnostic fractions that need to meet some threshold
     test_frac = h_measure_m / h_measure[mask_peak][i_min_dist]
     compl_frac = completeness_r_m / completeness_p
+
     # doubling the period may be done if the harmonic filling factor below f_16 is very high
     f_cut = np.max(f_n[harmonics][harmonic_n <= 15])
     f_n_c = f_n[f_n <= f_cut]
     n_harm_r_2, completeness_r_2, distance_r_2 = af.harmonic_series_length(1/p_multiples, f_n_c, freq_res, f_nyquist)
     compl_frac_2 = completeness_r_2[1] / completeness_p_l
+
     # empirically determined thresholds for the various measures
     minimal_frac = 1.1
     minimal_compl_frac = 0.85
     minimal_frac_low = 0.95
     minimal_compl_frac_low = 0.95
+
     # test conditions
     test_condition = (test_frac > minimal_frac)
     compl_condition = (compl_frac > minimal_compl_frac)
@@ -1078,9 +1158,11 @@ def find_orbital_period(time, flux, f_n):
             p_orb = p_multiples[compl_condition][i_best]
         else:
             p_orb = 2 * p_orb
+
         # make new bounds for refining
         f_left_b = 1 / p_orb - (bound_interval / 2)
         f_right_b = 1 / p_orb + (bound_interval / 2)
+
         # refine by using a dense sampling and the harmonic distances
         f_refine_2 = np.arange(f_left_b, f_right_b, 0.00001 / p_orb)
         n_harm_r2, completeness_r2, distance_r2 = af.harmonic_series_length(f_refine_2, f_n, freq_res, f_nyquist)
@@ -1088,6 +1170,7 @@ def find_orbital_period(time, flux, f_n):
         mask_peak = (h_measure_2 > np.max(h_measure_2) / 1.5)  # constrain the domain of the search
         i_min_dist = np.argmin(distance_r2[mask_peak])
         p_orb = 1 / f_refine_2[mask_peak][i_min_dist]
+
     return p_orb
 
 
@@ -1117,6 +1200,7 @@ def calc_iid_normal_likelihood(residuals):
     for i, r in enumerate(residuals):
         sum_r_2 += r**2
     like = -n / 2 * (np.log(2 * np.pi * sum_r_2 / n) + 1)
+
     return like
 
 
@@ -1139,10 +1223,13 @@ def calc_approx_did_likelihood(time, residuals):
         Log-likelihood approximation
     """
     n = len(time)
+
     # Compute the Lomb-Scargle periodogram of the data
     freqs, psd = astropy_scargle_simple_psd(time, residuals)  # automatically mean subtracted
+
     # Compute the Whittle likelihood
     like = -n * np.log(2 * np.pi) - np.sum(np.log(psd))
+
     return like
 
 
@@ -1169,14 +1256,19 @@ def calc_whittle_likelihood(time, flux, model):
         Log-likelihood approximation
     """
     n = len(time)
+
     # Compute the Lomb-Scargle periodogram of the data
     freqs, psd_d = astropy_scargle_simple_psd(time, flux)  # automatically mean subtracted
+
     # Compute the Lomb-Scargle periodogram of the model
     freqs_m, psd_m = astropy_scargle_simple_psd(time, model)  # automatically mean subtracted
+
     # Avoid division by zero in likelihood calculation
     psd_m = np.maximum(psd_m, 1e-15)  # Ensure numerical stability
+
     # Compute the Whittle likelihood
     like = -n * np.log(2 * np.pi) - np.sum(np.log(psd_m) + (psd_d / psd_m))
+
     return like
 
 
@@ -1205,30 +1297,42 @@ def calc_did_normal_likelihood(time, residuals):
         Natural logarithm of the likelihood
     """
     n = len(residuals)
+
     # calculate the PSD, fast
     freqs, psd = astropy_scargle_simple_psd(time, residuals)
+
     # calculate the autocorrelation function
     psd_ext = np.append(psd, psd[-1:0:-1])  # double the PSD domain for ifft
     acf = np.fft.ifft(psd_ext)
+
     # unbias the variance measure and put the array the right way around
     acf = np.real(np.append(acf[len(freqs):], acf[:len(freqs)])) * n / (n - 1)
+
     # calculate the acf lags
     lags = np.fft.fftfreq(len(psd_ext), d=(freqs[1] - freqs[0]))
     lags = np.append(lags[len(psd):], lags[:len(psd)])  # put them the right way around
+
     # make the lags matrix, but re-use the same matrix
     matrix = time - time[:, np.newaxis]  # lags_matrix, same as np.outer
+
     # interpolate - I need the lags at specific times
     matrix = np.interp(matrix, lags, acf)  # cov_matrix, already mean-subtracted in PSD
+
     # Compute the Cholesky decomposition of cov_matrix (by definition positive definite)
     matrix = sp.linalg.cho_factor(matrix, lower=False, overwrite_a=True, check_finite=False)  # cho_decomp
+
     # Solve M @ x = v^T using the Cholesky factorization (x = M^-1 v^T)
     x = sp.linalg.cho_solve(matrix, residuals[:, np.newaxis], check_finite=False)
+
     # log of the exponent - analogous to the matrix multiplication
     ln_exp = (residuals @ x)[0]  # v @ x = v @ M^-1 @ v^T
+
     # log of the determinant (avoids too small eigenvalues that would result in 0)
     ln_det = 2 * np.sum(np.log(np.diag(matrix[0])))
+
     # likelihood for multivariate normal distribution
     like = -n * np.log(2 * np.pi) / 2 - ln_det / 2 - ln_exp / 2
+
     return like
 
 
@@ -1261,35 +1365,48 @@ def calc_ddd_normal_likelihood(time, residuals, flux_err):
         Natural logarithm of the likelihood
     """
     n = len(residuals)
+
     # calculate the PSD, fast
     freqs, psd = astropy_scargle_simple_psd(time, residuals)
+
     # calculate the autocorrelation function
     psd_ext = np.append(psd, psd[-1:0:-1])  # double the PSD domain for ifft
     acf = np.fft.ifft(psd_ext)
+
     # unbias the variance measure and put the array the right way around
     acf = np.real(np.append(acf[len(freqs):], acf[:len(freqs)])) * n / (n - 1)
+
     # calculate the acf lags
     lags = np.fft.fftfreq(len(psd_ext), d=(freqs[1] - freqs[0]))
     lags = np.append(lags[len(psd):], lags[:len(psd)])  # put them the right way around
+
     # make the lags matrix, but re-use the same matrix
     matrix = time - time[:, np.newaxis]  # lags_matrix, same as np.outer
+
     # interpolate - I need the lags at specific times
     matrix = np.interp(matrix, lags, acf)  # cov_matrix, already mean-subtracted in PSD
+
     # substitute individual data errors if given
     var = matrix[0, 0]  # diag elements are the same by construction
     corr_matrix = matrix / var  # divide out the variance to get correlation matrix
     err_matrix = flux_err * flux_err[:, np.newaxis]  # make matrix of measurement errors (same as np.outer)
     matrix = err_matrix * corr_matrix  # multiply to get back to covariance
+
     # Compute the Cholesky decomposition of cov_matrix (by definition positive definite)
     matrix = sp.linalg.cho_factor(matrix, lower=False, overwrite_a=True, check_finite=False)  # cho_decomp
+
     # Solve M @ x = v^T using the Cholesky factorization (x = M^-1 v^T)
     x = sp.linalg.cho_solve(matrix, residuals[:, np.newaxis], check_finite=False)
+
     # log of the exponent - analogous to the matrix multiplication
     ln_exp = (residuals @ x)[0]  # v @ x = v @ M^-1 @ v^T
+
     # log of the determinant (avoids too small eigenvalues that would result in 0)
     ln_det = 2 * np.sum(np.log(np.diag(matrix[0])))
+
     # likelihood for multivariate normal distribution
     like = -n * np.log(2 * np.pi) / 2 - ln_det / 2 - ln_exp / 2
+
     return like
 
 
@@ -1325,12 +1442,16 @@ def calc_likelihood(time=None, flux=None, residuals=None, flux_err=None, func=ca
     """
     # make a dict of the given arguments
     kwargs = {'time': time, 'flux': flux, 'residuals': residuals, 'flux_err': flux_err}
+
     # check what the chosen function needs
     func_args = list(inspect.signature(func).parameters)
+
     # make a dict of those
     args_dict = {k: kwargs.pop(k) for k in dict(kwargs) if k in func_args}
+
     # feed to the function
     like = func(**args_dict)
+
     return like
 
 
@@ -1370,6 +1491,7 @@ def calc_bic(residuals, n_param):
     # originally JIT-ted function, but with for loop is slightly quicker
     sum_r_2 = ut.std_unb(residuals, n)
     bic = n * np.log(2 * np.pi * sum_r_2 / n) + n + n_param * np.log(n)
+
     return bic
 
 
@@ -1396,6 +1518,7 @@ def calc_bic_2(residuals, n_param, flux_err=None):
     """
     n = len(residuals)
     bic = n_param * np.log(n) - 2 * calc_likelihood(residuals, flux_err=flux_err)
+
     return bic
 
 
@@ -1435,6 +1558,7 @@ def linear_curve(time, const, slope, i_chunks, t_shift=True):
         else:
             t_sector_mean = 0
         curve[s[0]:s[1]] = co + sl * (time[s[0]:s[1]] - t_sector_mean)
+
     return curve
 
 
@@ -1475,13 +1599,16 @@ def linear_pars(time, flux, i_chunks):
         x_ms = (time[s[0]:s[1]] - x_m)
         y_m = np.mean(flux[s[0]:s[1]])
         y_ms = (flux[s[0]:s[1]] - y_m)
+
         # sums
         s_xx = np.sum(x_ms**2)
         s_xy = np.sum(x_ms * y_ms)
+
         # parameters
         slope[i] = s_xy / s_xx
         # y_inter[i] = y_m - slope[i] * x_m  # original non-mean-centered formula
         y_inter[i] = y_m  # mean-centered value
+
     return y_inter, slope
 
 
@@ -1511,6 +1638,7 @@ def linear_pars_two_points(x1, y1, x2, y2):
     """
     slope = (y2 - y1) / (x2 - x1)
     y_inter = y1 - (x1 * slope)
+
     return y_inter, slope
 
 
@@ -1545,12 +1673,14 @@ def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
         mean_t = np.mean(time)
     else:
         mean_t = 0
+
     model_sines = np.zeros(len(time))
     for f, a, ph in zip(f_n, a_n, ph_n):
         # model_sines += a * np.sin((2 * np.pi * f * (time - mean_t)) + ph)
         # double loop runs a tad bit quicker when numba-JIT-ted
         for i, t in enumerate(time):
             model_sines[i] += a * np.sin((2 * np.pi * f * (t - mean_t)) + ph)
+
     return model_sines
 
 
@@ -1588,6 +1718,7 @@ def sum_sines_deriv(time, f_n, a_n, ph_n, deriv=1, t_shift=True):
         mean_t = np.mean(time)
     else:
         mean_t = 0
+
     model_sines = np.zeros(len(time))
     mod_2 = deriv % 2
     mod_4 = deriv % 4
@@ -1596,6 +1727,7 @@ def sum_sines_deriv(time, f_n, a_n, ph_n, deriv=1, t_shift=True):
     for f, a, ph in zip(f_n, a_n, ph_n):
         for i, t in enumerate(time):
             model_sines[i] += sign * (2 * np.pi * f)**deriv * a * np.sin((2 * np.pi * f * (t - mean_t)) + ph + ph_cos)
+
     return model_sines
 
 
@@ -1637,8 +1769,10 @@ def formal_uncertainties_linear(time, residuals, i_chunks):
         len_t = len(time[s[0]:s[1]])
         n_data = len(residuals[s[0]:s[1]])  # same as len_t, but just for the sake of clarity
         n_dof = n_data - n_param  # degrees of freedom
+
         # standard deviation of the residuals but per sector
         std = ut.std_unb(residuals[s[0]:s[1]], n_dof)
+
         # some sums for the uncertainty formulae
         sum_t = 0
         for t in time[s[0]:s[1]]:
@@ -1648,6 +1782,7 @@ def formal_uncertainties_linear(time, residuals, i_chunks):
             ss_xx += (t - sum_t / len_t)**2
         sigma_const[i] = std * np.sqrt(1 / n_data + (sum_t / len_t)**2 / ss_xx)
         sigma_slope[i] = std / np.sqrt(ss_xx)
+
     return sigma_const, sigma_slope
 
 
@@ -1696,26 +1831,34 @@ def formal_uncertainties(time, residuals, flux_err, a_n, i_chunks):
     n_data = len(residuals)
     n_param = 2 + 3 * len(a_n)  # number of parameters in the model
     n_dof = max(n_data - n_param, 1)  # degrees of freedom
+
     # calculate the standard deviation of the residuals
     std = ut.std_unb(residuals, n_dof)
+
     # calculate the standard error based on the smallest data error
     ste = np.median(flux_err) / np.sqrt(n_data)
+
     # take the maximum of the standard deviation and standard error as sigma N
     sigma_n = max(std, ste)
+
     # calculate the D factor (square root of the average number of consecutive data points of the same sign)
     positive = (residuals > 0).astype(np.int_)
     indices = np.arange(n_data)
     zero_crossings = indices[1:][np.abs(positive[1:] - positive[:-1]).astype(np.bool_)]
     sss_i = np.concatenate((np.array([0]), zero_crossings, np.array([n_data])))  # same-sign sequence indices
     d_factor = np.sqrt(np.mean(np.diff(sss_i)))
+
     # uncertainty formulae for sinusoids
     sigma_f = d_factor * sigma_n * np.sqrt(6 / n_data) / (np.pi * a_n * np.ptp(time))
     sigma_a = d_factor * sigma_n * np.sqrt(2 / n_data)
     sigma_ph = d_factor * sigma_n * np.sqrt(2 / n_data) / a_n  # times 2 pi w.r.t. the paper
+
     # make an array of sigma_a (these are the same)
     sigma_a = np.full(len(a_n), sigma_a)
+
     # linear regression uncertainties
     sigma_const, sigma_slope = formal_uncertainties_linear(time, residuals, i_chunks)
+
     return sigma_const, sigma_slope, sigma_f, sigma_a, sigma_ph
 
 
@@ -1767,36 +1910,44 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
     a significant speed increase. It cannot be used on smaller intervals.
     """
     df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
+
     # full LS periodogram
     if (f0 == 0) & (fn == 0):
         # inconsistency with astropy_scargle for small freq intervals, so only do the full pd
         freqs, ampls = astropy_scargle(time, flux, f0=f0, fn=fn, df=df)
     else:
         freqs, ampls = scargle(time, flux, f0=f0, fn=fn, df=df)
+
     # selection step based on flux to noise (refine step keeps using ampl)
     if select == 'sn':
         noise_spectrum = scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0)
         ampls = ampls / noise_spectrum
+
     # select highest value
     p1 = np.argmax(ampls)
+
     # check if we pick the boundary frequency
     if p1 in [0, len(freqs) - 1]:
         if verbose:
             print(f'Edge of frequency range {freqs[p1]} at position {p1} during extraction phase 1.')
+
     # now refine once by increasing the frequency resolution x100
     f_left = max(freqs[p1] - df, df / 10)  # may not get too low
     f_right = freqs[p1] + df
     f_refine, a_refine = scargle(time, flux, f0=f_left, fn=f_right, df=df/100)
     p2 = np.argmax(a_refine)
+
     # check if we pick the boundary frequency
     if p2 in [0, len(f_refine) - 1]:
         if verbose:
             print(f'Edge of frequency range {f_refine[p2]} at position {p2} during extraction phase 2.')
     f_final = f_refine[p2]
     a_final = a_refine[p2]
+
     # finally, compute the phase (and make sure it stays within + and - pi)
     ph_final = scargle_phase_single(time, flux, f_final)
     ph_final = (ph_final + np.pi) % (2 * np.pi) - np.pi
+
     return f_final, a_final, ph_final
 
 
@@ -1850,19 +2001,23 @@ def extract_single_narrow(time, flux, f0=0, fn=0, verbose=True):
     slower on the full frequency range, even though JIT-ted.
     """
     df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
+
     # full LS periodogram (over a narrow range)
     freqs, ampls = scargle(time, flux, f0=f0, fn=fn, df=df)
     p1 = np.argmax(ampls)
+
     # check if we pick the boundary frequency
     if p1 in [0, len(freqs) - 1]:
         if verbose:
             print(f'Edge of frequency range {ut.float_to_str(freqs[p1], dec=2)} at position {p1} '
                   f'during extraction phase 1.')
+
     # now refine once by increasing the frequency resolution x100
     f_left = max(freqs[p1] - df, df / 10)  # may not get too low
     f_right = freqs[p1] + df
     f_refine, a_refine = scargle(time, flux, f0=f_left, fn=f_right, df=df/100)
     p2 = np.argmax(a_refine)
+
     # check if we pick the boundary frequency
     if p2 in [0, len(f_refine) - 1]:
         if verbose:
@@ -1870,9 +2025,11 @@ def extract_single_narrow(time, flux, f0=0, fn=0, verbose=True):
                   f'during extraction phase 2.')
     f_final = f_refine[p2]
     a_final = a_refine[p2]
+
     # finally, compute the phase (and make sure it stays within + and - pi)
     ph_final = scargle_phase_single(time, flux, f_final)
     ph_final = (ph_final + np.pi) % (2 * np.pi) - np.pi
+
     return f_final, a_final, ph_final
 
 
@@ -1936,6 +2093,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     n_g = len(close_f)  # number of frequencies being updated
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     n_harm = len(harmonics)
+
     # determine initial bic
     model_sinusoid_ncf = sum_sines(time, np.delete(f_n, close_f), np.delete(a_n, close_f), np.delete(ph_n, close_f))
     cur_resid = flux - (model_sinusoid_ncf + sum_sines(time, f_n[close_f], a_n[close_f], ph_n[close_f]))
@@ -1944,6 +2102,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_f - n_harm)
     bic_prev = calc_bic(resid, n_param)
     bic_init = bic_prev
+
     # stop the loop when the BIC increases
     accept = True
     while accept:
@@ -1953,6 +2112,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             cur_resid += sum_sines(time, np.array([f_n_temp[j]]), np.array([a_n_temp[j]]), np.array([ph_n_temp[j]]))
             const, slope = linear_pars(time, cur_resid, i_chunks)
             resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
             # if f is a harmonic, don't shift the frequency
             if j in harmonics:
                 f_j = f_n_temp[j]
@@ -1962,11 +2122,14 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
                 f0 = f_n_temp[j] - freq_res
                 fn = f_n_temp[j] + freq_res
                 f_j, a_j, ph_j = extract_single(time, resid, f0=f0, fn=fn, select='a', verbose=verbose)
+
             f_n_temp[j], a_n_temp[j], ph_n_temp[j] = f_j, a_j, ph_j
             cur_resid -= sum_sines(time, np.array([f_j]), np.array([a_j]), np.array([ph_j]))
+
         # as a last model-refining step, redetermine the constant and slope
         const, slope = linear_pars(time, cur_resid, i_chunks)
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
         # calculate BIC before moving to the next iteration
         bic = calc_bic(resid, n_param)
         d_bic = bic_prev - bic
@@ -1975,14 +2138,18 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             f_n[close_f], a_n[close_f], ph_n[close_f] = f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f]
             bic_prev = bic
             accept = True
+
         if verbose:
             print(f'N_f= {n_f}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) '
                   f'- N_refine= {n_g}, f= {f_j:1.6f}, a= {a_j:1.6f}', end='\r')
+
     if verbose:
         print(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f}) - end refinement', end='\r')
+
     # redo the constant and slope without the last iteration of changes
     resid = flux - (model_sinusoid_ncf + sum_sines(time, f_n[close_f], a_n[close_f], ph_n[close_f]))
     const, slope = linear_pars(time, resid, i_chunks)
+
     return const, slope, f_n, a_n, ph_n
 
 
@@ -2060,6 +2227,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         a_n = np.array([])
     if ph_n is None:
         ph_n = np.array([])
+
     # setup
     freq_res = 1.5 / np.ptp(time)  # frequency resolution
     n_sectors = len(i_chunks)
@@ -2069,12 +2237,14 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     else:
         harmonics = np.array([])
     n_harm = len(harmonics)
+
     # set up selection process
     if select == 'hybrid':
         switch = True  # when we would normally end, we switch strategy
         select = 'a'  # start with amplitude extraction
     else:
         switch = False
+
     # determine the initial bic
     cur_resid = flux - sum_sines(time, f_n, a_n, ph_n)
     const, slope = linear_pars(time, cur_resid, i_chunks)
@@ -2084,6 +2254,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     bic_init = bic_prev
     if verbose:
         print(f'N_f= {len(f_n)}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
+
     # stop the loop when the BIC decreases by less than 2 (or increases)
     n_freq_cur = -1
     while (len(f_n) > n_freq_cur) | switch:
@@ -2091,10 +2262,13 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         if switch & (not (len(f_n) > n_freq_cur)):
             select = 'sn'
             switch = False
+
         # update number of current frequencies
         n_freq_cur = len(f_n)
+
         # attempt to extract the next frequency
         f_i, a_i, ph_i = extract_single(time, resid, f0=0, fn=0, select=select, verbose=verbose)
+
         # now iterate over close frequencies (around f_i) a number of times to improve them
         f_n_temp, a_n_temp, ph_n_temp = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
         close_f = af.f_within_rayleigh(n_freq_cur, f_n_temp, freq_res)
@@ -2104,11 +2278,13 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
             refine_out = refine_subset(time, flux, close_f, p_orb, const, slope, f_n_temp, a_n_temp, ph_n_temp,
                                        i_chunks, verbose=verbose)
             const, slope, f_n_temp, a_n_temp, ph_n_temp = refine_out
+
         # as a last model-refining step, redetermine the constant and slope
         model_sinusoid_n = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
         cur_resid -= (model_sinusoid_n - model_sinusoid_r)  # add the changes to the sinusoid residuals
         const, slope = linear_pars(time, cur_resid, i_chunks)
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
         # calculate BIC before moving to the next iteration
         n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq_cur + 1 - n_harm)
         bic = calc_bic(resid, n_param)
@@ -2116,17 +2292,22 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         if np.round(d_bic, 2) > 2:
             # accept the new frequency
             f_n, a_n, ph_n = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
+
             # adjust the shifted frequencies
             f_n[close_f], a_n[close_f], ph_n[close_f] = f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f]
             bic_prev = bic
+
         if verbose:
             print(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) - '
                   f'f= {f_i:1.6f}, a= {a_i:1.6f}', end='\r')
+
     if verbose:
         print(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f}) - end extraction')
+
     # lastly re-determine slope and const
     cur_resid += (model_sinusoid_n - model_sinusoid_r)  # undo last change
     const, slope = linear_pars(time, cur_resid, i_chunks)
+
     return const, slope, f_n, a_n, ph_n
 
 
@@ -2185,19 +2366,23 @@ def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None
         a_n = np.array([])
     if ph_n is None:
         ph_n = np.array([])
+
     # setup
     f_max = 1 / (2 * np.min(time[1:] - time[:-1]))  # Nyquist freq
     n_sectors = len(i_chunks)
     n_freq = len(f_n)
+
     # extract the existing harmonics using the period
     if n_freq > 0:
         harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     else:
         harmonics, harmonic_n = np.array([], dtype=int), np.array([], dtype=int)
     n_harm = len(harmonics)
+
     # make a list of not-present possible harmonics
     h_candidate = np.arange(1, p_orb * f_max, dtype=int)
     h_candidate = np.delete(h_candidate, harmonic_n - 1)  # harmonic_n minus one is the position
+
     # initial residuals
     cur_resid = flux - sum_sines(time, f_n, a_n, ph_n)
     const, slope = linear_pars(time, cur_resid, i_chunks)
@@ -2207,6 +2392,7 @@ def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None
     bic_prev = bic_init
     if verbose:
         print(f'N_f= {n_freq}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
+
     # loop over candidates and try to extract (BIC decreases by 2 or more)
     n_h_acc = []
     for h_c in h_candidate:
@@ -2214,11 +2400,13 @@ def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None
         a_c = scargle_ampl_single(time, resid, f_c)
         ph_c = scargle_phase_single(time, resid, f_c)
         ph_c = np.mod(ph_c + np.pi, 2 * np.pi) - np.pi  # make sure the phase stays within + and - pi
+
         # redetermine the constant and slope
         model_sinusoid_n = sum_sines(time, np.array([f_c]), np.array([a_c]), np.array([ph_c]))
         cur_resid -= model_sinusoid_n
         const, slope = linear_pars(time, cur_resid, i_chunks)
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
         # determine new BIC and whether it improved
         n_harm_cur = n_harm + len(n_h_acc) + 1
         n_param = 2 * n_sectors + 1 * (n_harm_cur > 0) + 2 * n_harm_cur + 3 * (n_freq - n_harm)
@@ -2234,12 +2422,15 @@ def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None
             cur_resid += model_sinusoid_n
             const, slope = linear_pars(time, cur_resid, i_chunks)
             resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
         if verbose:
             print(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) - '
                   f'h= {h_c}', end='\r')
+
     if verbose:
         print(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f}) - end extraction')
         print(f'Successfully extracted harmonics {n_h_acc}')
+
     return const, slope, f_n, a_n, ph_n
 
 
@@ -2295,15 +2486,18 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     n_sectors = len(i_chunks)
     n_freq = len(f_n)
     n_harm_init = len(harmonics)
+
     # indices of harmonic candidates to remove
     remove_harm_c = np.zeros(0, dtype=np.int_)
     f_new, a_new, ph_new = np.zeros((3, 0))
+
     # determine initial bic
     model_sinusoid = sum_sines(time, f_n, a_n, ph_n)
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
     resid = cur_resid - linear_curve(time, const, slope, i_chunks)
     n_param = 2 * n_sectors + 1 + 2 * n_harm_init + 3 * (n_freq - n_harm_init)
     bic_init = calc_bic(resid, n_param)
+
     # go through the harmonics by harmonic number and re-extract them (removing all duplicate n's in the process)
     for n in np.unique(harmonic_n):
         remove = np.arange(len(f_n))[harmonics][harmonic_n == n]
@@ -2312,25 +2506,30 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
         cur_resid += model_sinusoid_r
         const, slope = linear_pars(time, resid, i_chunks)  # redetermine const and slope
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
         # calculate the new harmonic
         f_i = n / p_orb  # fixed f
         a_i = scargle_ampl_single(time, resid, f_i)
         ph_i = scargle_phase_single(time, resid, f_i)
         ph_i = np.mod(ph_i + np.pi, 2 * np.pi) - np.pi  # make sure the phase stays within + and - pi
+
         # make a model of the new sinusoid and add it to the full sinusoid residual
         model_sinusoid_n = sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
         cur_resid -= model_sinusoid_n
+
         # add to freq list and removal list
         f_new, a_new, ph_new = np.append(f_new, f_i), np.append(a_new, a_i), np.append(ph_new, ph_i)
         remove_harm_c = np.append(remove_harm_c, remove)
         if verbose:
             print(f'Harmonic number {n} re-extracted, replacing {len(remove)} candidates', end='\r')
+
     # lastly re-determine slope and const (not needed here)
     # const, slope = linear_pars(time, cur_resid, i_chunks)
     # finally, remove all the designated sinusoids from the lists and add the new ones
     f_n = np.append(np.delete(f_n, remove_harm_c), f_new)
     a_n = np.append(np.delete(a_n, remove_harm_c), a_new)
     ph_n = np.append(np.delete(ph_n, remove_harm_c), ph_new)
+
     # re-extract the non-harmonics
     n_freq = len(f_n)
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
@@ -2343,29 +2542,35 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
         cur_resid += model_sinusoid_r
         const, slope = linear_pars(time, cur_resid, i_chunks)  # redetermine const and slope
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
         # extract the updated frequency
         fl, fr = f_n[i] - freq_res, f_n[i] + freq_res
         f_n[i], a_n[i], ph_n[i] = extract_single(time, resid, f0=fl, fn=fr, select='a', verbose=verbose)
         ph_n[i] = np.mod(ph_n[i] + np.pi, 2 * np.pi) - np.pi  # make sure the phase stays within + and - pi
         if (f_n[i] <= fl) | (f_n[i] >= fr):
             remove_non_harm = np.append(remove_non_harm, [i])
+
         # make a model of the new sinusoid and add it to the full sinusoid residual
         model_sinusoid_n = sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
         cur_resid -= model_sinusoid_n
+
     # finally, remove all the designated sinusoids from the lists and add the new ones
     f_n = np.delete(f_n, non_harm[remove_non_harm])
     a_n = np.delete(a_n, non_harm[remove_non_harm])
     ph_n = np.delete(ph_n, non_harm[remove_non_harm])
+
     # re-establish cur_resid
     model_sinusoid = sum_sines(time, f_n, a_n, ph_n)
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
     const, slope = linear_pars(time, cur_resid, i_chunks)  # lastly re-determine slope and const
+
     if verbose:
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
         n_param = 2 * n_sectors + 1 + 2 * n_harm + 3 * (n_freq - n_harm)
         bic = calc_bic(resid, n_param)
         print(f'Candidate harmonics replaced: {n_harm_init} ({n_harm} left). ')
         print(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {bic_init - bic:1.2f})')
+
     return const, slope, f_n, a_n, ph_n
 
 
@@ -2421,8 +2626,10 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     n_freq = len(f_n)
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     n_harm = len(harmonics)
+
     # indices of single frequencies to remove
     remove_single = np.zeros(0, dtype=np.int_)
+
     # determine initial bic
     model_sinusoid = sum_sines(time, f_n, a_n, ph_n)
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
@@ -2431,6 +2638,7 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     bic_prev = calc_bic(resid, n_param)
     bic_init = bic_prev
     n_prev = -1
+
     # while frequencies are added to the remove list, continue loop
     while len(remove_single) > n_prev:
         n_prev = len(remove_single)
@@ -2443,27 +2651,33 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
             resid = cur_resid + model_sinusoid_r
             const, slope = linear_pars(time, resid, i_chunks)  # redetermine const and slope
             resid -= linear_curve(time, const, slope, i_chunks)
+
             # number of parameters and bic
             n_harm_i = n_harm - len([h for h in remove_single if h in harmonics]) - 1 * (i in harmonics)
             n_freq_i = n_freq - len(remove_single) - 1 - n_harm_i
             n_param = 2 * n_sectors + 1 * (n_harm_i > 0) + 2 * n_harm_i + 3 * n_freq_i
             bic = calc_bic(resid, n_param)
+
             # if improvement, add to list of removed freqs
             if np.round(bic_prev - bic, 2) > 0:
                 remove_single = np.append(remove_single, i)
                 cur_resid += model_sinusoid_r
                 bic_prev = bic
+
     # lastly re-determine slope and const
     const, slope = linear_pars(time, cur_resid, i_chunks)
+
     # finally, remove all the designated sinusoids from the lists
     f_n = np.delete(f_n, remove_single)
     a_n = np.delete(a_n, remove_single)
     ph_n = np.delete(ph_n, remove_single)
+
     if verbose:
         str_bic = ut.float_to_str(bic_prev, dec=2)
         str_delta = ut.float_to_str(bic_init - bic_prev, dec=2)
         print(f'Single frequencies removed: {n_freq - len(f_n)}')
         print(f'N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})')
+
     return const, slope, f_n, a_n, ph_n
 
 
@@ -2521,6 +2735,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(n_freq), harmonics)
     n_harm = len(harmonics)
+
     # make an array of sets of frequencies (non-harmonic) to be investigated for replacement
     close_f_groups = af.chains_within_rayleigh(f_n[non_harm], freq_res)
     close_f_groups = [non_harm[group] for group in close_f_groups]  # convert to the right indices
@@ -2528,6 +2743,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
               for g in close_f_groups
               for p1 in range(len(g) - 1)
               for p2 in range(p1 + 1, len(g))]
+
     # make an array of sets of frequencies (now with harmonics) to be investigated for replacement
     close_f_groups = af.chains_within_rayleigh(f_n, freq_res)
     f_sets_h = [g[np.arange(p1, p2 + 1)]
@@ -2535,12 +2751,14 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 for p1 in range(len(g) - 1)
                 for p2 in range(p1 + 1, len(g))
                 if np.any(np.array([g_f in harmonics for g_f in g[np.arange(p1, p2 + 1)]]))]
+
     # join the two lists, and remember which is which
     harm_sets = np.arange(len(f_sets), len(f_sets) + len(f_sets_h))
     f_sets.extend(f_sets_h)
     remove_sets = np.zeros(0, dtype=np.int_)  # sets of frequencies to replace (by 1 freq)
     used_sets = np.zeros(0, dtype=np.int_)  # sets that are not to be examined anymore
     f_new, a_new, ph_new = np.zeros((3, 0))
+
     # determine initial bic
     model_sinusoid = sum_sines(time, f_n, a_n, ph_n)
     best_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
@@ -2549,6 +2767,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     bic_prev = calc_bic(resid, n_param)
     bic_init = bic_prev
     n_prev = -1
+
     # while frequencies are added to the remove list, continue loop
     while len(remove_sets) > n_prev:
         n_prev = len(remove_sets)
@@ -2561,6 +2780,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
             resid = best_resid + model_sinusoid_r
             const, slope = linear_pars(time, resid, i_chunks)  # redetermine const and slope
             resid -= linear_curve(time, const, slope, i_chunks)
+
             # extract a single freq to try replacing the set
             if i in harm_sets:
                 harm_i = np.array([h for h in set_i if h in harmonics])
@@ -2571,11 +2791,13 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 edges = [min(f_n[set_i]) - freq_res, max(f_n[set_i]) + freq_res]
                 out = extract_single_narrow(time, resid, f0=edges[0], fn=edges[1], verbose=verbose)
                 f_i, a_i, ph_i = np.array([out[0]]), np.array([out[1]]), np.array([out[2]])
+
             # make a model including the new freq
             model_sinusoid_n = sum_sines(time, f_i, a_i, ph_i)
             resid -= model_sinusoid_n
             const, slope = linear_pars(time, resid, i_chunks)  # redetermine const and slope
             resid -= linear_curve(time, const, slope, i_chunks)
+
             # number of parameters and bic
             n_freq_i = n_freq - sum([len(f_sets[j]) for j in remove_sets]) - len(set_i) + len(f_new) + len(f_i) - n_harm
             n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * n_freq_i
@@ -2584,24 +2806,30 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 # do not look at sets with the same freqs as the just removed set anymore
                 overlap = [j for j, subset in enumerate(f_sets) if np.any(np.array([k in set_i for k in subset]))]
                 used_sets = np.unique(np.append(used_sets, overlap))
+
                 # add to list of removed sets
                 remove_sets = np.append(remove_sets, i)
+
                 # remember the new frequency (or the current one if it is a harmonic)
                 f_new, a_new, ph_new = np.append(f_new, f_i), np.append(a_new, a_i), np.append(ph_new, ph_i)
                 best_resid += model_sinusoid_r - model_sinusoid_n
                 bic_prev = bic
+
     # lastly re-determine slope and const
     const, slope = linear_pars(time, best_resid, i_chunks)
+
     # finally, remove all the designated sinusoids from the lists and add the new ones
     i_to_remove = [k for i in remove_sets for k in f_sets[i]]
     f_n = np.append(np.delete(f_n, i_to_remove), f_new)
     a_n = np.append(np.delete(a_n, i_to_remove), a_new)
     ph_n = np.append(np.delete(ph_n, i_to_remove), ph_new)
+
     if verbose:
         str_bic = ut.float_to_str(bic_prev, dec=2)
         str_delta = ut.float_to_str(bic_init - bic_prev, dec=2)
         print(f'Frequency sets replaced by a single frequency: {len(remove_sets)} ({len(i_to_remove)} frequencies). ')
         print(f'N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})')
+
     return const, slope, f_n, a_n, ph_n
 
 
@@ -2656,9 +2884,11 @@ def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, 
     # first check if any frequency can be left out (after the fit, this may be possible)
     out_a = remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=verbose)
     const, slope, f_n, a_n, ph_n = out_a
+
     # Now go on to trying to replace sets of frequencies that are close together
     out_b = replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=verbose)
     const, slope, f_n, a_n, ph_n = out_b
+
     return const, slope, f_n, a_n, ph_n
 
 

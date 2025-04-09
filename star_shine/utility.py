@@ -53,6 +53,7 @@ def float_to_str(x, dec=2):
     x_int = int(x_round)
     x_dec = int(np.abs(np.round(x_round - x_int, dec)) * 10**dec)
     s = str(x_int) + '.' + str(x_dec).zfill(dec)
+
     return s
 
 
@@ -73,6 +74,7 @@ def weighted_mean(x, w):
         Mean of x weighted by w
     """
     w_mean = np.sum(x * w) / np.sum(w)
+
     return w_mean
 
 
@@ -93,11 +95,13 @@ def std_unb(x, n):
         Unbiased standard deviation
     """
     residuals = x - np.mean(x)
+
     # tested to be faster in numba than np.sum(x**2)
     sum_r_2 = 0
     for r in residuals:
         sum_r_2 += r**2
     std = np.sqrt(sum_r_2 / n)  # unbiased standard deviation of the residuals
+
     return std
 
 
@@ -122,6 +126,7 @@ def decimal_figures(x, n_sf):
         decimals = (n_sf - 1) - int(np.floor(np.log10(abs(x))))
     else:
         decimals = 1
+
     return decimals
 
 
@@ -187,10 +192,12 @@ def normalise_counts(flux_counts, flux_counts_err, i_chunks):
     medians = np.zeros(len(i_chunks))
     flux_norm = np.zeros(len(flux_counts))
     flux_err_norm = np.zeros(len(flux_counts))
+
     for i, ch in enumerate(i_chunks):
         medians[i] = np.median(flux_counts[ch[0]:ch[1]])
         flux_norm[ch[0]:ch[1]] = flux_counts[ch[0]:ch[1]] / medians[i]
         flux_err_norm[ch[0]:ch[1]] = flux_counts_err[ch[0]:ch[1]] / medians[i]
+
     return flux_norm, flux_err_norm, medians
 
 
@@ -441,6 +448,7 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
             i_group = len(not_used)
         not_used = np.delete(not_used, np.arange(i_group))
         groups.append(group_i)
+
     return groups
 
 
@@ -476,6 +484,7 @@ def correct_for_crowdsap(flux, crowdsap, i_chunks):
     for i, s in enumerate(i_chunks):
         crowd = min(max(0., crowdsap[i]), 1.)  # clip to avoid unphysical output
         cor_flux[s[0]:s[1]] = (flux[s[0]:s[1]] - 1 + crowd) / crowd
+
     return cor_flux
 
 
@@ -507,6 +516,7 @@ def model_crowdsap(flux, crowdsap, i_chunks):
     for i, s in enumerate(i_chunks):
         crowd = min(max(0., crowdsap[i]), 1.)  # clip to avoid unphysical output
         model[s[0]:s[1]] = flux[s[0]:s[1]] * crowd + 1 - crowd
+
     return model
 
 
@@ -530,6 +540,7 @@ def save_inference_data(file_name, inf_data):
     fn_ext = os.path.splitext(os.path.basename(file_name))[1]
     file_name_mc = file_name.replace(fn_ext, '_dists.nc4')
     inf_data.to_netcdf(file_name_mc)
+
     return None
 
 
@@ -549,6 +560,7 @@ def read_inference_data(file_name):
     fn_ext = os.path.splitext(os.path.basename(file_name))[1]
     file_name_mc = file_name.replace(fn_ext, '_dists.nc4')
     inf_data = az.from_netcdf(file_name_mc)
+
     return inf_data
 
 
@@ -589,9 +601,11 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
     load_dir = os.path.join(load_dir, f'{target_id}_analysis')  # add subdir
     if save_dir is not None:
         save_dir = os.path.join(save_dir, f'{target_id}_analysis')  # add subdir
+
         # for saving, make a folder if not there yet
         if not os.path.isdir(save_dir):
             os.mkdir(save_dir)  # create the subdir
+
     # open all the data
     file_name = os.path.join(load_dir, f'{target_id}_analysis_1.hdf5')
     if os.path.isfile(file_name):
@@ -603,6 +617,7 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
     else:
         const_1, slope_1, f_n_1, a_n_1, ph_n_1 = np.array([[], [], [], [], []])
         model_1 = np.zeros(len(time))
+
     file_name = os.path.join(load_dir, f'{target_id}_analysis_2.hdf5')
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
@@ -613,6 +628,7 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
     else:
         const_2, slope_2, f_n_2, a_n_2, ph_n_2 = np.array([[], [], [], [], []])
         model_2 = np.zeros(len(time))
+
     file_name = os.path.join(load_dir, f'{target_id}_analysis_3.hdf5')
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
@@ -626,6 +642,7 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
         const_3, slope_3, f_n_3, a_n_3, ph_n_3 = np.array([[], [], [], [], []])
         p_orb_3, p_err_3 = 0, 0
         model_3 = np.zeros(len(time))
+
     file_name = os.path.join(load_dir, f'{target_id}_analysis_4.hdf5')
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
@@ -636,6 +653,7 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
     else:
         const_4, slope_4, f_n_4, a_n_4, ph_n_4 = np.array([[], [], [], [], []])
         model_4 = np.zeros(len(time))
+
     file_name = os.path.join(load_dir, f'{target_id}_analysis_5.hdf5')
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
@@ -654,6 +672,7 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
         n_param_5, bic_5, noise_level_5 = 0, 0, 0
         model_5 = np.zeros(len(time))
         f_h_5, a_h_5, ph_h_5 = np.array([[], [], []])
+
     # stick together for sending to plot function
     models = [model_1, model_2, model_3, model_4, model_5]
     p_orb_i = [0, 0, p_orb_3, p_orb_3, p_orb_5]
@@ -694,6 +713,7 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
         pass  # some variable wasn't loaded (file did not exist)
     except ValueError:
         pass  # no frequencies?
+
     return None
 
 
@@ -727,14 +747,18 @@ def plot_all_from_file(file_name, i_chunks=None, load_dir=None, save_dir=None, s
     target_id = os.path.splitext(os.path.basename(file_name))[0]  # file name is used as target identifier
     if load_dir is None:
         load_dir = os.path.dirname(file_name)
+
     # load the data
     time, flux, flux_err = np.loadtxt(file_name, usecols=(0, 1, 2), unpack=True)
+
     # if sectors not given, take full length
     if i_chunks is None:
         i_chunks = np.array([[0, len(time)]])  # no sector information
     # i_half_s = i_chunks  # in this case no differentiation between half or full sectors
+
     # do the plotting
     sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, save_dir=save_dir, show=show)
+
     return None
 
 
@@ -766,8 +790,11 @@ def plot_all_from_tic(tic, all_files, load_dir=None, save_dir=None, show=True):
     """
     if load_dir is None:
         load_dir = os.path.dirname(all_files[0])
+
     # load the data
     time, flux, flux_err, i_chunks, medians = load_light_curve(all_files, apply_flags=True)
+
     # do the plotting
     sequential_plotting(time, flux, flux_err, i_chunks, tic, load_dir, save_dir=save_dir, show=show)
+
     return None
