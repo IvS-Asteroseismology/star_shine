@@ -66,13 +66,15 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
 
     Returns
     -------
-    inf_data: object
-        Arviz inference data object
-    par_means: list[float]
-        Parameter mean values in the following order:
-        const, slope, f_n, a_n, ph_n
-    par_hdi: list[float]
-        Parameter HDI error values, same order as par_means
+    tuple
+        A tuple containing the following elements:
+        inf_data: object
+            Arviz inference data object
+        par_means: list[float]
+            Parameter mean values in the following order:
+            const, slope, f_n, a_n, ph_n
+        par_hdi: list[float]
+            Parameter HDI error values, same order as par_means
     """
     # setup
     time_t = time.reshape(-1, 1)  # transposed time
@@ -188,13 +190,15 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
 
     Returns
     -------
-    inf_data: object
-        Arviz inference data object
-    par_means: list[float]
-        Parameter mean values in the following order:
-        p_orb, const, slope, f_n, a_n, ph_n
-    par_hdi: list[float]
-        Parameter HDI error values, same order as par_means
+    tuple
+        A tuple containing the following elements:
+        inf_data: object
+            Arviz inference data object
+        par_means: list[float]
+            Parameter mean values in the following order:
+            p_orb, const, slope, f_n, a_n, ph_n
+        par_hdi: list[float]
+            Parameter HDI error values, same order as par_means
     """
     # setup
     time_t = time.reshape(-1, 1)  # transposed time

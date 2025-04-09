@@ -32,7 +32,7 @@ def fold_time_series_phase(time, p_orb, zero=None):
 
     Returns
     -------
-    phases: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         Phase array for all timestamps. Phases are between -0.5 and 0.5
     """
     mean_t = np.mean(time)
@@ -62,12 +62,14 @@ def fold_time_series(time, p_orb, t_zero, t_ext_1=0, t_ext_2=0):
     
     Returns
     -------
-    t_extended: numpy.ndarray[Any, dtype[float]]
-        Folded time series array for all timestamps (and possible extensions).
-    ext_left: numpy.ndarray[bool]
-        Mask of points to extend time series to the left (for if t_ext_1!=0)
-    ext_right: numpy.ndarray[bool]
-        Mask of points to extend time series to the right (for if t_ext_2!=0)
+    tuple
+        A tuple containing the following elements:
+        t_extended: numpy.ndarray[Any, dtype[float]]
+            Folded time series array for all timestamps (and possible extensions).
+        ext_left: numpy.ndarray[bool]
+            Mask of points to extend time series to the left (for if t_ext_1!=0)
+        ext_right: numpy.ndarray[bool]
+            Mask of points to extend time series to the right (for if t_ext_2!=0)
     """
     # reference time is the mean of the time array
     mean_t = np.mean(time)
@@ -92,7 +94,7 @@ def mask_timestamps(time, stamps):
 
     Returns
     -------
-    mask: numpy.ndarray[bool]
+    numpy.ndarray[bool]
         Boolean mask that is True between the stamps
     """
     mask = np.zeros(len(time), dtype=np.bool_)
@@ -116,7 +118,7 @@ def phase_dispersion(phases, flux, n_bins):
     
     Returns
     -------
-    total_var/overall_var: float
+    float
         Phase dispersion, or summed variance over the bins divided by
         the variance of the flux
     
@@ -159,10 +161,12 @@ def phase_dispersion_minimisation(time, flux, f_n, local=False):
     
     Returns
     -------
-    periods: numpy.ndarray[Any, dtype[float]]
-        Periods at which the phase dispersion is calculated
-    pd_all: numpy.ndarray[Any, dtype[float]]
-        Phase dispersion at the given periods
+    tuple
+        A tuple containing the following elements:
+        periods: numpy.ndarray[Any, dtype[float]]
+            Periods at which the phase dispersion is calculated
+        pd_all: numpy.ndarray[Any, dtype[float]]
+            Phase dispersion at the given periods
     """
     # number of bins for dispersion calculation
     n_points = len(time)
@@ -204,7 +208,7 @@ def scargle_noise_spectrum(time, resid, window_width=1.0):
 
     Returns
     -------
-    noise: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         The noise spectrum calculated as the mean in a frequency window
         in the residual periodogram
     
@@ -246,7 +250,7 @@ def scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0):
 
     Returns
     -------
-    noise: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         The noise spectrum calculated as the mean in a frequency window
         in the residual periodogram
 
@@ -287,7 +291,7 @@ def scargle_noise_at_freq(fs, time, resid, window_width=1.0):
 
     Returns
     -------
-    noise: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         The noise level calculated as the mean in a window around the
         frequency in the residual periodogram
     
@@ -319,7 +323,7 @@ def spectral_window(time, freqs):
         
     Returns
     -------
-    spec_win: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         The spectral window at the given frequencies, |W(freqs)|^2
     
     Notes
@@ -363,10 +367,12 @@ def scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
     
     Returns
     -------
-    f1: numpy.ndarray[Any, dtype[float]]
-        Frequencies at which the periodogram was calculated
-    s1: numpy.ndarray[Any, dtype[float]]
-        The periodogram spectrum in the chosen units
+    tuple
+        A tuple containing the following elements:
+        f1: numpy.ndarray[Any, dtype[float]]
+            Frequencies at which the periodogram was calculated
+        s1: numpy.ndarray[Any, dtype[float]]
+            The periodogram spectrum in the chosen units
     
     Notes
     -----
@@ -459,10 +465,12 @@ def scargle_simple_psd(time, flux):
 
     Returns
     -------
-    f1: numpy.ndarray[Any, dtype[float]]
-        Frequencies at which the periodogram was calculated
-    s1: numpy.ndarray[Any, dtype[float]]
-        The periodogram spectrum in the chosen units
+    tuple
+        A tuple containing the following elements:
+        f1: numpy.ndarray[Any, dtype[float]]
+            Frequencies at which the periodogram was calculated
+        s1: numpy.ndarray[Any, dtype[float]]
+            The periodogram spectrum in the chosen units
 
     Notes
     -----
@@ -546,7 +554,7 @@ def scargle_ampl_single(time, flux, f):
     
     Returns
     -------
-    ampl: float
+    float
         Amplitude at the given frequency
     
     See Also
@@ -610,7 +618,7 @@ def scargle_ampl(time, flux, fs):
     
     Returns
     -------
-    ampl: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         Amplitude at the given frequencies
     
     See Also
@@ -677,7 +685,7 @@ def scargle_phase_single(time, flux, f):
     
     Returns
     -------
-    phi: float
+    float
         Phase at the given frequency
     
     See Also
@@ -740,7 +748,7 @@ def scargle_phase(time, flux, fs):
     
     Returns
     -------
-    phi: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         Phase at the given frequencies
     
     Notes
@@ -818,10 +826,12 @@ def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
 
     Returns
     -------
-    f1: numpy.ndarray[Any, dtype[float]]
-        Frequencies at which the periodogram was calculated
-    s1: numpy.ndarray[Any, dtype[float]]
-        The periodogram spectrum in the chosen units
+    tuple
+        A tuple containing the following elements:
+        f1: numpy.ndarray[Any, dtype[float]]
+            Frequencies at which the periodogram was calculated
+        s1: numpy.ndarray[Any, dtype[float]]
+            The periodogram spectrum in the chosen units
 
     Notes
     -----
@@ -883,10 +893,12 @@ def astropy_scargle_simple_psd(time, flux):
 
     Returns
     -------
-    f1: numpy.ndarray[Any, dtype[float]]
-        Frequencies at which the periodogram was calculated
-    s1: numpy.ndarray[Any, dtype[float]]
-        The periodogram spectrum in the chosen units
+    tuple
+        A tuple containing the following elements:
+        f1: numpy.ndarray[Any, dtype[float]]
+            Frequencies at which the periodogram was calculated
+        s1: numpy.ndarray[Any, dtype[float]]
+            The periodogram spectrum in the chosen units
 
     Notes
     -----
@@ -938,7 +950,7 @@ def refine_orbital_period(p_orb, time, f_n):
 
     Returns
     -------
-    p_orb: float
+    float
         Orbital period of the eclipsing binary in days
 
     Notes
@@ -976,10 +988,12 @@ def find_orbital_period(time, flux, f_n):
 
     Returns
     -------
-    p_orb: float
-        Orbital period of the eclipsing binary in days
-    multiple: float
-        Multiple of the initial period that was chosen
+    tuple
+        A tuple containing the following elements:
+        p_orb: float
+            Orbital period of the eclipsing binary in days
+        multiple: float
+            Multiple of the initial period that was chosen
 
     Notes
     -----
@@ -1093,7 +1107,7 @@ def calc_iid_normal_likelihood(residuals):
     
     Returns
     -------
-    like: float
+    float
         Natural logarithm of the likelihood
     """
     n = len(residuals)
@@ -1121,7 +1135,7 @@ def calc_approx_did_likelihood(time, residuals):
 
     Returns
     -------
-    like: float
+    float
         Log-likelihood approximation
     """
     n = len(time)
@@ -1151,7 +1165,7 @@ def calc_whittle_likelihood(time, flux, model):
 
     Returns
     -------
-    like: float
+    float
         Log-likelihood approximation
     """
     n = len(time)
@@ -1187,7 +1201,7 @@ def calc_did_normal_likelihood(time, residuals):
 
     Returns
     -------
-    like: float
+    float
         Natural logarithm of the likelihood
     """
     n = len(residuals)
@@ -1243,7 +1257,7 @@ def calc_ddd_normal_likelihood(time, residuals, flux_err):
 
     Returns
     -------
-    like: float
+    float
         Natural logarithm of the likelihood
     """
     n = len(residuals)
@@ -1300,7 +1314,7 @@ def calc_likelihood(time=None, flux=None, residuals=None, flux_err=None, func=ca
 
     Returns
     -------
-    like: float
+    float
         Natural logarithm of the likelihood
 
     Notes
@@ -1333,7 +1347,7 @@ def calc_bic(residuals, n_param):
     
     Returns
     -------
-    bic: float
+    float
         Bayesian Information Criterion
     
     Notes
@@ -1377,7 +1391,7 @@ def calc_bic_2(residuals, n_param, flux_err=None):
 
     Returns
     -------
-    bic: float
+    float
         Bayesian Information Criterion
     """
     n = len(residuals)
@@ -1406,7 +1420,7 @@ def linear_curve(time, const, slope, i_chunks, t_shift=True):
     
     Returns
     -------
-    curve: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         The model time series of a (set of) straight line(s)
     
     Notes
@@ -1440,10 +1454,12 @@ def linear_pars(time, flux, i_chunks):
     
     Returns
     -------
-    y_inter: numpy.ndarray[Any, dtype[float]]
-        The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        The slopes of a piece-wise linear curve
+    tuple
+        A tuple containing the following elements:
+        y_inter: numpy.ndarray[Any, dtype[float]]
+            The y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            The slopes of a piece-wise linear curve
     
     Notes
     -----
@@ -1486,10 +1502,12 @@ def linear_pars_two_points(x1, y1, x2, y2):
     
     Returns
     -------
-    y_inter: float, numpy.ndarray[Any, dtype[float]]
-        The y-intercept(s) of a piece-wise linear curve
-    slope: float, numpy.ndarray[Any, dtype[float]]
-        The slope(s) of a piece-wise linear curve
+    tuple
+        A tuple containing the following elements:
+        y_inter: float, numpy.ndarray[Any, dtype[float]]
+            The y-intercept(s) of a piece-wise linear curve
+        slope: float, numpy.ndarray[Any, dtype[float]]
+            The slope(s) of a piece-wise linear curve
     """
     slope = (y2 - y1) / (x2 - x1)
     y_inter = y1 - (x1 * slope)
@@ -1515,7 +1533,7 @@ def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
     
     Returns
     -------
-    model_sines: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         Model time series of a sum of sine waves. Varies around 0.
     
     Notes
@@ -1558,7 +1576,7 @@ def sum_sines_deriv(time, f_n, a_n, ph_n, deriv=1, t_shift=True):
     
     Returns
     -------
-    model_sines: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         Model time series of a sum of sine wave derivatives. Varies around 0.
     
     Notes
@@ -1598,10 +1616,12 @@ def formal_uncertainties_linear(time, residuals, i_chunks):
 
     Returns
     -------
-    sigma_const: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the constant for each sector
-    sigma_slope: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the slope for each sector
+    tuple
+        A tuple containing the following elements:
+        sigma_const: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the constant for each sector
+        sigma_slope: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the slope for each sector
 
     Notes
     -----
@@ -1652,16 +1672,18 @@ def formal_uncertainties(time, residuals, flux_err, a_n, i_chunks):
     
     Returns
     -------
-    sigma_const: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the constant for each sector
-    sigma_slope: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the slope for each sector
-    sigma_f: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the frequency for each sine wave
-    sigma_a: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the amplitude for each sine wave (these are identical)
-    sigma_ph: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the phase for each sine wave
+    tuple
+        A tuple containing the following elements:
+        sigma_const: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the constant for each sector
+        sigma_slope: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the slope for each sector
+        sigma_f: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the frequency for each sine wave
+        sigma_a: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the amplitude for each sine wave (these are identical)
+        sigma_ph: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the phase for each sine wave
     
     Notes
     -----
@@ -1720,12 +1742,14 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
     
     Returns
     -------
-    f_final: float
-        Frequency of the extracted sinusoid
-    a_final: float
-        Amplitude of the extracted sinusoid
-    ph_final: float
-        Phase of the extracted sinusoid
+    tuple
+        A tuple containing the following elements:
+        f_final: float
+            Frequency of the extracted sinusoid
+        a_final: float
+            Amplitude of the extracted sinusoid
+        ph_final: float
+            Phase of the extracted sinusoid
     
     See Also
     --------
@@ -1798,12 +1822,14 @@ def extract_single_narrow(time, flux, f0=0, fn=0, verbose=True):
 
     Returns
     -------
-    f_final: float
-        Frequency of the extracted sinusoid
-    a_final: float
-        Amplitude of the extracted sinusoid
-    ph_final: float
-        Phase of the extracted sinusoid
+    tuple
+        A tuple containing the following elements:
+        f_final: float
+            Frequency of the extracted sinusoid
+        a_final: float
+            Amplitude of the extracted sinusoid
+        ph_final: float
+            Phase of the extracted sinusoid
 
     See Also
     --------
@@ -1882,16 +1908,18 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     
     Returns
     -------
-    const: numpy.ndarray[Any, dtype[float]]
-        Updated y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        Updated slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        Updated frequencies of a number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        Updated amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        Updated phases of a number of sine waves
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            Updated y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            Updated slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            Updated frequencies of a number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            Updated amplitudes of a number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            Updated phases of a number of sine waves
     
     See Also
     --------
@@ -1987,16 +2015,18 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
 
     Returns
     -------
-    const: numpy.ndarray[Any, dtype[float]]
-        The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            The y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            The slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            The frequencies of a number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            The amplitudes of a number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            The phases of a number of sine waves
 
     Notes
     -----
@@ -2125,16 +2155,18 @@ def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None
     
     Returns
     -------
-    const: numpy.ndarray[Any, dtype[float]]
-        (Updated) y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        (Updated) slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) frequencies of a (higher) number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) amplitudes of a (higher) number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) phases of a (higher) number of sine waves
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of a (higher) number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of a (higher) number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of a (higher) number of sine waves
     
     See Also
     --------
@@ -2241,16 +2273,18 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
 
     Returns
     -------
-    const: numpy.ndarray[Any, dtype[float]]
-        (Updated) y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        (Updated) slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) frequencies of the same number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) amplitudes of the same number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) phases of the same number of sine waves
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of the same number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of the same number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of the same number of sine waves
     """
     # extract the harmonics using the period and determine some numbers
     freq_res = 1.5 / np.ptp(time)
@@ -2365,16 +2399,18 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     
     Returns
     -------
-    const: numpy.ndarray[Any, dtype[float]]
-        (Updated) y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        (Updated) slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) frequencies of a (lower) number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) amplitudes of a (lower) number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) phases of a (lower) number of sine waves
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of a (lower) number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of a (lower) number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of a (lower) number of sine waves
     
     Notes
     -----
@@ -2461,16 +2497,18 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
 
     Returns
     -------
-    const: numpy.ndarray[Any, dtype[float]]
-        (Updated) y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        (Updated) slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) frequencies of a (lower) number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) amplitudes of a (lower) number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) phases of a (lower) number of sine waves
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of a (lower) number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of a (lower) number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of a (lower) number of sine waves
 
     Notes
     -----
@@ -2596,16 +2634,18 @@ def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, 
     
     Returns
     -------
-    const: numpy.ndarray[Any, dtype[float]]
-        (Updated) y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        (Updated) slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) frequencies of a (lower) number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) amplitudes of a (lower) number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        (Updated) phases of a (lower) number of sine waves
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of a (lower) number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of a (lower) number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of a (lower) number of sine waves
     
     Notes
     -----
@@ -2656,14 +2696,16 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
 
     Returns
     -------
-    passed_sigma: numpy.ndarray[bool]
-        Non-harmonic frequencies that passed the sigma check
-    passed_snr: numpy.ndarray[bool]
-        Non-harmonic frequencies that passed the signal-to-noise check
-    passed_both: numpy.ndarray[bool]
-        Non-harmonic frequencies that passed both checks
-    passed_harmonic: numpy.ndarray[bool]
-        Harmonic frequencies that passed
+    tuple
+        A tuple containing the following elements:
+        passed_sigma: numpy.ndarray[bool]
+            Non-harmonic frequencies that passed the sigma check
+        passed_snr: numpy.ndarray[bool]
+            Non-harmonic frequencies that passed the signal-to-noise check
+        passed_both: numpy.ndarray[bool]
+            Non-harmonic frequencies that passed both checks
+        passed_harmonic: numpy.ndarray[bool]
+            Harmonic frequencies that passed
     
     Notes
     -----

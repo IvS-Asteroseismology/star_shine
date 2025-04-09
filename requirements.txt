@@ -3,6 +3,6 @@ scipy
 numba
 h5py
 astropy
+pandas
 matplotlib
-arviz
-corner
+yaml

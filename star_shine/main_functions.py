@@ -18,7 +18,11 @@ from . import mcmc_functions as mcf
 from . import analysis_functions as af
 from . import utility as ut
 from . import visualisation as vis
-from .. import config
+from .config import get_config
+
+
+# load configuration
+config = get_config()
 
 
 class Data:
@@ -117,7 +121,7 @@ class Data:
                 dir_text = f" in directory {self.data_dir}"
             message = f"Missing files {missing_files}{dir_text}, removing from list."
 
-            if config.VERBOSE:
+            if config.verbose:
                 print(message)
 
             # remove the files
@@ -163,26 +167,26 @@ class Data:
 
         Returns
         -------
-        instance: Data object
+        Data
             Instance of the Data class with the loaded data.
         """
         instance = cls()
 
         # set the file list and data directory
         if data_dir == '':
-            data_dir = config.DATA_DIR
+            data_dir = config.data_dir
         instance.setter(file_list=file_list, data_dir=data_dir)
 
         # guard against empty list
         if len(file_list) == 0:
-            if config.VERBOSE:
+            if config.verbose:
                 print("Empty file list provided.")
             return
 
         # Check if the file(s) exist(s)
         instance._check_file_existence()
         if len(instance.file_list) == 0:
-            if config.VERBOSE:
+            if config.verbose:
                 print("No existing files in file list")
             return
 
@@ -198,7 +202,7 @@ class Data:
             file_list_dir = [os.path.join(instance.data_dir, file) for file in instance.file_list]
 
         # load the data from the list of files
-        lc_data = ut.load_light_curve(file_list_dir, apply_flags=config.APPLY_Q_FLAGS)
+        lc_data = ut.load_light_curve(file_list_dir, apply_flags=config.apply_q_flags)
         instance.setter(time=lc_data[0], flux=lc_data[1], flux_err=lc_data[2], i_chunks=lc_data[3], medians=lc_data[4])
 
         # set derived attributes
@@ -209,7 +213,7 @@ class Data:
 
         # check for overlapping time stamps
         if np.any(np.diff(instance.time) <= 0):
-            if config.VERBOSE:
+            if config.verbose:
                 print("The time array chunks include overlap.")
 
         return instance
@@ -228,7 +232,7 @@ class Data:
 
         Returns
         -------
-        instance: Data object
+        Data
             Instance of the Data class with the loaded data.
         """
         # to avoid dict in function defaults
@@ -270,7 +274,7 @@ class Data:
         instance = cls()
         instance.setter(**data_dict)
 
-        if config.VERBOSE:
+        if config.verbose:
             print(f'Loaded data file with target identifier: {data_dict['target_id']}, '
                   f'created on {data_dict['date_time']}. \n'
                   f'Data identifier: {data_dict['data_id']}. \n')
@@ -515,7 +519,7 @@ class Result:
 
         Returns
         -------
-        instance: Result object
+        Result
             Instance of the Result class with the loaded results.
         """
         # to avoid dict in function defaults
@@ -574,7 +578,7 @@ class Result:
         instance = cls()
         instance.setter(**result_dict)
 
-        if config.VERBOSE:
+        if config.verbose:
             print(f'Loaded analysis file with target identifier: {result_dict['target_id']}, '
                   f'created on {result_dict['date_time']}. \n'
                   f'Data identifier: {result_dict['data_id']}. Description: {result_dict['description']} \n')
@@ -592,12 +596,12 @@ class Result:
 
         Returns
         -------
-        instance: Result object
+        Result
             Instance of the Result class with the loaded results.
             Returns empty Result if condition not met.
         """
         # guard for existing file when not overwriting
-        if (not os.path.isfile(file_name)) | config.OVERWRITE:
+        if (not os.path.isfile(file_name)) | config.overwrite:
             instance = cls()
             return instance
 
@@ -758,11 +762,11 @@ class Result:
         -------
         None
         """
-        if (not os.path.isfile(file_name)) | config.OVERWRITE:
+        if (not os.path.isfile(file_name)) | config.overwrite:
             self.save(file_name)
 
             # save csv files if configured
-            if config.SAVE_ASCII:
+            if config.save_ascii:
                 self.save_as_csv(file_name)
 
         return None
@@ -772,7 +776,7 @@ class Result:
 
         Returns
         -------
-        curve: numpy.ndarray[Any, dtype[float]]
+        numpy.ndarray[Any, dtype[float]]
             The model time series of a (set of) straight line(s)
         """
         curve = tsf.linear_curve(time, self.const, self.slope, i_chunks)
@@ -784,7 +788,7 @@ class Result:
 
         Returns
         -------
-        curve: numpy.ndarray[Any, dtype[float]]
+        numpy.ndarray[Any, dtype[float]]
             Model time series of a sum of sine waves. Varies around 0.
         """
         curve = tsf.sum_sines(time, self.f_n, self.a_n, self.ph_n)
@@ -831,7 +835,7 @@ class Pipeline:
 
         # the files will be stored here
         if save_dir == '':
-            save_dir = config.SAVE_DIR
+            save_dir = config.save_dir
         self.save_dir = save_dir
         self.save_subdir = f'{self.data.target_id}_analysis'
 
@@ -841,7 +845,7 @@ class Pipeline:
 
         # initialise custom logger
         self.logger = logging.getLogger(__name__)
-        customize_logger(self.logger, os.path.join(save_dir, self.save_subdir), self.data.target_id, config.VERBOSE)
+        customize_logger(self.logger, os.path.join(save_dir, self.save_subdir), self.data.target_id, config.verbose)
 
         # check the input data
         if not isinstance(data, Data):
@@ -856,7 +860,7 @@ class Pipeline:
 
         Returns
         -------
-        curve: numpy.ndarray[Any, dtype[float]]
+        numpy.ndarray[Any, dtype[float]]
             The model time series of a (set of) straight line(s)
         """
         curve = self.result.model_linear(self.data.time, self.data.i_chunks)
@@ -868,7 +872,7 @@ class Pipeline:
 
         Returns
         -------
-        curve: numpy.ndarray[Any, dtype[float]]
+        numpy.ndarray[Any, dtype[float]]
             Model time series of a sum of sine waves. Varies around 0.
         """
         curve = self.result.model_sinusoid(self.data.time)
@@ -885,37 +889,37 @@ class Pipeline:
 
         Returns
         -------
-        Pipeline.result: Result object
+        Result
             Instance of the Result class containing the analysis results
         """
         t_a = systime.time()
         n_f_init = len(self.result.f_n)
-        if config.VERBOSE:
+        if config.verbose:
             print(f"{n_f_init} frequencies. Looking for more...")
 
         # start by looking for more harmonics
         if self.result.p_orb != 0:
             out_a = tsf.extract_harmonics(self.data.time, self.data.flux, self.result.p_orb, self.data.i_chunks,
-                                          self.result.f_n, self.result.a_n, self.result.ph_n, verbose=config.VERBOSE)
+                                          self.result.f_n, self.result.a_n, self.result.ph_n, verbose=config.verbose)
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         # extract all frequencies with the iterative scheme
         out_b = tsf.extract_sinusoids(self.data.time, self.data.flux, self.data.i_chunks, self.result.p_orb,
                                       self.result.f_n, self.result.a_n, self.result.ph_n,
-                                      select=config.SELECT, verbose=config.VERBOSE)
+                                      select=config.select, verbose=config.verbose)
         self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
 
         # remove any frequencies that end up not making the statistical cut
         out_c = tsf.reduce_sinusoids(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
                                      self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                     self.data.i_chunks, verbose=config.VERBOSE)
+                                     self.data.i_chunks, verbose=config.verbose)
         self.result.setter(const=out_c[0], slope=out_c[1], f_n=out_c[2], a_n=out_c[3], ph_n=out_c[4])
 
         # select frequencies based on some significance criteria
         out_d = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
                                      self.result.const, self.result.slope,
                                      self.result.f_n, self.result.a_n, self.result.ph_n, self.data.i_chunks,
-                                     verbose=config.VERBOSE)
+                                     verbose=config.verbose)
         self.result.setter(passed_sigma=out_d[0], passed_snr=out_d[1], passed_both=out_d[2], passed_harmonic=out_d[3])
 
         # main function done, calculate the rest of the stats
@@ -934,7 +938,7 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        if config.VERBOSE:
+        if config.verbose:
             print(f"\033[1;32;48mExtraction of sinusoids complete.\033[0m")
             print(f"\033[0;32;48m{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
                   f"Time taken: {t_b - t_a:1.1f}s\033[0m\n")
@@ -950,19 +954,19 @@ class Pipeline:
 
         Returns
         -------
-        Pipeline.result: Result object
+        Result
             Instance of the Result class containing the analysis results
         """
         t_a = systime.time()
-        if config.VERBOSE:
+        if config.verbose:
             print(f'Starting multi-sinusoid NL-LS optimisation.')
 
         # use the chosen optimisation method
         inf_data, par_mean, par_hdi = None, None, None
-        if config.OPTIMISE == 'fitter':
+        if config.optimise == 'fitter':
             par_mean = tsfit.fit_multi_sinusoid_per_group(self.data.time, self.data.flux, self.result.const,
                                                           self.result.slope, self.result.f_n, self.result.a_n,
-                                                          self.result.ph_n, self.data.i_chunks, verbose=config.VERBOSE)
+                                                          self.result.ph_n, self.data.i_chunks, verbose=config.verbose)
         else:
             # make model including everything to calculate noise level
             resid = self.data.flux - self.model_linear() - self.model_sinusoid()
@@ -982,7 +986,7 @@ class Pipeline:
             # Monte Carlo sampling of the model
             output = mcf.sample_sinusoid(self.data.time, self.data.flux, self.result.const, self.result.slope,
                                          f_n, a_n, ph_n,  self.result.c_err, self.result.sl_err, f_n_err, a_n_err,
-                                         ph_n_err, noise_level, self.data.i_chunks, verbose=config.VERBOSE)
+                                         ph_n_err, noise_level, self.data.i_chunks, verbose=config.verbose)
             inf_data, par_mean, par_hdi = output
 
         self.result.setter(const=par_mean[0], slope=par_mean[1], f_n=par_mean[2], a_n=par_mean[3], ph_n=par_mean[4],
@@ -992,7 +996,7 @@ class Pipeline:
         # select frequencies based on some significance criteria
         out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, 0, self.result.const,
                                      self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                     self.data.i_chunks, verbose=config.VERBOSE)
+                                     self.data.i_chunks, verbose=config.verbose)
         self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
 
         # main function done, calculate the rest of the stats
@@ -1012,7 +1016,7 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        if config.VERBOSE:
+        if config.verbose:
             print(f'\033[1;32;48mOptimisation of sinusoids complete.\033[0m')
             print(f'\033[0;32;48m{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, '
                   f'BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s\033[0m\n')
@@ -1024,7 +1028,7 @@ class Pipeline:
 
         Returns
         -------
-        Pipeline.result: Result object
+        Result
             Instance of the Result class containing the analysis results
 
         Notes
@@ -1038,7 +1042,7 @@ class Pipeline:
         Removes any frequencies that end up not making the statistical cut.
         """
         t_a = systime.time()
-        if config.VERBOSE:
+        if config.verbose:
             print(f"Coupling the harmonic frequencies to the orbital frequency...")
 
         # if given, the input p_orb is refined locally, otherwise the period is searched for globally
@@ -1054,19 +1058,19 @@ class Pipeline:
             # couple the harmonics to the period. likely removes more frequencies that need re-extracting
             out_a = tsf.fix_harmonic_frequency(self.data.time, self.data.flux, self.result.p_orb,  self.result.const,
                                                self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                               self.data.i_chunks, verbose=config.VERBOSE)
+                                               self.data.i_chunks, verbose=config.verbose)
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         # remove any frequencies that end up not making the statistical cut
         out_b = tsf.reduce_sinusoids(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
                                      self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                     self.data.i_chunks, verbose=config.VERBOSE)
+                                     self.data.i_chunks, verbose=config.verbose)
         self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
 
         # select frequencies based on some significance criteria
         out_c = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
                                      self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
-                                     self.result.ph_n, self.data.i_chunks, verbose=config.VERBOSE)
+                                     self.result.ph_n, self.data.i_chunks, verbose=config.verbose)
         self.result.setter(passed_sigma=out_c[0], passed_snr=out_c[1], passed_both=out_c[2], passed_harmonic=out_c[3])
 
         # main function done, calculate the rest of the stats
@@ -1089,7 +1093,7 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        if config.VERBOSE:
+        if config.verbose:
             rnd_p_orb = max(ut.decimal_figures(p_err, 2), ut.decimal_figures(self.result.p_orb, 2))
             print(f"\033[1;32;48mOrbital harmonic frequencies coupled.\033[0m")
             print(f"\033[0;32;48mp_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{p_err:.{rnd_p_orb}f}), \n"
@@ -1111,20 +1115,20 @@ class Pipeline:
 
         Returns
         -------
-        Pipeline.result: Result object
+        Result
             Instance of the Result class containing the analysis results
         """
         t_a = systime.time()
-        if config.VERBOSE:
+        if config.verbose:
             print(f'Starting multi-sine NL-LS optimisation with harmonics.')
 
         # use the chosen optimisation method
         par_hdi = np.zeros((6, 2))
-        if config.OPTIMISE == 'fitter':
+        if config.optimise == 'fitter':
             par_mean = tsfit.fit_multi_sinusoid_harmonics_per_group(self.data.time, self.data.flux, self.result.p_orb,
                                                                     self.result.const, self.result.slope,
                                                                     self.result.f_n, self.result.a_n, self.result.ph_n,
-                                                                    self.data.i_chunks, verbose=config.VERBOSE)
+                                                                    self.data.i_chunks, verbose=config.verbose)
         else:
             # make model including everything to calculate noise level
             resid = self.data.flux - self.model_linear() - self.model_sinusoid()
@@ -1148,7 +1152,7 @@ class Pipeline:
             output = mcf.sample_sinusoid_h(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
                                            self.result.slope, f_n, a_n, ph_n, self.result.p_err, self.result.c_err,
                                            self.result.sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
-                                           self.data.i_chunks, verbose=config.VERBOSE)
+                                           self.data.i_chunks, verbose=config.verbose)
             inf_data, par_mean, par_hdi = output
 
         self.result.setter(p_orb=par_mean[0], const=par_mean[1], slope=par_mean[2], f_n=par_mean[3], a_n=par_mean[4],
@@ -1158,7 +1162,7 @@ class Pipeline:
         # select frequencies based on some significance criteria
         out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
                                      self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
-                                     self.result.ph_n, self.data.i_chunks, verbose=config.VERBOSE)
+                                     self.result.ph_n, self.data.i_chunks, verbose=config.verbose)
         self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
 
         # main function done, calculate the rest of the stats
@@ -1181,7 +1185,7 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        if config.VERBOSE:
+        if config.verbose:
             rnd_p_orb = max(ut.decimal_figures(self.result.p_err, 2),
                             ut.decimal_figures(self.result.p_orb, 2))
             print(f'\033[1;32;48mOptimisation with coupled harmonics complete.\033[0m')
@@ -1231,7 +1235,7 @@ class Pipeline:
 
         Returns
         -------
-        Pipeline.result: Result object
+        Result
             Instance of the Result class containing the analysis results
         """
         # this list determines which analysis steps are taken and in what order
@@ -1239,8 +1243,8 @@ class Pipeline:
                       'optimise_sinusoid_h']
 
         # run steps until config number
-        if config.STOP_AT_STAGE != 0:
-            step_names = step_names[:config.STOP_AT_STAGE]
+        if config.stop_at_stage != 0:
+            step_names = step_names[:config.stop_at_stage]
 
         # tag the start of the analysis
         t_a = systime.time()

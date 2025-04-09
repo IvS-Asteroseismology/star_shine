@@ -30,7 +30,7 @@ def f_within_rayleigh(i, f_n, rayleigh):
     
     Returns
     -------
-    i_close_unsorted: numpy.ndarray[Any, dtype[int]]
+    numpy.ndarray[Any, dtype[int]]
         Indices of close frequencies in the chain
     """
     indices = np.arange((len(f_n)))
@@ -76,7 +76,7 @@ def chains_within_rayleigh(f_n, rayleigh):
     
     Returns
     -------
-    groups: list[numpy.ndarray[Any, dtype[int]]]
+    list[numpy.ndarray[Any, dtype[int]]]
         Indices of close frequencies in all found chains
     
     See Also
@@ -117,7 +117,7 @@ def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3., sigma_f=1
     
     Returns
     -------
-    remove: numpy.ndarray[Any, dtype[int]]
+    numpy.ndarray[Any, dtype[int]]
         Indices of frequencies deemed insignificant
     
     Notes
@@ -154,7 +154,7 @@ def remove_insignificant_snr(a_n, noise_at_f, n_points):
     
     Returns
     -------
-    remove: numpy.ndarray[Any, dtype[int]]
+    numpy.ndarray[Any, dtype[int]]
         Indices of frequencies deemed insignificant
     
     Notes
@@ -194,7 +194,7 @@ def find_harmonics(f_n, f_n_err, p_orb, sigma=1.):
     
     Returns
     -------
-    i_harmonic: numpy.ndarray[bool]
+    numpy.ndarray[bool]
         Indices of frequencies that are harmonics of p_orb
     
     Notes
@@ -234,10 +234,12 @@ def construct_harmonic_range(f_0, domain):
     
     Returns
     -------
-    harmonics: numpy.ndarray[Any, dtype[float]]
-        Frequencies of the harmonic series in the domain
-    n_range: numpy.ndarray[Any, dtype[int]]
-        Corresponding harmonic numbers (base frequency is 1)
+    tuple
+        A tuple containing the following elements:
+        harmonics: numpy.ndarray[Any, dtype[float]]
+            Frequencies of the harmonic series in the domain
+        n_range: numpy.ndarray[Any, dtype[int]]
+            Corresponding harmonic numbers (base frequency is 1)
     """
     # determine where the range of harmonics starts and ends
     n_start = np.ceil(domain[0] / f_0)
@@ -262,10 +264,12 @@ def find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9):
     
     Returns
     -------
-    harmonics: numpy.ndarray[Any, dtype[int]]
-        Indices of the frequencies in f_n that are deemed harmonics
-    harmonic_n: numpy.ndarray[Any, dtype[int]]
-        Corresponding harmonic numbers (base frequency is 1)
+    tuple
+        A tuple containing the following elements:
+        harmonics: numpy.ndarray[Any, dtype[int]]
+            Indices of the frequencies in f_n that are deemed harmonics
+        harmonic_n: numpy.ndarray[Any, dtype[int]]
+            Corresponding harmonic numbers (base frequency is 1)
     
     Notes
     -----
@@ -314,10 +318,12 @@ def find_harmonics_tolerance(f_n, p_orb, f_tol):
     
     Returns
     -------
-     harmonics: numpy.ndarray[Any, dtype[int]]
-        Indices of the frequencies in f_n that are deemed harmonics
-     harmonic_n: numpy.ndarray[Any, dtype[int]]
-        Corresponding harmonic numbers (base frequency is 1)
+    tuple
+        A tuple containing the following elements:
+        harmonics: numpy.ndarray[Any, dtype[int]]
+            Indices of the frequencies in f_n that are deemed harmonics
+        harmonic_n: numpy.ndarray[Any, dtype[int]]
+            Corresponding harmonic numbers (base frequency is 1)
     
     Notes
     -----
@@ -357,10 +363,12 @@ def select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol, sigma_f=3):
     
     Returns
     -------
-     harmonics_passed: numpy.ndarray[Any, dtype[int]]
-        Indices of the frequencies in f_n that are harmonics
-     harmonic_n: numpy.ndarray[Any, dtype[int]]
-        Corresponding harmonic numbers (base frequency is 1)
+    tuple
+        A tuple containing the following elements:
+         harmonics_passed: numpy.ndarray[Any, dtype[int]]
+            Indices of the frequencies in f_n that are harmonics
+         harmonic_n: numpy.ndarray[Any, dtype[int]]
+            Corresponding harmonic numbers (base frequency is 1)
 
     Notes
     -----
@@ -398,10 +406,12 @@ def find_combinations(f_n, f_n_err, sigma=1.):
     
     Returns
     -------
-    final_o2: dict[int]
-        Dictionary containing the indices of combinations of order 2
-    final_o3: dict[int]
-        Dictionary containing the indices of combinations of order 3
+    tuple
+        A tuple containing the following elements:
+        final_o2: dict[int]
+            Dictionary containing the indices of combinations of order 2
+        final_o3: dict[int]
+            Dictionary containing the indices of combinations of order 3
 
     Notes
     -----
@@ -446,7 +456,7 @@ def find_unknown_harmonics(f_n, f_n_err, sigma=1., n_max=5, f_tol=None):
     
     Returns
     -------
-    candidate_h: dict[int]
+    dict[int]
         Dictionary containing dictionaries with the indices of harmonic series
     
     Notes
@@ -571,12 +581,14 @@ def harmonic_series_length(f_test, f_n, freq_res, f_nyquist):
     
     Returns
     -------
-    n_harm: numpy.ndarray[Any, dtype[float]]
-        Number of harmonics per pattern
-    completeness: numpy.ndarray[Any, dtype[float]]
-        Completeness factor of each pattern
-    distance: numpy.ndarray[Any, dtype[float]]
-        Sum of squared distances between harmonics
+    tuple
+        A tuple containing the following elements:
+        n_harm: numpy.ndarray[Any, dtype[float]]
+            Number of harmonics per pattern
+        completeness: numpy.ndarray[Any, dtype[float]]
+            Completeness factor of each pattern
+        distance: numpy.ndarray[Any, dtype[float]]
+            Sum of squared distances between harmonics
     """
     n_harm = np.zeros(len(f_test))
     completeness = np.zeros(len(f_test))
@@ -607,12 +619,14 @@ def linear_regression_uncertainty(p_orb, t_tot, sigma_t=1):
 
     Returns
     -------
-    p_err: float
-        Error in the period
-    t_err: float
-        Error in t_zero
-    p_t_cov: float
-        Covariance between the period and t_zero
+    tuple
+        A tuple containing the following elements:
+        p_err: float
+            Error in the period
+        t_err: float
+            Error in t_zero
+        p_t_cov: float
+            Covariance between the period and t_zero
 
     Notes
     -----

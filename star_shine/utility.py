@@ -26,7 +26,11 @@ except ImportError:
 from . import timeseries_functions as tsf
 from . import analysis_functions as af
 from . import visualisation as vis
-from .. import config
+from .config import get_config
+
+
+# load configuration
+config = get_config()
 
 
 @nb.njit(cache=True)
@@ -42,7 +46,7 @@ def float_to_str(x, dec=2):
     
     Returns
     -------
-    s: str
+    str
         String with the value x
     """
     x_round = np.round(x, dec)
@@ -65,7 +69,7 @@ def weighted_mean(x, w):
     
     Returns
     -------
-    w_mean: float
+    float
         Mean of x weighted by w
     """
     w_mean = np.sum(x * w) / np.sum(w)
@@ -85,7 +89,7 @@ def std_unb(x, n):
 
     Returns
     -------
-    std: float
+    float
         Unbiased standard deviation
     """
     residuals = x - np.mean(x)
@@ -111,7 +115,7 @@ def decimal_figures(x, n_sf):
     
     Returns
     -------
-    decimals: int
+    int
         Number of decimal places to round to
     """
     if x != 0:
@@ -133,7 +137,7 @@ def signal_to_noise_threshold(n_points):
     
     Returns
     -------
-    sn_thr: float
+    float
         signal-to-noise threshold for this data set
     
     Notes
@@ -203,11 +207,13 @@ def sort_chunks(chunk_sorter, i_chunks):
 
     Returns
     -------
-    time_sorter: numpy.ndarray[Any, dtype[int]]
-        Sort indices for the full array
-    i_chunks: numpy.ndarray[Any, dtype[int]]
-        Updated pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    tuple
+        A tuple containing the following elements:
+        time_sorter: numpy.ndarray[Any, dtype[int]]
+            Sort indices for the full array
+        i_chunks: numpy.ndarray[Any, dtype[int]]
+            Updated pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+            the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     """
     # Update i_chunks to be in the sorted order
     sorted_i_chunks = i_chunks[chunk_sorter]
@@ -236,15 +242,17 @@ def load_csv_data(file_name):
 
     Returns
     -------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    flux_err: numpy.ndarray[Any, dtype[float]]
-        Errors in the measurement values
+    tuple
+        A tuple containing the following elements:
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series
+        flux: numpy.ndarray[Any, dtype[float]]
+            Measurement values of the time series
+        flux_err: numpy.ndarray[Any, dtype[float]]
+            Errors in the measurement values
     """
     # get the right columns with pandas
-    col_names = [config.CN_TIME, config.CN_FLUX, config.CN_FLUX_ERR]
+    col_names = [config.cn_time, config.cn_flux, config.cn_flux_err]
     df = pd.read_csv(file_name, usecols=col_names)
 
     # convert to numpy arrays
@@ -266,17 +274,19 @@ def load_fits_data(file_name):
     
     Returns
     -------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    flux_err: numpy.ndarray[Any, dtype[float]]
-        Errors in the measurement values
-    qual_flags: numpy.ndarray[Any, dtype[int]]
-        Integer values representing the quality of the
-        data points. Zero means good quality.
-    crowdsap: float
-        Light contamination parameter (1-third_light)
+    tuple
+        A tuple containing the following elements:
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series
+        flux: numpy.ndarray[Any, dtype[float]]
+            Measurement values of the time series
+        flux_err: numpy.ndarray[Any, dtype[float]]
+            Errors in the measurement values
+        qual_flags: numpy.ndarray[Any, dtype[int]]
+            Integer values representing the quality of the
+            data points. Zero means good quality.
+        crowdsap: float
+            Light contamination parameter (1-third_light)
 
     Notes
     -----
@@ -285,12 +295,12 @@ def load_fits_data(file_name):
     # grab the time series data
     with fits.open(file_name, mode='readonly') as hdul:
         # time stamps and flux measurements
-        time = hdul[1].data[config.CF_TIME]
-        flux = hdul[1].data[config.CF_FLUX]
-        flux_err = hdul[1].data[config.CF_FLUX_ERR]
+        time = hdul[1].data[config.cf_time]
+        flux = hdul[1].data[config.cf_flux]
+        flux_err = hdul[1].data[config.cf_flux_err]
 
         # quality flags
-        qual_flags = hdul[1].data[config.CF_QUALITY]
+        qual_flags = hdul[1].data[config.cf_quality]
 
         # get crowding numbers if found
         if 'CROWDSAP' in hdul[1].header.keys():
@@ -350,7 +360,7 @@ def load_light_curve(file_list, apply_flags=True):
 
         # keep track of the data belonging to each time chunk
         chunk_index = [len(i_chunks), len(i_chunks) + len(ti)]
-        if config.HALVE_CHUNKS & (file.endswith('.fits') | file.endswith('.fit')):
+        if config.halve_chunks & (file.endswith('.fits') | file.endswith('.fit')):
             chunk_index = [[len(i_chunks), len(i_chunks) + len(ti)//2],
                            [len(i_chunks) + len(ti)//2, len(i_chunks) + len(ti)]]
         i_chunks = np.append(i_chunks, chunk_index, axis=0)
@@ -405,7 +415,7 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
     
     Returns
     -------
-    groups: list[numpy.ndarray[Any, dtype[int]]]
+    list[numpy.ndarray[Any, dtype[int]]]
         List of sets of indices indicating the groups
     
     Notes
@@ -450,7 +460,7 @@ def correct_for_crowdsap(flux, crowdsap, i_chunks):
     
     Returns
     -------
-    cor_flux: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series corrected for
         contaminating light
     
@@ -485,7 +495,7 @@ def model_crowdsap(flux, crowdsap, i_chunks):
 
     Returns
     -------
-    model: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         Model of the flux incorporating light contamination
 
     Notes
@@ -533,7 +543,7 @@ def read_inference_data(file_name):
 
     Returns
     -------
-    inf_data: object
+    object
         Arviz inference data object
     """
     fn_ext = os.path.splitext(os.path.basename(file_name))[1]

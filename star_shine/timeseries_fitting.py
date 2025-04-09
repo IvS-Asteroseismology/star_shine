@@ -48,7 +48,7 @@ def dsin_dx(two_pi_t, f, a, ph, d='f', p_orb=0):
 
     Returns
     -------
-    model_deriv: numpy.ndarray[Any, dtype[float]]
+    numpy.ndarray[Any, dtype[float]]
         Model time series of the derivative of a sine wave to f.
 
     Notes
@@ -91,7 +91,7 @@ def objective_sinusoids(params, time, flux, i_chunks):
 
     Returns
     -------
-    -ln_likelihood: float
+    float
         Minus the (natural)log-likelihood of the residuals
 
     See Also
@@ -136,7 +136,7 @@ def jacobian_sinusoids(params, time, flux, i_chunks):
 
     Returns
     -------
-    jac: float
+    float
         The derivative of minus the (natural)log-likelihood of the residuals
 
     See Also
@@ -211,16 +211,18 @@ def fit_multi_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, verbo
 
     Returns
     -------
-    res_const: numpy.ndarray[Any, dtype[float]]
-        Updated y-intercepts of a piece-wise linear curve
-    res_slope: numpy.ndarray[Any, dtype[float]]
-        Updated slopes of a piece-wise linear curve
-    res_freqs: numpy.ndarray[Any, dtype[float]]
-        Updated frequencies of a number of sine waves
-    res_ampls: numpy.ndarray[Any, dtype[float]]
-        Updated amplitudes of a number of sine waves
-    res_phases: numpy.ndarray[Any, dtype[float]]
-        Updated phases of a number of sine waves
+    tuple
+        A tuple containing the following elements:
+        res_const: numpy.ndarray[Any, dtype[float]]
+            Updated y-intercepts of a piece-wise linear curve
+        res_slope: numpy.ndarray[Any, dtype[float]]
+            Updated slopes of a piece-wise linear curve
+        res_freqs: numpy.ndarray[Any, dtype[float]]
+            Updated frequencies of a number of sine waves
+        res_ampls: numpy.ndarray[Any, dtype[float]]
+            Updated amplitudes of a number of sine waves
+        res_phases: numpy.ndarray[Any, dtype[float]]
+            Updated phases of a number of sine waves
 
     Notes
     -----
@@ -288,16 +290,18 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
 
     Returns
     -------
-    res_const: numpy.ndarray[Any, dtype[float]]
-        Updated y-intercepts of a piece-wise linear curve
-    res_slope: numpy.ndarray[Any, dtype[float]]
-        Updated slopes of a piece-wise linear curve
-    res_freqs: numpy.ndarray[Any, dtype[float]]
-        Updated frequencies of a number of sine waves
-    res_ampls: numpy.ndarray[Any, dtype[float]]
-        Updated amplitudes of a number of sine waves
-    res_phases: numpy.ndarray[Any, dtype[float]]
-        Updated phases of a number of sine waves
+    tuple
+        A tuple containing the following elements:
+        res_const: numpy.ndarray[Any, dtype[float]]
+            Updated y-intercepts of a piece-wise linear curve
+        res_slope: numpy.ndarray[Any, dtype[float]]
+            Updated slopes of a piece-wise linear curve
+        res_freqs: numpy.ndarray[Any, dtype[float]]
+            Updated frequencies of a number of sine waves
+        res_ampls: numpy.ndarray[Any, dtype[float]]
+            Updated amplitudes of a number of sine waves
+        res_phases: numpy.ndarray[Any, dtype[float]]
+            Updated phases of a number of sine waves
 
     Notes
     -----
@@ -365,7 +369,7 @@ def objective_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
 
     Returns
     -------
-    -ln_likelihood: float
+    float
         Minus the (natural)log-likelihood of the residuals
 
     See Also
@@ -425,7 +429,7 @@ def jacobian_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
 
     Returns
     -------
-    jac: float
+    float
         The derivative of minus the (natural)log-likelihood of the residuals
 
     See Also
@@ -518,18 +522,20 @@ def fit_multi_sinusoid_harmonics(time, flux, p_orb, const, slope, f_n, a_n, ph_n
 
     Returns
     -------
-    res_p_orb: float
-        Updated Orbital period in days
-    res_const: numpy.ndarray[Any, dtype[float]]
-        Updated y-intercepts of a piece-wise linear curve
-    res_slope: numpy.ndarray[Any, dtype[float]]
-        Updated slopes of a piece-wise linear curve
-    res_freqs: numpy.ndarray[Any, dtype[float]]
-        Updated frequencies of a number of sine waves
-    res_ampls: numpy.ndarray[Any, dtype[float]]
-        Updated amplitudes of a number of sine waves
-    res_phases: numpy.ndarray[Any, dtype[float]]
-        Updated phases of a number of sine waves
+    tuple
+        A tuple containing the following elements:
+        res_p_orb: float
+            Updated Orbital period in days
+        res_const: numpy.ndarray[Any, dtype[float]]
+            Updated y-intercepts of a piece-wise linear curve
+        res_slope: numpy.ndarray[Any, dtype[float]]
+            Updated slopes of a piece-wise linear curve
+        res_freqs: numpy.ndarray[Any, dtype[float]]
+            Updated frequencies of a number of sine waves
+        res_ampls: numpy.ndarray[Any, dtype[float]]
+            Updated amplitudes of a number of sine waves
+        res_phases: numpy.ndarray[Any, dtype[float]]
+            Updated phases of a number of sine waves
 
     Notes
     -----
@@ -610,18 +616,20 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
 
     Returns
     -------
-    res_p_orb: float
-        Updated Orbital period in days
-    res_const: numpy.ndarray[Any, dtype[float]]
-        Updated y-intercepts of a piece-wise linear curve
-    res_slope: numpy.ndarray[Any, dtype[float]]
-        Updated slopes of a piece-wise linear curve
-    res_freqs: numpy.ndarray[Any, dtype[float]]
-        Updated frequencies of a number of sine waves
-    res_ampls: numpy.ndarray[Any, dtype[float]]
-        Updated amplitudes of a number of sine waves
-    res_phases: numpy.ndarray[Any, dtype[float]]
-        Updated phases of a number of sine waves
+    tuple
+        A tuple containing the following elements:
+        res_p_orb: float
+            Updated Orbital period in days
+        res_const: numpy.ndarray[Any, dtype[float]]
+            Updated y-intercepts of a piece-wise linear curve
+        res_slope: numpy.ndarray[Any, dtype[float]]
+            Updated slopes of a piece-wise linear curve
+        res_freqs: numpy.ndarray[Any, dtype[float]]
+            Updated frequencies of a number of sine waves
+        res_ampls: numpy.ndarray[Any, dtype[float]]
+            Updated amplitudes of a number of sine waves
+        res_phases: numpy.ndarray[Any, dtype[float]]
+            Updated phases of a number of sine waves
 
     Notes
     -----
