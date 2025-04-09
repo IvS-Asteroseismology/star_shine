@@ -1714,7 +1714,7 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
         Last frequency of the periodogram.
         If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
     select: str
-        Select the next frequency based on amplitude 'a' or flux-to-noise 'sn'
+        Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'
     verbose: bool
         If set to True, this function will print some information
     
@@ -1733,7 +1733,7 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
     
     Notes
     -----
-    The extracted frequency is based on the highest amplitude or flux-to-noise
+    The extracted frequency is based on the highest amplitude or signal-to-noise
     in the periodogram (over the interval where it is calculated). The highest
     peak is oversampled by a factor 100 to get a precise measurement.
     
@@ -1981,7 +1981,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         The phases of a number of sine waves (can be empty or None)
     select: str, optional
         Select the next frequency based on amplitude ('a'),
-        flux-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).
+        signal-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).
     verbose: bool, optional
         If set to True, this function will print some information
 
@@ -2659,7 +2659,7 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     passed_sigma: numpy.ndarray[bool]
         Non-harmonic frequencies that passed the sigma check
     passed_snr: numpy.ndarray[bool]
-        Non-harmonic frequencies that passed the flux-to-noise check
+        Non-harmonic frequencies that passed the signal-to-noise check
     passed_both: numpy.ndarray[bool]
         Non-harmonic frequencies that passed both checks
     passed_harmonic: numpy.ndarray[bool]
@@ -2685,7 +2685,7 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     # find the insignificant frequencies
     remove_sigma = af.remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3, sigma_f=3)
     
-    # apply the flux-to-noise threshold
+    # apply the signal-to-noise threshold
     noise_at_f = scargle_noise_at_freq(f_n, time, residuals, window_width=1.0)
     remove_snr = af.remove_insignificant_snr(a_n, noise_at_f, n_points)
     
