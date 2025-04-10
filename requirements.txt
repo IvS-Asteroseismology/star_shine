@@ -5,4 +5,4 @@ h5py
 astropy
 pandas
 matplotlib
-yaml
+pyyaml
