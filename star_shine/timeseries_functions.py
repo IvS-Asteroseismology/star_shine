@@ -1410,20 +1410,20 @@ def calc_ddd_normal_likelihood(time, residuals, flux_err):
     return like
 
 
-def calc_likelihood(time=None, flux=None, residuals=None, flux_err=None, func=calc_iid_normal_likelihood):
+def calc_likelihood(time=None, flux=None, residual=None, flux_err=None, func=calc_iid_normal_likelihood):
     """Natural logarithm of the likelihood function.
 
     Parameters
     ----------
-    time: numpy.ndarray[Any, dtype[float]]
+    time: numpy.ndarray[Any, dtype[float]], optional
         Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
+    flux: numpy.ndarray[Any, dtype[float]], optional
         Measurement values of the time series
-    residuals: numpy.ndarray[Any, dtype[float]]
+    residual: numpy.ndarray[Any, dtype[float]], optional
         Residual is flux - model
-    flux_err: None, numpy.ndarray[Any, dtype[float]]
+    flux_err: numpy.ndarray[Any, dtype[float]], optional
         Errors in the measurement values
-    func: function
+    func: function, optional
         The likelihood function to use for the calculation
         Choose from: calc_iid_normal_likelihood, calc_approx_did_likelihood,
         calc_whittle_likelihood, calc_did_normal_likelihood,
@@ -1441,13 +1441,24 @@ def calc_likelihood(time=None, flux=None, residuals=None, flux_err=None, func=ca
     or some approximations in-between.
     """
     # make a dict of the given arguments
-    kwargs = {'time': time, 'flux': flux, 'residuals': residuals, 'flux_err': flux_err}
+    kwargs = {'time': time, 'flux': flux, 'residuals': residual, 'flux_err': flux_err}
 
     # check what the chosen function needs
     func_args = list(inspect.signature(func).parameters)
 
     # make a dict of those
     args_dict = {k: kwargs.pop(k) for k in dict(kwargs) if k in func_args}
+
+    # check None for function input
+    if np.any([value is None for value in args_dict.values()]):
+        raise ValueError("Relevant input arrays must not be None.")
+
+    # check empty input and input length
+    input_len = [len(value) for value in args_dict.values()]
+    if np.any([l == 0 for l in input_len]):
+        raise ValueError("Relevant input arrays must not be empty.")
+    elif np.any([l != input_len[0] for l in input_len]):
+        raise ValueError("Relevant input arrays must have equal length.")
 
     # feed to the function
     like = func(**args_dict)

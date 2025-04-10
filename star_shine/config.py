@@ -147,8 +147,7 @@ class Config:
 
         return None
 
-    @classmethod
-    def update_from_file(cls, new_config_path):
+    def update_from_file(self, new_config_path):
         """Updates the settings with a user defined configuration file.
 
         Parameters
@@ -160,13 +159,12 @@ class Config:
         -------
         None
         """
-        cls._config_path = new_config_path
-        cls._load_config()
+        self._config_path = new_config_path
+        self._load_config()
 
         return None
 
-    @classmethod
-    def update_from_dict(cls, settings):
+    def update_from_dict(self, settings):
         """Updates the settings with user defined keyword arguments.
 
         Parameters
@@ -183,8 +181,8 @@ class Config:
 
         # set the valid attributes
         for key, value in settings.items():
-            if hasattr(cls._instance, key):
-                setattr(cls._instance, key, value)
+            if hasattr(self, key):
+                setattr(self, key, value)
             else:
                 invalid[key] = value
 
