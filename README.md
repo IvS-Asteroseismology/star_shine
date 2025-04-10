@@ -41,8 +41,8 @@ although any Python version >=3.6 is expected to work.
 
 **Package dependencies:** The following package versions have been used in the development of this code, 
 meaning older versions can in principle work, but this is not guaranteed. NumPy 1.20.3, SciPy 1.7.3, Numba 0.55.1, 
-h5py 3.7.0, Astropy 4.3.1, Matplotlib 3.5.3, Arviz 0.11.4, corner 2.2.1, pymc3 3.11.4 (optional), 
-theano 1.1.2 (optional), fastprogress 1.0.0 (optional).
+h5py 3.7.0, Astropy 4.3.1, Matplotlib 3.5.3, pyyaml 6.0.2, pymc3 3.11.4 (optional), theano 1.1.2 (optional), 
+Arviz 0.11.4 (optional), fastprogress 1.0.0 (optional).
 
 Newer versions are expected to work, and it is considered a bug if this is not the case.
 
