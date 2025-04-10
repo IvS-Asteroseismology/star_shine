@@ -274,9 +274,9 @@ class Data:
         instance.setter(**data_dict)
 
         if config.verbose:
-            print(f'Loaded data file with target identifier: {data_dict['target_id']}, '
-                  f'created on {data_dict['date_time']}. \n'
-                  f'Data identifier: {data_dict['data_id']}. \n')
+            print(f"Loaded data file with target identifier: {data_dict['target_id']}, "
+                  f"created on {data_dict['date_time']}. \n"
+                  f"Data identifier: {data_dict['data_id']}. \n")
 
         return instance
 
@@ -578,9 +578,9 @@ class Result:
         instance.setter(**result_dict)
 
         if config.verbose:
-            print(f'Loaded analysis file with target identifier: {result_dict['target_id']}, '
-                  f'created on {result_dict['date_time']}. \n'
-                  f'Data identifier: {result_dict['data_id']}. Description: {result_dict['description']} \n')
+            print(f"Loaded analysis file with target identifier: {result_dict['target_id']}, "
+                  f"created on {result_dict['date_time']}. \n"
+                  f"Data identifier: {result_dict['data_id']}. Description: {result_dict['description']} \n")
 
         return instance
 
@@ -743,7 +743,7 @@ class Result:
                 'Right bound HDI of the orbital period', 'Number of free parameters',
                 'Bayesian Information Criterion of the residuals', 'Standard deviation of the residuals']
         data = np.column_stack((names, stats, desc))
-        hdr = f'{self.target_id}, {self.data_id}, Model statistics\nname, value, description'
+        hdr = f"{self.target_id}, {self.data_id}, Model statistics\nname, value, description"
         file_name_stats = file_name.replace(ext, '_stats.csv')
         np.savetxt(file_name_stats, data, delimiter=',', header=hdr, fmt='%s')
 
@@ -836,7 +836,7 @@ class Pipeline:
         if save_dir == '':
             save_dir = config.save_dir
         self.save_dir = save_dir
-        self.save_subdir = f'{self.data.target_id}_analysis'
+        self.save_subdir = f"{self.data.target_id}_analysis"
 
         # for saving, make a folder if not there yet
         full_dir = os.path.join(save_dir, self.save_subdir)
@@ -958,7 +958,7 @@ class Pipeline:
         """
         t_a = systime.time()
         if config.verbose:
-            print(f'Starting multi-sinusoid NL-LS optimisation.')
+            print("Starting multi-sinusoid NL-LS optimisation.")
 
         # use the chosen optimisation method
         inf_data, par_mean, par_hdi = None, None, None
@@ -1016,9 +1016,9 @@ class Pipeline:
         # print some useful info
         t_b = systime.time()
         if config.verbose:
-            print(f'\033[1;32;48mOptimisation of sinusoids complete.\033[0m')
-            print(f'\033[0;32;48m{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, '
-                  f'BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s\033[0m\n')
+            print(f"\033[1;32;48mOptimisation of sinusoids complete.\033[0m")
+            print(f"\033[0;32;48m{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
+                  f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s\033[0m\n")
 
         return self.result
 
@@ -1042,7 +1042,7 @@ class Pipeline:
         """
         t_a = systime.time()
         if config.verbose:
-            print(f"Coupling the harmonic frequencies to the orbital frequency...")
+            print("Coupling the harmonic frequencies to the orbital frequency...")
 
         # if given, the input p_orb is refined locally, otherwise the period is searched for globally
         if self.data.p_orb == 0:
@@ -1119,7 +1119,7 @@ class Pipeline:
         """
         t_a = systime.time()
         if config.verbose:
-            print(f'Starting multi-sine NL-LS optimisation with harmonics.')
+            print("Starting multi-sine NL-LS optimisation with harmonics.")
 
         # use the chosen optimisation method
         par_hdi = np.zeros((6, 2))
@@ -1187,10 +1187,10 @@ class Pipeline:
         if config.verbose:
             rnd_p_orb = max(ut.decimal_figures(self.result.p_err, 2),
                             ut.decimal_figures(self.result.p_orb, 2))
-            print(f'\033[1;32;48mOptimisation with coupled harmonics complete.\033[0m')
-            print(f'\033[0;32;48mp_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{self.result.p_err:.{rnd_p_orb}f}), \n'
-                  f'{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, '
-                  f'BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s\033[0m\n')
+            print(f"\033[1;32;48mOptimisation with coupled harmonics complete.\033[0m")
+            print(f"\033[0;32;48mp_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{self.result.p_err:.{rnd_p_orb}f}), \n"
+                  f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
+                  f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s\033[0m\n")
 
         return self.result
 
@@ -1247,11 +1247,11 @@ class Pipeline:
 
         # tag the start of the analysis
         t_a = systime.time()
-        self.logger.info('Start of analysis')
+        self.logger.info("Start of analysis")
 
         # run this sequence for each analysis step of the pipeline
         for step in range(len(step_names)):
-            file_name = os.path.join(self.save_dir, self.save_subdir, f'{self.data.target_id}_result_{step + 1}.hdf5')
+            file_name = os.path.join(self.save_dir, self.save_subdir, f"{self.data.target_id}_result_{step + 1}.hdf5")
 
             # Load existing file if not overwriting
             self.result = Result.load_conditional(file_name)  # returns empty Result if no file
@@ -1269,6 +1269,6 @@ class Pipeline:
 
         # final message and timing
         t_b = systime.time()
-        self.logger.info(f'End of analysis. Total time elapsed: {t_b - t_a:1.1f}s.')  # info to save to log
+        self.logger.info(f"End of analysis. Total time elapsed: {t_b - t_a:1.1f}s.")  # info to save to log
 
         return self.result
