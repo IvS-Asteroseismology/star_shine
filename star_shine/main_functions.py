@@ -60,6 +60,10 @@ class Data:
         The orbital period. Set to 0 to search for the best period.
         If the orbital period is known with certainty beforehand, it can
         be provided as initial value and no new period will be searched.
+    f_min: float
+        Minimum frequency for extraction and periodograms
+    f_max: float
+        Maximum frequency for extraction and periodograms
     """
 
     def __init__(self, target_id='', data_id=''):
@@ -91,7 +95,10 @@ class Data:
         self.t_mean = 0.
         self.t_mean_chunk = np.zeros((0,), dtype=np.float_)
         self.t_int = 0.
+
         self.p_orb = 0.
+        self.f_min = 0.
+        self.f_max = 0.
 
         return
 
@@ -204,16 +211,19 @@ class Data:
         lc_data = ut.load_light_curve(file_list_dir, apply_flags=config.apply_q_flags)
         instance.setter(time=lc_data[0], flux=lc_data[1], flux_err=lc_data[2], i_chunks=lc_data[3], medians=lc_data[4])
 
+        # check for overlapping time stamps
+        if np.any(np.diff(instance.time) <= 0):
+            if config.verbose:
+                print("The time array chunks include overlap.")
+
         # set derived attributes
         instance.t_tot = np.ptp(instance.time)
         instance.t_mean = np.mean(instance.time)
         instance.t_mean_chunk = np.array([np.mean(instance.time[ch[0]:ch[1]]) for ch in instance.i_chunks])
         instance.t_int = np.median(np.diff(instance.time))  # integration time, taken to be the median time step
 
-        # check for overlapping time stamps
-        if np.any(np.diff(instance.time) <= 0):
-            if config.verbose:
-                print("The time array chunks include overlap.")
+        instance.f_min = 0.01 / instance.t_tot
+        instance.f_max = ut.frequency_upper_threshold(instance.time, func='min')
 
         return instance
 
@@ -899,13 +909,16 @@ class Pipeline:
         # start by looking for more harmonics
         if self.result.p_orb != 0:
             out_a = tsf.extract_harmonics(self.data.time, self.data.flux, self.result.p_orb, self.data.i_chunks,
-                                          self.result.f_n, self.result.a_n, self.result.ph_n, verbose=config.verbose)
+                                          config.bic_thr, self.result.f_n, self.result.a_n, self.result.ph_n,
+                                          verbose=config.verbose)
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         # extract all frequencies with the iterative scheme
         out_b = tsf.extract_sinusoids(self.data.time, self.data.flux, self.data.i_chunks, self.result.p_orb,
-                                      self.result.f_n, self.result.a_n, self.result.ph_n,
-                                      select=config.select, verbose=config.verbose)
+                                      self.result.f_n, self.result.a_n, self.result.ph_n, bic_thr=config.bic_thr,
+                                      snr_thr=config.snr_thr, stop_crit=config.stop_crit, select=config.select,
+                                      f0=self.data.f_min, fn=self.data.f_max, fit_each_step=config.optimise_step,
+                                      verbose=config.verbose)
         self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
 
         # remove any frequencies that end up not making the statistical cut
