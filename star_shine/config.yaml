@@ -1,0 +1,98 @@
+########################################################################################################################
+# --------------------------------------------- Star Shine settings file -----------------------------------------------
+########################################################################################################################
+## ------------------------------------------------ General settings ---------------------------------------------------
+# verbose description:
+# Print information during runtime
+verbose: False
+
+# stop_at_stage description:
+# Run the analysis up to and including this stage, 0 means all stages are run
+stop_at_stage: 0
+
+# ----------------------------------------------- Extraction settings --------------------------------------------------
+# select description:
+# Select the next frequency in iterative extraction based on 'amp', 'snr', or 'hybrid' (first amp then snr)
+select: 'hybrid'
+
+# stop_crit description:
+# Stop criterion for the iterative extraction of sinusoids will be based on 'bic', or 'snr'
+stop_crit: 'bic'
+
+# bic_thr description:
+# Delta-BIC threshold for the acceptance of sinusoids
+bic_thr: 2
+
+# snr_thr description:
+# Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1
+snr_thr: -1
+
+# f_max description:
+# Highest frequency allowed during extraction and for periodograms, uses built-in Nyquist if set to -1
+f_max: -1
+
+# ---------------------------------------------- Optimisation settings -------------------------------------------------
+# optimise description:
+# 'fitter' or 'sampler' method is used for model optimisation
+optimise: 'fitter'
+
+# optimise_step description:
+# Optimise at every step (T) or only at the end (F)
+optimise_step: True
+
+########################################################################################################################
+# ---------------------------------------------- Data and file settings ------------------------------------------------
+# overwrite description:
+# Overwrite existing result files
+overwrite: False
+
+# data_dir description:
+# Root directory of the data, if empty will use current dir
+data_dir: ''
+
+# save_dir description:
+# Save directory for analysis results, if empty will use current dir
+save_dir: ''
+
+# save_ascii description:
+# Save ascii variants of the HDF5 result files
+save_ascii: False
+
+# --------------------------------------------- Tabulated data settings ------------------------------------------------
+# cn_time description:
+# Column name for the time stamps
+cn_time: 'time'
+
+# cn_flux description:
+# Column name for the flux measurements
+cn_flux: 'flux'
+
+# cn_flux_err description:
+# Column name for the flux measurement errors
+cn_flux_err: 'flux_err'
+
+# ------------------------------------------------ Fits data settings --------------------------------------------------
+# cf_time description:
+# Column name for the time stamps
+cf_time: 'TIME'
+
+# cf_flux description:
+# Column name for the flux [examples: SAP_FLUX, PDCSAP_FLUX, KSPSAP_FLUX]
+cf_flux: 'SAP_FLUX'
+
+# cf_flux_err description:
+# Column name for the flux errors [examples: SAP_FLUX_ERR, PDCSAP_FLUX_ERR, KSPSAP_FLUX_ERR]
+cf_flux_err: 'SAP_FLUX_ERR'
+
+# cf_quality description:
+# Column name for the flux errors
+cf_quality: 'QUALITY'
+
+# apply_q_flags description:
+# Apply the quality flags supplied by the data source
+apply_q_flags: True
+
+# halve_chunks description:
+# Cut the time chunks in half (TESS data often has a discontinuity mid-sector)
+halve_chunks: False
+########################################################################################################################

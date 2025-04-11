@@ -39,7 +39,8 @@ class Config:
     select: str = 'hybrid'
     stop_crit: str = 'bic'
     bic_thr: float = 2.
-    snr_thr: float = 5.
+    snr_thr: float = -1.
+    f_max: float = -1.
 
     # Optimisation settings
     optimise: str = 'fitter'
