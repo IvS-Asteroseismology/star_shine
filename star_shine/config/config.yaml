@@ -12,20 +12,24 @@ stop_at_stage: 0
 
 # ----------------------------------------------- Extraction settings --------------------------------------------------
 # select description:
-# Select next frequency based on 'amp', 'snr', or 'hybrid' (first amp then snr)
+# Select the next frequency in iterative extraction based on 'amp', 'snr', or 'hybrid' (first amp then snr)
 select: 'hybrid'
 
 # stop_crit description:
-# Stop the extraction based on 'bic', 'snr'
+# Stop criterion for the iterative extraction of sinusoids will be based on 'bic', or 'snr'
 stop_crit: 'bic'
 
 # bic_thr description:
-# Threshold for delta-BIC to stop iteration
+# Delta-BIC threshold for the acceptance of sinusoids
 bic_thr: 2
 
 # snr_thr description:
-# Threshold for SNR to stop iteration
-snr_thr: 4
+# Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1
+snr_thr: -1
+
+# f_max description:
+# Highest frequency allowed during extraction and for periodograms, uses built-in Nyquist if set to -1
+f_max: -1
 
 # ---------------------------------------------- Optimisation settings -------------------------------------------------
 # optimise description:
