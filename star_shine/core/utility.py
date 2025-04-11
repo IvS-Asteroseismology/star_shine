@@ -24,9 +24,7 @@ except ImportError:
     az = None
     pass
 
-from . import timeseries_functions as tsf
-from . import analysis_functions as af
-from . import visualisation as vis
+from . import visualisation as vis, analysis_functions as af, timeseries_functions as tsf
 from .config import get_config
 
 

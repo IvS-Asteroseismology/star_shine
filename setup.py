@@ -9,7 +9,7 @@ from setuptools import setup
 # package version
 MAJOR = 0
 MINOR = 1
-ATTR = '0'
+ATTR = '1'
 # full acronym
 ACRONYM = ("Satellite Time-series Analysis Routine using "
            "Sinusoids and Harmonics through Iterative Non-linear Extraction")
@@ -26,6 +26,6 @@ setup(name="star_shine",
       package_data={'star_shine': ['data/*']},
       include_package_data=True,
       python_requires=">=3.6",
-      install_requires=['numpy', 'scipy', 'numba', 'h5py', 'astropy', 'pandas', 'matplotlib', 'yaml'],
+      install_requires=['numpy', 'scipy', 'numba', 'h5py', 'astropy', 'pandas', 'matplotlib', 'pyyaml'],
       extras_require={'mcmc': ['pymc3', 'fastprogress', 'theano', 'arviz']}
      )

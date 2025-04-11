@@ -13,8 +13,7 @@ import scipy as sp
 import numba as nb
 import astropy.timeseries as apy
 
-from . import analysis_functions as af
-from . import utility as ut
+from star_shine.core import utility as ut, analysis_functions as af
 
 
 @nb.njit(cache=True)

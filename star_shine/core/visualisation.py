@@ -18,8 +18,7 @@ except ImportError:
     az = None
     pass
 
-from . import timeseries_functions as tsf
-from . import analysis_functions as af
+from star_shine.core import analysis_functions as af, timeseries_functions as tsf
 
 # mpl style sheet
 script_dir = os.path.dirname(os.path.abspath(__file__))  # absolute dir the script is in

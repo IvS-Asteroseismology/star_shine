@@ -3,12 +3,8 @@
 Code written by: Luc IJspeert
 """
 
-from . import main_functions
-from .main_functions import *
-from . import timeseries_functions as tsf
-from . import timeseries_fitting as tsfit
-from . import analysis_functions as af
-from . import mcmc_functions as mcf
-from . import utility as ut
-from .utility import update_config
-from . import visualisation as vis
+from star_shine.api.main import *
+from .core import mcmc_functions as mcf, utility as ut, visualisation as vis, analysis_functions as af, \
+    timeseries_fitting as tsfit, timeseries_functions as tsf
+from .api import main
+from star_shine.core.utility import update_config

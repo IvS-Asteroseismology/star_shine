@@ -11,13 +11,13 @@ import datetime
 import h5py
 import numpy as np
 
-from . import timeseries_functions as tsf
-from . import timeseries_fitting as tsfit
-from . import mcmc_functions as mcf
-from . import analysis_functions as af
-from . import utility as ut
-from . import visualisation as vis
-from .config import get_config
+from star_shine.core import timeseries_functions as tsf
+from star_shine.core import timeseries_fitting as tsfit
+from star_shine.core import analysis_functions as af
+from star_shine.core import mcmc_functions as mcf
+from star_shine.core import utility as ut
+from star_shine.core import visualisation as vis
+from star_shine.core.config import get_config
 
 
 # load configuration

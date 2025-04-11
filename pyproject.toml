@@ -1,0 +1,50 @@
+[project]
+name = "star_shine"
+version = "0.1.1"
+description = "Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction"
+authors = [
+    { name = "Luc IJspeert" }
+]
+license = { text = "GPL-3.0-only" }
+readme = "README.md"
+requires-python = ">=3.6"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3"
+]
+dependencies = [
+    "numpy>=1.20.3,<3.0.0",
+    "scipy>=1.7.3,<2.0.0",
+    "numba>=0.55.1,<1.0.0",
+    "h5py>=3.7.0,<4.0.0",
+    "astropy>=4.3.1,<8.0.0",
+    "pandas>=1.2.3,<3.0.0",
+    "matplotlib>=3.5.3,<4.0.0",
+    "pyyaml>=6.0.2,<7.0.0"
+]
+
+[project.optional-dependencies]
+mcmc = [
+    "pymc3>=3.11.4,<4.0.0",
+    "theano>=1.1.2,<2.0.0",
+    "arviz>=0.11.4,<1.0.0",
+    "fastprogress>=1.0.0,<2.0.0"
+]
+
+[project.scripts]
+starshine-gui = "star_shine.gui.gui_app:launch_gui"
+
+[project.urls]
+repository = "https://github.com/LucIJspeert/star_shine"
+
+[tool.poetry]
+# Poetry still expects this section for build logic, source includes, and advanced features.
+include = ["star_shine/data/*"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+

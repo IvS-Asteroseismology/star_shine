@@ -11,7 +11,7 @@ import numpy as np
 import numba as nb
 import itertools as itt
 
-from . import utility as ut
+from star_shine.core import utility as ut
 
 
 @nb.njit(cache=True)
