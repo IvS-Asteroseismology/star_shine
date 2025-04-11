@@ -150,17 +150,17 @@ def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3., sigma_f=1
 
 
 @nb.njit(cache=True)
-def remove_insignificant_snr(a_n, noise_at_f, n_points):
+def remove_insignificant_snr(time, a_n, noise_at_f):
     """Removes insufficiently significant frequencies in terms of S/N.
     
     Parameters
     ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
     a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
     noise_at_f: numpy.ndarray[Any, dtype[float]]
         The noise level at each frequency
-    n_points: int
-        Number of data points
     
     Returns
     -------
@@ -178,7 +178,7 @@ def remove_insignificant_snr(a_n, noise_at_f, n_points):
     Not to be confused with the noise on the individual data points of the
     time series.
     """
-    snr_threshold = ut.signal_to_noise_threshold(n_points)
+    snr_threshold = ut.signal_to_noise_threshold(time)
 
     # signal-to-noise below threshold
     a_insig_1 = (a_n / noise_at_f < snr_threshold)
@@ -620,7 +620,7 @@ def find_unknown_harmonics(f_n, f_n_err, sigma=1., n_max=5, f_tol=None):
 
 
 @nb.njit(cache=True)
-def harmonic_series_length(f_test, f_n, freq_res, f_nyquist):
+def harmonic_series_length(f_test, f_n, freq_res, f_max):
     """Find the number of harmonics that a set of frequencies has
     
     Parameters
@@ -631,9 +631,9 @@ def harmonic_series_length(f_test, f_n, freq_res, f_nyquist):
         The frequencies of a number of sine waves
     freq_res: float
         Frequency resolution
-    f_nyquist: float
-        Nyquist frequency
-    
+    f_max: float
+        Highest allowed frequency at which signals are extracted
+
     Returns
     -------
     tuple
@@ -656,7 +656,7 @@ def harmonic_series_length(f_test, f_n, freq_res, f_nyquist):
             completeness[i] = 1
             distance[i] = 0
         else:
-            completeness[i] = n_harm[i] / (f_nyquist // f)
+            completeness[i] = n_harm[i] / (f_max // f)
             distance[i] = np.sum((f_n[harmonics] - harmonic_n * f)**2)
 
     return n_harm, completeness, distance

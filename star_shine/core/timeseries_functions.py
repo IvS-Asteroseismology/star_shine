@@ -13,7 +13,14 @@ import scipy as sp
 import numba as nb
 import astropy.timeseries as apy
 
-from star_shine.core import utility as ut, analysis_functions as af
+from . import timeseries_fitting as tsfit
+from . import analysis_functions as af
+from . import utility as ut
+from .config import get_config
+
+
+# load configuration
+config = get_config()
 
 
 @nb.njit(cache=True)
@@ -421,7 +428,7 @@ def scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
     t_tot = np.ptp(time_ms)
     f0 = max(f0, 0.01 / t_tot)  # don't go lower than T/100
     if df == 0:
-        df = 0.1 / t_tot
+        df = 0.1 / t_tot  # default frequency sampling is about 1/10 of frequency resolution
     if fn == 0:
         fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
     nf = int((fn - f0) / df + 0.001) + 1
@@ -916,7 +923,7 @@ def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
     t_tot = np.ptp(time_ms)
     f0 = max(f0, 0.01 / t_tot)  # don't go lower than T/100
     if df == 0:
-        df = 0.1 / t_tot
+        df = 0.1 / t_tot  # default frequency sampling is about 1/10 of frequency resolution
     if fn == 0:
         fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
     nf = int((fn - f0) / df + 0.001) + 1
@@ -1883,10 +1890,10 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
     f0: float
-        Starting frequency of the periodogram.
+        Lowest allowed frequency for extraction.
         If left zero, default is f0 = 1/(100*T)
     fn: float
-        Last frequency of the periodogram.
+        Highest allowed frequency for extraction.
         If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
     select: str
         Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'
@@ -1920,9 +1927,10 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
     a significant speed increase. It cannot be used on smaller intervals.
     """
     df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
+    f_nyquist_min = 1/(2*np.median(np.diff(time)))  # minimum Nyquist frequency
 
     # full LS periodogram
-    if (f0 == 0) & (fn == 0):
+    if (f0 == 0) & ((fn == 0) | (fn >= f_nyquist_min)):
         # inconsistency with astropy_scargle for small freq intervals, so only do the full pd
         freqs, ampls = astropy_scargle(time, flux, f0=f0, fn=fn, df=df)
     else:
@@ -2163,8 +2171,8 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     return const, slope, f_n, a_n, ph_n
 
 
-def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=None, select='hybrid',
-                      verbose=True):
+def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=None, bic_thr=2, snr_thr=0,
+                      stop_crit='bic', select='hybrid', f0=0, fn=0, fit_each_step=False, verbose=True):
     """Extract all the frequencies from a periodic flux.
 
     Parameters
@@ -2184,9 +2192,24 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         The amplitudes of a number of sine waves (can be empty or None)
     ph_n: numpy.ndarray[Any, dtype[float]], optional
         The phases of a number of sine waves (can be empty or None)
+    bic_thr: float, optional
+        The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
+    snr_thr: float, optional
+        Threshold for signal-to-noise ratio for a signal to be considered significant.
+    stop_crit: str, optional
+        Use the BIC as stopping criterion or the SNR, choose from 'bic', or 'snr'
     select: str, optional
         Select the next frequency based on amplitude ('a'),
         signal-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).
+    f0: float
+        Lowest allowed frequency for extraction.
+        If left zero, default is f0 = 1/(100*T)
+    fn: float
+        Highest allowed frequency for extraction.
+        If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
+    fit_each_step: bool
+        If set to True, a non-linear least-squares fit of all extracted sinusoids in groups is performed at each
+        iteration. While this increases the quality of the extracted signals, it drastically slows down the code.
     verbose: bool, optional
         If set to True, this function will print some information
 
@@ -2224,12 +2247,15 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
 
     Exclusively uses the Lomb-Scargle periodogram (and an iterative parameter
     improvement scheme) to extract the frequencies.
-    Uses a delta BIC > 2 stopping criterion.
+    Uses a delta BIC > bic_thr stopping criterion.
 
     [Author's note] Although it is my belief that doing a non-linear
     multi-sinusoid fit at each iteration of the prewhitening is the
     ideal approach, it is also a very (very!) time-consuming one and this
     algorithm aims to be fast while approaching the optimal solution.
+
+    [Another author's note] I added an option to do the non-linear multi-
+    sinusoid fit at each iteration.
     """
     if f_n is None:
         f_n = np.array([])
@@ -2277,17 +2303,27 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         n_freq_cur = len(f_n)
 
         # attempt to extract the next frequency
-        f_i, a_i, ph_i = extract_single(time, resid, f0=0, fn=0, select=select, verbose=verbose)
+        f_i, a_i, ph_i = extract_single(time, resid, f0=f0, fn=fn, select=select, verbose=verbose)
 
-        # now iterate over close frequencies (around f_i) a number of times to improve them
+        # now improve frequencies
         f_n_temp, a_n_temp, ph_n_temp = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
-        close_f = af.f_within_rayleigh(n_freq_cur, f_n_temp, freq_res)
-        model_sinusoid_r = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
-        model_sinusoid_r -= sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
-        if len(close_f) > 1:
-            refine_out = refine_subset(time, flux, close_f, p_orb, const, slope, f_n_temp, a_n_temp, ph_n_temp,
-                                       i_chunks, verbose=verbose)
-            const, slope, f_n_temp, a_n_temp, ph_n_temp = refine_out
+        if fit_each_step:
+            # fit all frequencies for best improvement
+            close_f = np.arange((len(f_n)))  # all f
+            model_sinusoid_r = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
+            model_sinusoid_r -= sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+            fit_out = tsfit.fit_multi_sinusoid_per_group(time, flux, const, slope, f_n_temp, a_n_temp, ph_n_temp,
+                                                         i_chunks, verbose=verbose)
+            const, slope, f_n_temp, a_n_temp, ph_n_temp = fit_out
+        else:
+            # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
+            close_f = af.f_within_rayleigh(n_freq_cur, f_n_temp, freq_res)
+            model_sinusoid_r = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
+            model_sinusoid_r -= sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+            if len(close_f) > 1:
+                refine_out = refine_subset(time, flux, close_f, p_orb, const, slope, f_n_temp, a_n_temp, ph_n_temp,
+                                           i_chunks, verbose=verbose)
+                const, slope, f_n_temp, a_n_temp, ph_n_temp = refine_out
 
         # as a last model-refining step, redetermine the constant and slope
         model_sinusoid_n = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
@@ -2295,11 +2331,19 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         const, slope = linear_pars(time, cur_resid, i_chunks)
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
 
-        # calculate BIC before moving to the next iteration
+        # calculate BIC
         n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq_cur + 1 - n_harm)
         bic = calc_bic(resid, n_param)
         d_bic = bic_prev - bic
-        if np.round(d_bic, 2) > 2:
+        condition = np.round(d_bic, 2) > bic_thr
+        # calculate SNR in a 1 c/d window around the extracted frequency
+        if stop_crit == 'snr':
+            noise = scargle_noise_at_freq(np.array([f_i]), time, resid, window_width=1.0)
+            snr = a_i / noise
+            condition = snr > snr_thr
+
+        # check acceptance condition before moving to the next iteration
+        if condition:
             # accept the new frequency
             f_n, a_n, ph_n = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
 
@@ -2321,7 +2365,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     return const, slope, f_n, a_n, ph_n
 
 
-def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None, verbose=True):
+def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, ph_n=None, verbose=True):
     """Tries to extract more harmonics from the flux
     
     Parameters
@@ -2341,6 +2385,8 @@ def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None
     i_chunks: numpy.ndarray[Any, dtype[int]], optional
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    bic_thr: float
+        The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
     verbose: bool, optional
         If set to True, this function will print some information
     
@@ -2422,7 +2468,7 @@ def extract_harmonics(time, flux, p_orb, i_chunks, f_n=None, a_n=None, ph_n=None
         n_param = 2 * n_sectors + 1 * (n_harm_cur > 0) + 2 * n_harm_cur + 3 * (n_freq - n_harm)
         bic = calc_bic(resid, n_param)
         d_bic = bic_prev - bic
-        if np.round(d_bic, 2) > 2:
+        if np.round(d_bic, 2) > bic_thr:
             # h_c is accepted, add it to the final list and continue
             bic_prev = bic
             f_n, a_n, ph_n = np.append(f_n, f_c), np.append(a_n, a_c), np.append(ph_n, ph_c)
@@ -2954,7 +3000,6 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     not those for a set of harmonics (which would be a looser constraint).
     """
     t_tot = np.ptp(time)
-    n_points = len(time)
     freq_res = 1.5 / t_tot  # Rayleigh criterion
     
     # obtain the errors on the sine waves (depends on residual and thus model)
@@ -2969,7 +3014,7 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     
     # apply the signal-to-noise threshold
     noise_at_f = scargle_noise_at_freq(f_n, time, residuals, window_width=1.0)
-    remove_snr = af.remove_insignificant_snr(a_n, noise_at_f, n_points)
+    remove_snr = af.remove_insignificant_snr(time, a_n, noise_at_f)
     
     # frequencies that pass sigma criteria
     passed_sigma = np.ones(len(f_n), dtype=bool)
