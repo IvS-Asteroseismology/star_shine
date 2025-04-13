@@ -4,6 +4,7 @@ Code written by: Luc IJspeert
 """
 import os
 import yaml
+import importlib.resources
 
 
 class Config:
@@ -193,6 +194,7 @@ class Config:
 
         return None
 
+
 def get_config():
     """Use this function to get the configuration
 
@@ -202,3 +204,16 @@ def get_config():
         The singleton instance of Config.
     """
     return Config()
+
+
+def get_config_path():
+    """Get the path to the configuration file
+
+    Returns
+    -------
+    str
+        Path to the config file
+    """
+    # Use importlib.resources to find the path
+    with importlib.resources.path('star_shine.config', 'config.yaml') as config_path:
+        return str(config_path)

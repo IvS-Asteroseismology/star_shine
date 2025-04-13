@@ -16,7 +16,7 @@ import astropy.timeseries as apy
 from . import timeseries_fitting as tsfit
 from . import analysis_functions as af
 from . import utility as ut
-from .config import get_config
+from star_shine.config.helpers import get_config
 
 
 # load configuration

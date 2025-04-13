@@ -18,11 +18,14 @@ except ImportError:
     az = None
     pass
 
-from star_shine.core import analysis_functions as af, timeseries_functions as tsf
+from star_shine.core import analysis_functions as af
+from star_shine.core import timeseries_functions as tsf
+from star_shine.core import utility as ut
+from star_shine.config.helpers import get_mpl_stylesheet_path
+
 
 # mpl style sheet
-script_dir = os.path.dirname(os.path.abspath(__file__))  # absolute dir the script is in
-plt.style.use(os.path.join(script_dir, 'data', 'mpl_stylesheet.dat'))
+plt.style.use(get_mpl_stylesheet_path())
 
 
 def plot_pd(time, flux, i_chunks, plot_per_chunk=False, file_name=None, show=True):
@@ -601,3 +604,237 @@ def plot_trace_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n):
     az.plot_trace(inf_data, combined=False, compact=True, rug=True, divergences='top', lines=par_lines)
 
     return
+
+
+def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, save_dir=None, show=True):
+    """Due to plotting not working under multiprocessing this function is
+    made to make plots after running the analysis in parallel.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    flux_err: numpy.ndarray[Any, dtype[float]]
+        Errors in the measurement values
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    target_id: int, str
+        In case of using analyse_from_tic:
+        The TESS Input Catalog number
+        In case of user-defined light curve files (analyse_from_file):
+        Should be the same as the name of the light curve file.
+    load_dir: str
+        Path to a directory for loading analysis results.
+        Will append <target_id> + _analysis automatically
+    save_dir: str, None
+        Path to a directory for saving the plots.
+        Will append <target_id> + _analysis automatically
+        Directory is created if it doesn't exist yet
+    show: bool
+        Whether to show the plots or not.
+
+    Returns
+    -------
+    None
+    """
+    load_dir = os.path.join(load_dir, f'{target_id}_analysis')  # add subdir
+    if save_dir is not None:
+        save_dir = os.path.join(save_dir, f'{target_id}_analysis')  # add subdir
+
+        # for saving, make a folder if not there yet
+        if not os.path.isdir(save_dir):
+            os.mkdir(save_dir)  # create the subdir
+
+    # open all the data
+    file_name = os.path.join(load_dir, f'{target_id}_analysis_1.hdf5')
+    if os.path.isfile(file_name):
+        results = read_result_hdf5(file_name, verbose=False)
+        const_1, slope_1, f_n_1, a_n_1, ph_n_1 = results['sin_mean']
+        model_linear = tsf.linear_curve(time, const_1, slope_1, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_1, a_n_1, ph_n_1)
+        model_1 = model_linear + model_sinusoid
+    else:
+        const_1, slope_1, f_n_1, a_n_1, ph_n_1 = np.array([[], [], [], [], []])
+        model_1 = np.zeros(len(time))
+
+    file_name = os.path.join(load_dir, f'{target_id}_analysis_2.hdf5')
+    if os.path.isfile(file_name):
+        results = read_result_hdf5(file_name, verbose=False)
+        const_2, slope_2, f_n_2, a_n_2, ph_n_2 = results['sin_mean']
+        model_linear = tsf.linear_curve(time, const_2, slope_2, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_2, a_n_2, ph_n_2)
+        model_2 = model_linear + model_sinusoid
+    else:
+        const_2, slope_2, f_n_2, a_n_2, ph_n_2 = np.array([[], [], [], [], []])
+        model_2 = np.zeros(len(time))
+
+    file_name = os.path.join(load_dir, f'{target_id}_analysis_3.hdf5')
+    if os.path.isfile(file_name):
+        results = read_result_hdf5(file_name, verbose=False)
+        const_3, slope_3, f_n_3, a_n_3, ph_n_3 = results['sin_mean']
+        p_orb_3, _ = results['ephem']
+        p_err_3, _ = results['ephem_err']
+        model_linear = tsf.linear_curve(time, const_3, slope_3, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_3, a_n_3, ph_n_3)
+        model_3 = model_linear + model_sinusoid
+    else:
+        const_3, slope_3, f_n_3, a_n_3, ph_n_3 = np.array([[], [], [], [], []])
+        p_orb_3, p_err_3 = 0, 0
+        model_3 = np.zeros(len(time))
+
+    file_name = os.path.join(load_dir, f'{target_id}_analysis_4.hdf5')
+    if os.path.isfile(file_name):
+        results = read_result_hdf5(file_name, verbose=False)
+        const_4, slope_4, f_n_4, a_n_4, ph_n_4 = results['sin_mean']
+        model_linear = tsf.linear_curve(time, const_4, slope_4, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_4, a_n_4, ph_n_4)
+        model_4 = model_linear + model_sinusoid
+    else:
+        const_4, slope_4, f_n_4, a_n_4, ph_n_4 = np.array([[], [], [], [], []])
+        model_4 = np.zeros(len(time))
+
+    file_name = os.path.join(load_dir, f'{target_id}_analysis_5.hdf5')
+    if os.path.isfile(file_name):
+        results = read_result_hdf5(file_name, verbose=False)
+        const_5, slope_5, f_n_5, a_n_5, ph_n_5 = results['sin_mean']
+        p_orb_5, _ = results['ephem']
+        p_err_5, _ = results['ephem_err']
+        t_tot, t_mean, t_mean_s, t_int, n_param_5, bic_5, noise_level_5 = results['stats']
+        model_linear = tsf.linear_curve(time, const_5, slope_5, i_chunks)
+        model_sinusoid = tsf.sum_sines(time, f_n_5, a_n_5, ph_n_5)
+        model_5 = model_linear + model_sinusoid
+        harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n_5, p_orb_5, f_tol=1e-9)
+        f_h_5, a_h_5, ph_h_5 = f_n_5[harmonics], a_n_5[harmonics], ph_n_5[harmonics]
+    else:
+        const_5, slope_5, f_n_5, a_n_5, ph_n_5 = np.array([[], [], [], [], []])
+        p_orb_5, p_err_5 = 0, 0
+        n_param_5, bic_5, noise_level_5 = 0, 0, 0
+        model_5 = np.zeros(len(time))
+        f_h_5, a_h_5, ph_h_5 = np.array([[], [], []])
+
+    # stick together for sending to plot function
+    models = [model_1, model_2, model_3, model_4, model_5]
+    p_orb_i = [0, 0, p_orb_3, p_orb_3, p_orb_5]
+    p_err_i = [0, 0, p_err_3, p_err_3, p_err_5]
+    f_n_i = [f_n_1, f_n_2, f_n_3, f_n_4, f_n_5]
+    a_n_i = [a_n_1, a_n_2, a_n_3, a_n_4, a_n_5]
+
+    # plot frequency_analysis
+    try:
+        if save_dir is not None:
+            file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_pd_full.png')
+        else:
+            file_name = None
+        plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a_n_i, i_chunks,
+                                file_name=file_name, show=show)
+        if np.any([len(fs) != 0 for fs in f_n_i]):
+            plot_nr = np.arange(1, len(f_n_i) + 1)[[len(fs) != 0 for fs in f_n_i]][-1]
+            plot_data = [eval(f'const_{plot_nr}'), eval(f'slope_{plot_nr}'),
+                         eval(f'f_n_{plot_nr}'), eval(f'a_n_{plot_nr}'), eval(f'ph_n_{plot_nr}')]
+            if save_dir is not None:
+                file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_lc_sinusoids_{plot_nr}.png')
+            else:
+                file_name = None
+            plot_lc_sinusoids(time, flux, *plot_data, i_chunks, file_name=file_name, show=show)
+            if save_dir is not None:
+                file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_pd_output_{plot_nr}.png')
+            else:
+                file_name = None
+            plot_data = [p_orb_i[plot_nr - 1], p_err_i[plot_nr - 1]] + plot_data
+            plot_pd_single_output(time, flux, flux_err, *plot_data, i_chunks, annotate=False,
+                                      file_name=file_name, show=show)
+            if save_dir is not None:
+                file_name = os.path.join(save_dir, f'{target_id}_frequency_analysis_lc_harmonics_{plot_nr}.png')
+            else:
+                file_name = None
+            plot_lc_harmonics(time, flux, *plot_data, i_chunks, file_name=file_name, show=show)
+    except NameError:
+        pass  # some variable wasn't loaded (file did not exist)
+    except ValueError:
+        pass  # no frequencies?
+
+    return None
+
+def plot_all_from_file(file_name, i_chunks=None, load_dir=None, save_dir=None, show=True):
+    """Plot all diagnostic plots of the results for a given light curve file
+
+    Parameters
+    ----------
+    file_name: str
+        Path to a file containing the light curve data, with
+        timestamps, normalised flux, error values as the
+        first three columns, respectively.
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    load_dir: str
+        Path to a directory for loading analysis results.
+        Will append <target_id> + _analysis automatically.
+        Assumes the same directory as file_name if None.
+    save_dir: str, None
+        Path to a directory for saving the plots.
+        Will append <target_id> + _analysis automatically.
+        Directory is created if it doesn't exist yet.
+    show: bool
+        Whether to show the plots or not.
+
+    Returns
+    -------
+    None
+    """
+    target_id = os.path.splitext(os.path.basename(file_name))[0]  # file name is used as target identifier
+    if load_dir is None:
+        load_dir = os.path.dirname(file_name)
+
+    # load the data
+    time, flux, flux_err = np.loadtxt(file_name, usecols=(0, 1, 2), unpack=True)
+
+    # if sectors not given, take full length
+    if i_chunks is None:
+        i_chunks = np.array([[0, len(time)]])  # no sector information
+    # i_half_s = i_chunks  # in this case no differentiation between half or full sectors
+
+    # do the plotting
+    sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, save_dir=save_dir, show=show)
+
+    return None
+
+def plot_all_from_tic(tic, all_files, load_dir=None, save_dir=None, show=True):
+    """Plot all diagnostic plots of the results for a given light curve file
+
+    Parameters
+    ----------
+    tic: int
+        The TESS Input Catalog (TIC) number for loading/saving the data
+        and later reference.
+    all_files: list[str]
+        List of all the TESS data product '.fits' files. The files
+        with the corresponding TIC number are selected.
+    load_dir: str
+        Path to a directory for loading analysis results.
+        Will append <tic> + _analysis automatically.
+        Assumes the same directory as all_files if None.
+    save_dir: str, None
+        Path to a directory for saving the plots.
+        Will append <tic> + _analysis automatically.
+        Directory is created if it doesn't exist yet.
+    show: bool
+        Whether to show the plots or not.
+
+    Returns
+    -------
+    None
+    """
+    if load_dir is None:
+        load_dir = os.path.dirname(all_files[0])
+
+    # load the data
+    time, flux, flux_err, i_chunks, medians = ut.load_light_curve(all_files, apply_flags=True)
+
+    # do the plotting
+    sequential_plotting(time, flux, flux_err, i_chunks, tic, load_dir, save_dir=save_dir, show=show)
+
+    return None

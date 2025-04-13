@@ -1,5 +1,5 @@
 import unittest
-from star_shine.core.config import Config, get_config
+from star_shine.config.config import Config, get_config
 
 class TestConfig(unittest.TestCase):
 
