@@ -215,5 +215,6 @@ def get_config_path():
         Path to the config file
     """
     # Use importlib.resources to find the path
-    with importlib.resources.path('star_shine.config', 'config.yaml') as config_path:
-        return str(config_path)
+    config_path = str(importlib.resources.files('star_shine.config').joinpath('config.yaml'))
+
+    return config_path

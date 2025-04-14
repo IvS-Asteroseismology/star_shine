@@ -22,9 +22,14 @@ def get_version():
     -------
     str
         The version of the code
+
+    Raises
+    ------
+    FileNotFoundError
+        In case the package metadata is not set and subsequently the pyproject.toml was not found
     """
     try:
-        version = importlib.metadata.version("star_shine")
+        version = importlib.metadata.version('star_shine')
 
     except importlib.metadata.PackageNotFoundError:
         # Fallback to reading from pyproject.toml if not installed
@@ -32,13 +37,13 @@ def get_version():
         pyproject_path = os.path.join(project_root, '../../pyproject.toml')  # Adjust the path as needed
 
         try:
-            with open(pyproject_path, "rb") as f:
+            with open(pyproject_path, 'rb') as f:
                 pyproject_data = tomllib.load(f)
 
         except (FileNotFoundError, KeyError) as e:
             raise FileNotFoundError("Could not find or parse version in pyproject.toml")
 
-        version = pyproject_data["project"]["version"]
+        version = pyproject_data['project']['version']
 
     return version
 
@@ -64,6 +69,7 @@ def get_config_path():
     """
     # Use importlib.resources to find the path
     config_path = cnfg.get_config_path()
+
     return config_path
 
 
@@ -76,8 +82,9 @@ def get_mpl_stylesheet_path():
         Path to the matplotlib stylesheet
     """
     # Use importlib.resources to find the path
-    with importlib.resources.path('star_shine.config', 'mpl_stylesheet.dat') as stylesheet_path:
-        return str(stylesheet_path)
+    stylesheet_path = str(importlib.resources.files('star_shine.config').joinpath('mpl_stylesheet.dat'))
+
+    return stylesheet_path
 
 
 def get_custom_logger(save_dir, target_id, verbose):
