@@ -13,8 +13,8 @@ import scipy as sp
 import numba as nb
 import astropy.timeseries as apy
 
-from . import timeseries_fitting as tsfit
-from . import analysis_functions as af
+from . import fitting as fit
+from . import analysis as anf
 from . import utility as ut
 from star_shine.config.helpers import get_config
 
@@ -1039,7 +1039,7 @@ def refine_orbital_period(p_orb, time, f_n):
 
     # refine by using a dense sampling and the harmonic distances
     f_refine = np.arange(0.99 / p_orb, 1.01 / p_orb, 0.00001 / p_orb)
-    n_harm_r, completeness_r, distance_r = af.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
+    n_harm_r, completeness_r, distance_r = anf.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
     h_measure = n_harm_r * completeness_r  # compute h_measure for constraining a domain
     mask_peak = (h_measure > np.max(h_measure) / 1.5)  # constrain the domain of the search
     i_min_dist = np.argmin(distance_r[mask_peak])
@@ -1088,7 +1088,7 @@ def find_orbital_period(time, flux, f_n):
     psi_measure = ampls / phase_disp
 
     # also check the number of harmonics at each period and include into best f
-    n_harm, completeness, distance = af.harmonic_series_length(1 / periods, f_n, freq_res, f_nyquist)
+    n_harm, completeness, distance = anf.harmonic_series_length(1 / periods, f_n, freq_res, f_nyquist)
     psi_h_measure = psi_measure * n_harm * completeness
 
     # select the best period, refine it and check double P
@@ -1096,7 +1096,7 @@ def find_orbital_period(time, flux, f_n):
 
     # refine by using a dense sampling and the harmonic distances
     f_refine = np.arange(0.99 / p_orb, 1.01 / p_orb, 0.00001 / p_orb)
-    n_harm_r, completeness_r, distance_r = af.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
+    n_harm_r, completeness_r, distance_r = anf.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
     h_measure = n_harm_r * completeness_r  # compute h_measure for constraining a domain
     mask_peak = (h_measure > np.max(h_measure) / 1.5)  # constrain the domain of the search
     i_min_dist = np.argmin(distance_r[mask_peak])
@@ -1119,14 +1119,14 @@ def find_orbital_period(time, flux, f_n):
     bound_interval = f_r_bound - f_l_bound
 
     # decide on the multiple of the period
-    harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=freq_res / 2)
+    harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=freq_res / 2)
     completeness_p = (len(harmonics) / (f_nyquist // (1 / p_orb)))
     completeness_p_l = (len(harmonics[harmonic_n <= 15]) / (f_nyquist // (1 / p_orb)))
 
     # check these (commonly missed) multiples
     n_multiply = np.array([1/2, 2, 3, 4, 5])
     p_multiples = p_orb * n_multiply
-    n_harm_r_m, completeness_r_m, distance_r_m = af.harmonic_series_length(1/p_multiples, f_n, freq_res, f_nyquist)
+    n_harm_r_m, completeness_r_m, distance_r_m = anf.harmonic_series_length(1 / p_multiples, f_n, freq_res, f_nyquist)
     h_measure_m = n_harm_r_m * completeness_r_m  # compute h_measure for constraining a domain
 
     # if there are very high numbers, add double that fraction for testing
@@ -1134,7 +1134,7 @@ def find_orbital_period(time, flux, f_n):
     if np.any(test_frac[2:] > 3):
         n_multiply = np.append(n_multiply, [2 * n_multiply[2:][test_frac[2:] > 3]])
         p_multiples = p_orb * n_multiply
-        n_harm_r_m, completeness_r_m, distance_r_m = af.harmonic_series_length(1/p_multiples, f_n, freq_res, f_nyquist)
+        n_harm_r_m, completeness_r_m, distance_r_m = anf.harmonic_series_length(1 / p_multiples, f_n, freq_res, f_nyquist)
         h_measure_m = n_harm_r_m * completeness_r_m  # compute h_measure for constraining a domain
 
     # compute diagnostic fractions that need to meet some threshold
@@ -1144,7 +1144,7 @@ def find_orbital_period(time, flux, f_n):
     # doubling the period may be done if the harmonic filling factor below f_16 is very high
     f_cut = np.max(f_n[harmonics][harmonic_n <= 15])
     f_n_c = f_n[f_n <= f_cut]
-    n_harm_r_2, completeness_r_2, distance_r_2 = af.harmonic_series_length(1/p_multiples, f_n_c, freq_res, f_nyquist)
+    n_harm_r_2, completeness_r_2, distance_r_2 = anf.harmonic_series_length(1 / p_multiples, f_n_c, freq_res, f_nyquist)
     compl_frac_2 = completeness_r_2[1] / completeness_p_l
 
     # empirically determined thresholds for the various measures
@@ -1171,7 +1171,7 @@ def find_orbital_period(time, flux, f_n):
 
         # refine by using a dense sampling and the harmonic distances
         f_refine_2 = np.arange(f_left_b, f_right_b, 0.00001 / p_orb)
-        n_harm_r2, completeness_r2, distance_r2 = af.harmonic_series_length(f_refine_2, f_n, freq_res, f_nyquist)
+        n_harm_r2, completeness_r2, distance_r2 = anf.harmonic_series_length(f_refine_2, f_n, freq_res, f_nyquist)
         h_measure_2 = n_harm_r2 * completeness_r2  # compute h_measure for constraining a domain
         mask_peak = (h_measure_2 > np.max(h_measure_2) / 1.5)  # constrain the domain of the search
         i_min_dist = np.argmin(distance_r2[mask_peak])
@@ -2109,7 +2109,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     n_sectors = len(i_chunks)
     n_f = len(f_n)
     n_g = len(close_f)  # number of frequencies being updated
-    harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     n_harm = len(harmonics)
 
     # determine initial bic
@@ -2269,7 +2269,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     n_sectors = len(i_chunks)
     n_freq = len(f_n)
     if n_freq > 0:
-        harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+        harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     else:
         harmonics = np.array([])
     n_harm = len(harmonics)
@@ -2312,12 +2312,12 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
             close_f = np.arange((len(f_n)))  # all f
             model_sinusoid_r = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
             model_sinusoid_r -= sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
-            fit_out = tsfit.fit_multi_sinusoid_per_group(time, flux, const, slope, f_n_temp, a_n_temp, ph_n_temp,
-                                                         i_chunks, verbose=verbose)
+            fit_out = fit.fit_multi_sinusoid_per_group(time, flux, const, slope, f_n_temp, a_n_temp, ph_n_temp,
+                                                       i_chunks, verbose=verbose)
             const, slope, f_n_temp, a_n_temp, ph_n_temp = fit_out
         else:
             # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
-            close_f = af.f_within_rayleigh(n_freq_cur, f_n_temp, freq_res)
+            close_f = anf.f_within_rayleigh(n_freq_cur, f_n_temp, freq_res)
             model_sinusoid_r = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
             model_sinusoid_r -= sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
             if len(close_f) > 1:
@@ -2430,7 +2430,7 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
 
     # extract the existing harmonics using the period
     if n_freq > 0:
-        harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+        harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     else:
         harmonics, harmonic_n = np.array([], dtype=int), np.array([], dtype=int)
     n_harm = len(harmonics)
@@ -2535,7 +2535,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     """
     # extract the harmonics using the period and determine some numbers
     freq_res = 1.5 / np.ptp(time)
-    harmonics, harmonic_n = af.find_harmonics_tolerance(f_n, p_orb, f_tol=freq_res / 2)
+    harmonics, harmonic_n = anf.find_harmonics_tolerance(f_n, p_orb, f_tol=freq_res / 2)
     if len(harmonics) == 0:
         raise ValueError('No harmonic frequencies found')
     
@@ -2588,7 +2588,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
 
     # re-extract the non-harmonics
     n_freq = len(f_n)
-    harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(n_freq), harmonics)
     n_harm = len(harmonics)
     remove_non_harm = np.zeros(0, dtype=np.int_)
@@ -2680,7 +2680,7 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     """
     n_sectors = len(i_chunks)
     n_freq = len(f_n)
-    harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     n_harm = len(harmonics)
 
     # indices of single frequencies to remove
@@ -2788,12 +2788,12 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     freq_res = 1.5 / np.ptp(time)  # frequency resolution
     n_sectors = len(i_chunks)
     n_freq = len(f_n)
-    harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(n_freq), harmonics)
     n_harm = len(harmonics)
 
     # make an array of sets of frequencies (non-harmonic) to be investigated for replacement
-    close_f_groups = af.chains_within_rayleigh(f_n[non_harm], freq_res)
+    close_f_groups = anf.chains_within_rayleigh(f_n[non_harm], freq_res)
     close_f_groups = [non_harm[group] for group in close_f_groups]  # convert to the right indices
     f_sets = [g[np.arange(p1, p2 + 1)]
               for g in close_f_groups
@@ -2801,7 +2801,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
               for p2 in range(p1 + 1, len(g))]
 
     # make an array of sets of frequencies (now with harmonics) to be investigated for replacement
-    close_f_groups = af.chains_within_rayleigh(f_n, freq_res)
+    close_f_groups = anf.chains_within_rayleigh(f_n, freq_res)
     f_sets_h = [g[np.arange(p1, p2 + 1)]
                 for g in close_f_groups
                 for p1 in range(len(g) - 1)
@@ -3010,11 +3010,11 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     c_err, sl_err, f_n_err, a_n_err, ph_n_err = errors
     
     # find the insignificant frequencies
-    remove_sigma = af.remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3, sigma_f=3)
+    remove_sigma = anf.remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3, sigma_f=3)
     
     # apply the signal-to-noise threshold
     noise_at_f = scargle_noise_at_freq(f_n, time, residuals, window_width=1.0)
-    remove_snr = af.remove_insignificant_snr(time, a_n, noise_at_f)
+    remove_snr = anf.remove_insignificant_snr(time, a_n, noise_at_f)
     
     # frequencies that pass sigma criteria
     passed_sigma = np.ones(len(f_n), dtype=bool)
@@ -3030,7 +3030,7 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     # candidate harmonic frequencies
     passed_harmonic = np.zeros(len(f_n), dtype=bool)
     if p_orb != 0:
-        harmonics, harmonic_n = af.select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol=freq_res / 2, sigma_f=3)
+        harmonics, harmonic_n = anf.select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol=freq_res / 2, sigma_f=3)
         passed_harmonic[harmonics] = True
     else:
         harmonics = np.array([], dtype=int)

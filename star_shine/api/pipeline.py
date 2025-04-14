@@ -12,10 +12,10 @@ import numpy as np
 from data import Data
 from result import Result
 
-from star_shine.core import timeseries_functions as tsf
-from star_shine.core import timeseries_fitting as tsfit
-from star_shine.core import analysis_functions as af
-from star_shine.core import mcmc_functions as mcf
+from star_shine.core import timeseries as tsf
+from star_shine.core import fitting as fit
+from star_shine.core import analysis as anf
+from star_shine.core import mcmc as mcf
 from star_shine.core import utility as ut
 from star_shine.config.helpers import get_config, get_custom_logger
 
@@ -195,9 +195,9 @@ class Pipeline:
         # use the chosen optimisation method
         inf_data, par_mean, par_hdi = None, None, None
         if config.optimise == 'fitter':
-            par_mean = tsfit.fit_multi_sinusoid_per_group(self.data.time, self.data.flux, self.result.const,
-                                                          self.result.slope, self.result.f_n, self.result.a_n,
-                                                          self.result.ph_n, self.data.i_chunks, verbose=config.verbose)
+            par_mean = fit.fit_multi_sinusoid_per_group(self.data.time, self.data.flux, self.result.const,
+                                                        self.result.slope, self.result.f_n, self.result.a_n,
+                                                        self.result.ph_n, self.data.i_chunks, verbose=config.verbose)
         else:
             # make model including everything to calculate noise level
             resid = self.data.flux - self.model_linear() - self.model_sinusoid()
@@ -284,7 +284,7 @@ class Pipeline:
 
         # if time series too short, or no harmonics found, log and warn and maybe cut off the analysis
         freq_res = 1.5 / self.data.t_tot  # Rayleigh criterion
-        harmonics, harmonic_n = af.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=freq_res / 2)
+        harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=freq_res / 2)
         if (self.data.t_tot / self.result.p_orb > 1.1) & (len(harmonics) > 1):
             # couple the harmonics to the period. likely removes more frequencies that need re-extracting
             out_a = tsf.fix_harmonic_frequency(self.data.time, self.data.flux, self.result.p_orb,  self.result.const,
@@ -306,7 +306,7 @@ class Pipeline:
 
         # main function done, calculate the rest of the stats
         resid = self.data.flux - self.model_linear() - self.model_sinusoid()
-        harmonics, harmonic_n = af.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
+        harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
         n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
         bic = tsf.calc_bic(resid, n_param)
         noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
@@ -315,8 +315,8 @@ class Pipeline:
         # calculate formal uncertainties
         out_d = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
         self.result.setter(c_err=out_d[0], sl_err=out_d[1], f_n_err=out_d[2], a_n_err=out_d[3], ph_n_err=out_d[4])
-        p_err, _, _ = af.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot,
-                                                       sigma_t=self.data.t_int / 2)
+        p_err, _, _ = anf.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot,
+                                                        sigma_t=self.data.t_int / 2)
         self.result.setter(p_orb=np.array([self.result.p_orb, p_err, 0, 0]))
 
         # set the result description
@@ -356,14 +356,14 @@ class Pipeline:
         # use the chosen optimisation method
         par_hdi = np.zeros((6, 2))
         if config.optimise == 'fitter':
-            par_mean = tsfit.fit_multi_sinusoid_harmonics_per_group(self.data.time, self.data.flux, self.result.p_orb,
-                                                                    self.result.const, self.result.slope,
-                                                                    self.result.f_n, self.result.a_n, self.result.ph_n,
-                                                                    self.data.i_chunks, verbose=config.verbose)
+            par_mean = fit.fit_multi_sinusoid_harmonics_per_group(self.data.time, self.data.flux, self.result.p_orb,
+                                                                  self.result.const, self.result.slope,
+                                                                  self.result.f_n, self.result.a_n, self.result.ph_n,
+                                                                  self.data.i_chunks, verbose=config.verbose)
         else:
             # make model including everything to calculate noise level
             resid = self.data.flux - self.model_linear() - self.model_sinusoid()
-            harmonics, harmonic_n = af.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
+            harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
             n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
             noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
 
@@ -371,8 +371,8 @@ class Pipeline:
             c_err, sl_err, f_n_err, a_n_err, ph_n_err = tsf.formal_uncertainties(self.data.time, resid,
                                                                                  self.data.flux_err, self.result.a_n,
                                                                                  self.data.i_chunks)
-            p_err, _, _ = af.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot,
-                                                           sigma_t=self.data.t_int/2)
+            p_err, _, _ = anf.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot,
+                                                            sigma_t=self.data.t_int/2)
 
             # do not include those frequencies that have too big uncertainty
             include = (ph_n_err < 1 / np.sqrt(6))  # circular distribution for ph_n cannot handle these
@@ -398,7 +398,7 @@ class Pipeline:
 
         # main function done, calculate the rest of the stats
         resid = self.data.flux - self.model_linear() - self.model_sinusoid()
-        harmonics, harmonic_n = af.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
+        harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
         n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
         bic = tsf.calc_bic(resid, n_param)
         noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
@@ -406,7 +406,7 @@ class Pipeline:
 
         # calculate formal uncertainties
         out_e = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
-        p_err, _, _ = af.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot, sigma_t=self.data.t_int/2)
+        p_err, _, _ = anf.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot, sigma_t=self.data.t_int / 2)
         self.result.setter(p_err=p_err, c_err=out_e[0], sl_err=out_e[1], f_n_err=out_e[2], a_n_err=out_e[3],
                            ph_n_err=out_e[4])
 

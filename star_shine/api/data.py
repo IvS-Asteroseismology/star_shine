@@ -9,8 +9,9 @@ import os
 import datetime
 import numpy as np
 
-from star_shine.core import utility as ut, io
+from star_shine.core import utility as ut
 from star_shine.core import visualisation as vis
+from star_shine.core import io
 from star_shine.config.helpers import get_config
 
 

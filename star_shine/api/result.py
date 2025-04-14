@@ -9,7 +9,8 @@ import os
 import datetime
 import numpy as np
 
-from star_shine.core import timeseries_functions as tsf, io
+from star_shine.core import timeseries as tsf
+from star_shine.core import io
 from star_shine.config.helpers import get_config
 
 

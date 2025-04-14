@@ -23,7 +23,7 @@ except (ImportError, AttributeError) as e:
         print('PyMC3 functionality unavailable, likely incompatible numpy version')
     pass
 
-from star_shine.core import analysis_functions as af
+from star_shine.core import analysis as af
 
 
 def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n_err, a_n_err, ph_n_err, noise_level,

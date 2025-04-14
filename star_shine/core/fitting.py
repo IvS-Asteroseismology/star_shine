@@ -20,7 +20,9 @@ import numba as nb
 import scipy as sp
 import scipy.optimize
 
-from star_shine.core import utility as ut, analysis_functions as af, timeseries_functions as tsf
+from star_shine.core import timeseries as tsf
+from star_shine.core import analysis as anf
+from star_shine.core import utility as ut
 
 
 @nb.njit(cache=True)
@@ -577,7 +579,7 @@ def fit_multi_sinusoid_harmonics(time, flux, p_orb, const, slope, f_n, a_n, ph_n
     Strictly speaking it is doing a maximum log-likelihood fit, but that is
     in essence identical (and numerically more stable due to the logarithm).
     """
-    harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     n_sect = len(i_chunks)  # each sector has its own slope (or two)
     n_f_tot = len(f_n)
     n_harm = len(harmonics)
@@ -681,7 +683,7 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     The orbital harmonics are always the first group.
     """
     # get harmonics and group the remaining frequencies
-    harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     indices = np.arange(len(f_n))
     i_non_harm = np.delete(indices, harmonics)
     f_groups = ut.group_frequencies_for_fit(a_n[i_non_harm], g_min=20, g_max=25)

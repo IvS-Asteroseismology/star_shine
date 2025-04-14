@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from star_shine.core import timeseries_functions as tsf
+from star_shine.core import timeseries as tsf
 
 
 class TestLikelihood(unittest.TestCase):
