@@ -4,7 +4,7 @@
 
 ![Language Badge](https://img.shields.io/badge/Language-Python-blue.svg)
 <a href="./LICENCE.md"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License Badge"/></a>
-[![CI](https://github.com/LucIJspeert/star_shine/actions/workflows/ci.yaml/badge.svg)](https://github.com/LucIJspeert/star_shine/actions/workflows/ci.yaml)
+[![Tests](https://github.com/LucIJspeert/star_shine/actions/workflows/tests.yaml/badge.svg)](https://github.com/LucIJspeert/star_shine/actions/workflows/tests.yaml)
 
 [//]: # (<a href="https://github.com/LucIJspeert/star_shine/blob/master/LICENCE.md"><img src="https://img.shields.io/github/license/LucIJspeert/star_shine" alt="License Badge"/></a>)
 
