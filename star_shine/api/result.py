@@ -7,10 +7,10 @@ Code written by: Luc IJspeert
 """
 import os
 import datetime
-import h5py
 import numpy as np
 
 from star_shine.core import timeseries_functions as tsf
+from star_shine.utils import io
 from star_shine.config.helpers import get_config
 
 
@@ -147,6 +147,65 @@ class Result:
 
         return None
 
+    def get_dict(self):
+        """Make a dictionary of the attributes.
+
+        Primarily for saving to file.
+
+        Returns
+        -------
+        result_dict: dict
+            Dictionary of the result attributes and fields
+        """
+        # make a dictionary of the fields to be saved
+        result_dict = {}
+        result_dict['target_id'] = self.target_id
+        result_dict['data_id'] = self.data_id
+        result_dict['description'] = self.description
+        result_dict['date_time'] = str(datetime.datetime.now())
+
+        result_dict['n_param'] = self.n_param  # number of free parameters
+        result_dict['bic'] = self.bic  # Bayesian Information Criterion of the residuals
+        result_dict['noise_level'] = self.noise_level  # standard deviation of the residuals
+
+        # orbital period
+        result_dict['p_orb'] = self.p_orb
+
+        # the linear model
+        # y-intercepts
+        result_dict['const'] = self.const
+        result_dict['c_err'] = self.c_err
+        result_dict['c_hdi'] = self.c_hdi
+
+        # slopes
+        result_dict['slope'] = self.slope
+        result_dict['sl_err'] = self.sl_err
+        result_dict['sl_hdi'] = self.sl_hdi
+
+        # the sinusoid model
+        # frequencies
+        result_dict['f_n'] = self.f_n
+        result_dict['f_n_err'] = self.f_n_err
+        result_dict['f_n_hdi'] = self.f_n_hdi
+
+        # amplitudes
+        result_dict['a_n'] = self.a_n
+        result_dict['a_n_err'] = self.a_n_err
+        result_dict['a_n_hdi'] = self.a_n_hdi
+
+        # phases
+        result_dict['ph_n'] = self.ph_n
+        result_dict['ph_n_err'] = self.ph_n_err
+        result_dict['ph_n_hdi'] = self.ph_n_hdi
+
+        # selection criteria
+        result_dict['passed_sigma'] = self.passed_sigma
+        result_dict['passed_snr'] = self.passed_snr
+        result_dict['passed_both'] = self.passed_both
+        result_dict['passed_harmonic'] = self.passed_harmonic
+
+        return result_dict
+
     @classmethod
     def load(cls, file_name, h5py_file_kwargs=None):
         """Load a result file in hdf5 format.
@@ -164,57 +223,8 @@ class Result:
         Result
             Instance of the Result class with the loaded results.
         """
-        # to avoid dict in function defaults
-        if h5py_file_kwargs is None:
-            h5py_file_kwargs = {}
-
         # add everything to a dict
-        result_dict = {'file_name': file_name}
-
-        # load the results from the file
-        with h5py.File(file_name, 'r', **h5py_file_kwargs) as file:
-            # file description
-            result_dict['target_id'] = file.attrs['target_id']
-            result_dict['data_id'] = file.attrs['data_id']
-            result_dict['description'] = file.attrs['description']
-            result_dict['date_time'] = file.attrs['date_time']
-
-            # summary statistics
-            result_dict['n_param'] = file.attrs['n_param']
-            result_dict['bic'] = file.attrs['bic']
-            result_dict['noise_level'] = file.attrs['noise_level']
-
-            # linear model parameters
-            # y-intercepts
-            result_dict['const'] = np.copy(file['const'])
-            result_dict['c_err'] = np.copy(file['c_err'])
-            result_dict['c_hdi'] = np.copy(file['c_hdi'])
-            # slopes
-            result_dict['slope'] = np.copy(file['slope'])
-            result_dict['sl_err'] = np.copy(file['sl_err'])
-            result_dict['sl_hdi'] = np.copy(file['sl_hdi'])
-
-            # sinusoid model parameters
-            # frequencies
-            result_dict['f_n'] = np.copy(file['f_n'])
-            result_dict['f_n_err'] = np.copy(file['f_n_err'])
-            result_dict['f_n_hdi'] = np.copy(file['f_n_hdi'])
-            # amplitudes
-            result_dict['a_n'] = np.copy(file['a_n'])
-            result_dict['a_n_err'] = np.copy(file['a_n_err'])
-            result_dict['a_n_hdi'] = np.copy(file['a_n_hdi'])
-            # phases
-            result_dict['ph_n'] = np.copy(file['ph_n'])
-            result_dict['ph_n_err'] = np.copy(file['ph_n_err'])
-            result_dict['ph_n_hdi'] = np.copy(file['ph_n_hdi'])
-            # passing criteria
-            result_dict['passed_sigma'] = np.copy(file['passed_sigma'])
-            result_dict['passed_snr'] = np.copy(file['passed_snr'])
-            result_dict['passed_both'] = np.copy(file['passed_both'])
-
-            # harmonic model
-            result_dict['p_orb'] = np.copy(file['p_orb'])
-            result_dict['passed_harmonic'] = np.copy(file['passed_harmonic'])
+        result_dict = io.load_result_hdf5(file_name, h5py_file_kwargs)
 
         # initiate the Results instance and fill in the results
         instance = cls()
@@ -264,86 +274,11 @@ class Result:
         -------
         None
         """
-        # file name must have hdf5 extension
-        ext = os.path.splitext(os.path.basename(file_name))[1]
-        if ext != '.hdf5':
-            file_name = file_name.replace(ext, '.hdf5')
+        # get a dictionary of the fields to be saved
+        result_dict = self.get_dict()
 
-        # save to hdf5
-        with h5py.File(file_name, 'w') as file:
-            file.attrs['target_id'] = self.target_id
-            file.attrs['data_id'] = self.data_id
-            file.attrs['description'] = self.description
-            file.attrs['date_time'] = str(datetime.datetime.now())
-            file.attrs['n_param'] = self.n_param  # number of free parameters
-            file.attrs['bic'] = self.bic  # Bayesian Information Criterion of the residuals
-            file.attrs['noise_level'] = self.noise_level  # standard deviation of the residuals
-            # orbital period
-            file.create_dataset('p_orb', data=self.p_orb)
-            file['p_orb'].attrs['unit'] = 'd'
-            file['p_orb'].attrs['description'] = 'Orbital period and error estimates.'
-            # the linear model
-            # y-intercepts
-            file.create_dataset('const', data=self.const)
-            file['const'].attrs['unit'] = 'median normalised flux'
-            file['const'].attrs['description'] = 'y-intercept per analysed sector'
-            file.create_dataset('c_err', data=self.c_err)
-            file['c_err'].attrs['unit'] = 'median normalised flux'
-            file['c_err'].attrs['description'] = 'errors in the y-intercept per analysed sector'
-            file.create_dataset('c_hdi', data=self.c_hdi)
-            file['c_hdi'].attrs['unit'] = 'median normalised flux'
-            file['c_hdi'].attrs['description'] = 'HDI for the y-intercept per analysed sector'
-            # slopes
-            file.create_dataset('slope', data=self.slope)
-            file['slope'].attrs['unit'] = 'median normalised flux / d'
-            file['slope'].attrs['description'] = 'slope per analysed sector'
-            file.create_dataset('sl_err', data=self.sl_err)
-            file['sl_err'].attrs['unit'] = 'median normalised flux / d'
-            file['sl_err'].attrs['description'] = 'error in the slope per analysed sector'
-            file.create_dataset('sl_hdi', data=self.sl_hdi)
-            file['sl_hdi'].attrs['unit'] = 'median normalised flux / d'
-            file['sl_hdi'].attrs['description'] = 'HDI for the slope per analysed sector'
-            # the sinusoid model
-            # frequencies
-            file.create_dataset('f_n', data=self.f_n)
-            file['f_n'].attrs['unit'] = '1 / d'
-            file['f_n'].attrs['description'] = 'frequencies of a number of sine waves'
-            file.create_dataset('f_n_err', data=self.f_n_err)
-            file['f_n_err'].attrs['unit'] = '1 / d'
-            file['f_n_err'].attrs['description'] = 'errors in the frequencies of a number of sine waves'
-            file.create_dataset('f_n_hdi', data=self.f_n_hdi)
-            file['f_n_hdi'].attrs['unit'] = '1 / d'
-            file['f_n_hdi'].attrs['description'] = 'HDI for the frequencies of a number of sine waves'
-            # amplitudes
-            file.create_dataset('a_n', data=self.a_n)
-            file['a_n'].attrs['unit'] = 'median normalised flux'
-            file['a_n'].attrs['description'] = 'amplitudes of a number of sine waves'
-            file.create_dataset('a_n_err', data=self.a_n_err)
-            file['a_n_err'].attrs['unit'] = 'median normalised flux'
-            file['a_n_err'].attrs['description'] = 'errors in the amplitudes of a number of sine waves'
-            file.create_dataset('a_n_hdi', data=self.a_n_hdi)
-            file['a_n_hdi'].attrs['unit'] = 'median normalised flux'
-            file['a_n_hdi'].attrs['description'] = 'HDI for the amplitudes of a number of sine waves'
-            # phases
-            file.create_dataset('ph_n', data=self.ph_n)
-            file['ph_n'].attrs['unit'] = 'radians'
-            file['ph_n'].attrs['description'] = 'phases of a number of sine waves, with reference point t_mean'
-            file.create_dataset('ph_n_err', data=self.ph_n_err)
-            file['ph_n_err'].attrs['unit'] = 'radians'
-            file['ph_n_err'].attrs['description'] = 'errors in the phases of a number of sine waves'
-            file.create_dataset('ph_n_hdi', data=self.ph_n_hdi)
-            file['ph_n_hdi'].attrs['unit'] = 'radians'
-            file['ph_n_hdi'].attrs['description'] = 'HDI for the phases of a number of sine waves'
-            # selection criteria
-            file.create_dataset('passed_sigma', data=self.passed_sigma)
-            file['passed_sigma'].attrs['description'] = 'sinusoids passing the sigma criterion'
-            file.create_dataset('passed_snr', data=self.passed_snr)
-            file['passed_snr'].attrs['description'] = 'sinusoids passing the signal to noise criterion'
-            file.create_dataset('passed_both', data=self.passed_both)
-            file['passed_both'].attrs[
-                'description'] = 'sinusoids passing both the sigma and the signal to noise criteria'
-            file.create_dataset('passed_harmonic', data=self.passed_harmonic)
-            file['passed_harmonic'].attrs['description'] = 'harmonic sinusoids passing the sigma criterion'
+        # io module handles writing to file
+        io.save_result_hdf5(file_name, result_dict)
 
         return None
 
@@ -359,36 +294,11 @@ class Result:
         -------
         None
         """
-        # file extension
-        ext = os.path.splitext(os.path.basename(file_name))[1]
+        # get a dictionary of the fields to be saved
+        result_dict = self.get_dict()
 
-        # linear model parameters
-        data = np.column_stack((self.const, self.c_err, self.c_hdi[:, 0], self.c_hdi[:, 1],
-                                self.slope, self.sl_err, self.sl_hdi[:, 0], self.sl_hdi[:, 1]))
-        hdr = 'const, c_err, c_hdi_l, c_hdi_r, slope, sl_err, sl_hdi_l, sl_hdi_r'
-        file_name_lin = file_name.replace(ext, '_linear.csv')
-        np.savetxt(file_name_lin, data, delimiter=',', header=hdr)
-
-        # sinusoid model parameters
-        data = np.column_stack((self.f_n, self.f_n_err, self.f_n_hdi[:, 0], self.f_n_hdi[:, 1],
-                                self.a_n, self.a_n_err, self.a_n_hdi[:, 0], self.a_n_hdi[:, 1],
-                                self.ph_n, self.ph_n_err, self.ph_n_hdi[:, 0], self.ph_n_hdi[:, 1],
-                                self.passed_sigma, self.passed_snr, self.passed_both, self.passed_harmonic))
-        hdr = ('f_n, f_n_err, f_n_hdi_l, f_n_hdi_r, a_n, a_n_err, a_n_hdi_l, a_n_hdi_r, '
-               'ph_n, ph_n_err, ph_n_hdi_l, ph_n_hdi_r, passed_sigma, passed_snr, passed_b, passed_h')
-        file_name_sin = file_name.replace(ext, '_sinusoid.csv')
-        np.savetxt(file_name_sin, data, delimiter=',', header=hdr)
-
-        # period and statistics
-        names = ('p_orb', 'p_err', 'p_hdi_l', 'p_hdi_r'  'n_param', 'bic', 'noise_level')
-        stats = (self.p_orb, self.p_err, self.p_hdi[0], self.p_hdi[1], self.n_param, self.bic, self.noise_level)
-        desc = ['Orbital period', 'Error in the orbital period', 'Left bound HDI of the orbital period',
-                'Right bound HDI of the orbital period', 'Number of free parameters',
-                'Bayesian Information Criterion of the residuals', 'Standard deviation of the residuals']
-        data = np.column_stack((names, stats, desc))
-        hdr = f"{self.target_id}, {self.data_id}, Model statistics\nname, value, description"
-        file_name_stats = file_name.replace(ext, '_stats.csv')
-        np.savetxt(file_name_stats, data, delimiter=',', header=hdr, fmt='%s')
+        # io module handles writing to file
+        io.save_result_csv(file_name, result_dict)
 
         return None
 

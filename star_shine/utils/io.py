@@ -7,9 +7,9 @@ Code written by: Luc IJspeert
 """
 
 import os
+import h5py
 import numpy as np
 import numba as nb
-
 import pandas as pd
 import astropy.io.fits as fits
 try:
@@ -22,6 +22,365 @@ from star_shine.config.helpers import get_config
 
 # load configuration
 config = get_config()
+
+
+def load_data_hdf5(file_name, h5py_file_kwargs=None):
+    """Load data from an hdf5 file and return it in a dictionary.
+
+    Primarily for the api class Data.
+
+    Parameters
+    ----------
+    file_name: str
+        File name (including path) for loading the data.
+    h5py_file_kwargs: dict, optional
+        Keyword arguments for opening the h5py file.
+        Example: {'locking': False}, for a drive that does not support locking.
+
+    Returns
+    -------
+    Dict
+        Dictionary of the data attributes and fields
+    """
+    # to avoid dict in function defaults
+    if h5py_file_kwargs is None:
+        h5py_file_kwargs = {}
+
+    # add everything to a dict
+    data_dict = {}
+
+    # load the results from the file
+    with h5py.File(file_name, 'r', **h5py_file_kwargs) as file:
+        # file description
+        data_dict['target_id'] = file.attrs['target_id']
+        data_dict['data_id'] = file.attrs['data_id']
+        data_dict['description'] = file.attrs['description']
+        data_dict['date_time'] = file.attrs['date_time']
+
+        # original list of files
+        data_dict['data_dir'] = file.attrs['data_dir']
+        data_dict['file_list'] = np.copy(file['file_list'])
+
+        # summary statistics
+        data_dict['t_tot'] = file.attrs['t_tot']
+        data_dict['t_mean'] = file.attrs['t_mean']
+        data_dict['t_int'] = file.attrs['t_int']
+        data_dict['p_orb'] = file.attrs['p_orb']
+
+        # the time series data
+        data_dict['time'] = np.copy(file['time'])
+        data_dict['flux'] = np.copy(file['flux'])
+        data_dict['flux_err'] = np.copy(file['flux_err'])
+
+        # additional information
+        data_dict['i_chunks'] = np.copy(file['i_chunks'])
+        data_dict['flux_counts_medians'] = np.copy(file['flux_counts_medians'])
+        data_dict['t_mean_chunk'] = np.copy(file['t_mean_chunk'])
+
+    return data_dict
+
+
+def save_data_hdf5(file_name, data_dict):
+    """Save data to an hdf5 file.
+
+    Primarily for the api class Data.
+
+    Parameters
+    ----------
+    file_name: str
+        File name (including path) for saving the data.
+    data_dict: dict
+        Dictionary of the data attributes and fields
+
+    Returns
+    -------
+    None
+    """
+    # file name must have hdf5 extension
+    ext = os.path.splitext(os.path.basename(file_name))[1]
+    if ext != '.hdf5':
+        file_name = file_name.replace(ext, '.hdf5')
+
+    # save to hdf5
+    with h5py.File(file_name, 'w') as file:
+        file.attrs['target_id'] = data_dict['target_id']
+        file.attrs['data_id'] = data_dict['data_id']
+        file.attrs['description'] = data_dict['description']
+        file.attrs['date_time'] = data_dict['date_time']
+
+        # original list of files
+        file.attrs['data_dir'] = data_dict['data_dir']  # original data directory
+        file.create_dataset('file_list', data=data_dict['file_list'])
+        file['file_list'].attrs['description'] = 'original list of files for the creation of this data file'
+
+        # summary statistics
+        file.attrs['t_tot'] = data_dict['t_tot']  # Total time base of observations
+        file.attrs['t_mean'] = data_dict['t_mean']  # Time reference (zero) point of the full light curve
+        file.attrs['t_int'] = data_dict['t_int']  # Integration time of observations (median time step by default)
+        file.attrs['p_orb'] = data_dict['p_orb']  # orbital period, if applicable
+
+        # the time series data
+        file.create_dataset('time', data=data_dict['time'])
+        file['time'].attrs['unit'] = 'time unit of the data (often days)'
+        file['time'].attrs['description'] = 'timestamps of the observations'
+        file.create_dataset('flux', data=data_dict['flux'])
+        file['flux'].attrs['unit'] = 'median normalised flux'
+        file['flux'].attrs['description'] = 'normalised flux measurements of the observations'
+        file.create_dataset('flux_err', data=data_dict['flux_err'])
+        file['flux_err'].attrs['unit'] = 'median normalised flux'
+        file['flux_err'].attrs['description'] = 'normalised error measurements in the flux'
+
+        # additional information
+        file.create_dataset('i_chunks', data=data_dict['i_chunks'])
+        file['i_chunks'].attrs['description'] = 'pairs of indices indicating time chunks of the data'
+        file.create_dataset('flux_counts_medians', data=data_dict['flux_counts_medians'])
+        file['flux_counts_medians'].attrs['unit'] = 'raw flux counts'
+        file['flux_counts_medians'].attrs['description'] = 'median flux level per time chunk'
+        file.create_dataset('t_mean_chunk', data=data_dict['t_mean_chunk'])
+        file['t_mean_chunk'].attrs['unit'] = 'time unit of the data (often days)'
+        file['t_mean_chunk'].attrs['description'] = 'time reference (zero) point of the each time chunk'
+
+    return None
+
+
+def load_result_hdf5(file_name, h5py_file_kwargs):
+    """Load results from an hdf5 file and return it in a dictionary.
+
+    Primarily for the api class Result.
+
+    Parameters
+    ----------
+    file_name: str
+        File name (including path) for loading the results.
+    h5py_file_kwargs: dict, optional
+        Keyword arguments for opening the h5py file.
+        Example: {'locking': False}, for a drive that does not support locking.
+
+    Returns
+    -------
+    Dict
+        Dictionary of the result attributes and fields
+    """
+    # to avoid dict in function defaults
+    if h5py_file_kwargs is None:
+        h5py_file_kwargs = {}
+
+    # add everything to a dict
+    result_dict = {}
+
+    # load the results from the file
+    with h5py.File(file_name, 'r', **h5py_file_kwargs) as file:
+        # file description
+        result_dict['target_id'] = file.attrs['target_id']
+        result_dict['data_id'] = file.attrs['data_id']
+        result_dict['description'] = file.attrs['description']
+        result_dict['date_time'] = file.attrs['date_time']
+
+        # summary statistics
+        result_dict['n_param'] = file.attrs['n_param']
+        result_dict['bic'] = file.attrs['bic']
+        result_dict['noise_level'] = file.attrs['noise_level']
+
+        # linear model parameters
+        # y-intercepts
+        result_dict['const'] = np.copy(file['const'])
+        result_dict['c_err'] = np.copy(file['c_err'])
+        result_dict['c_hdi'] = np.copy(file['c_hdi'])
+        # slopes
+        result_dict['slope'] = np.copy(file['slope'])
+        result_dict['sl_err'] = np.copy(file['sl_err'])
+        result_dict['sl_hdi'] = np.copy(file['sl_hdi'])
+
+        # sinusoid model parameters
+        # frequencies
+        result_dict['f_n'] = np.copy(file['f_n'])
+        result_dict['f_n_err'] = np.copy(file['f_n_err'])
+        result_dict['f_n_hdi'] = np.copy(file['f_n_hdi'])
+        # amplitudes
+        result_dict['a_n'] = np.copy(file['a_n'])
+        result_dict['a_n_err'] = np.copy(file['a_n_err'])
+        result_dict['a_n_hdi'] = np.copy(file['a_n_hdi'])
+        # phases
+        result_dict['ph_n'] = np.copy(file['ph_n'])
+        result_dict['ph_n_err'] = np.copy(file['ph_n_err'])
+        result_dict['ph_n_hdi'] = np.copy(file['ph_n_hdi'])
+        # passing criteria
+        result_dict['passed_sigma'] = np.copy(file['passed_sigma'])
+        result_dict['passed_snr'] = np.copy(file['passed_snr'])
+        result_dict['passed_both'] = np.copy(file['passed_both'])
+
+        # harmonic model
+        result_dict['p_orb'] = np.copy(file['p_orb'])
+        result_dict['passed_harmonic'] = np.copy(file['passed_harmonic'])
+
+    return result_dict
+
+
+def save_result_hdf5(file_name, result_dict):
+    """Save results to an hdf5 file.
+
+    Primarily for the api class Result.
+
+    Parameters
+    ----------
+    file_name: str
+        File name (including path) for saving the result.
+    result_dict: dict
+        Dictionary of the result attributes and fields
+
+    Returns
+    -------
+    None
+    """
+    # file name must have hdf5 extension
+    ext = os.path.splitext(os.path.basename(file_name))[1]
+    if ext != '.hdf5':
+        file_name = file_name.replace(ext, '.hdf5')
+
+    # save to hdf5
+    with h5py.File(file_name, 'w') as file:
+        file.attrs['target_id'] = result_dict['target_id']
+        file.attrs['data_id'] = result_dict['data_id']
+        file.attrs['description'] = result_dict['description']
+        file.attrs['date_time'] = result_dict['date_time']
+        file.attrs['n_param'] = result_dict['n_param']  # number of free parameters
+        file.attrs['bic'] = result_dict['bic']  # Bayesian Information Criterion of the residuals
+        file.attrs['noise_level'] = result_dict['noise_level']  # standard deviation of the residuals
+
+        # orbital period
+        file.create_dataset('p_orb', data=result_dict['p_orb'])
+        file['p_orb'].attrs['unit'] = 'd'
+        file['p_orb'].attrs['description'] = 'Orbital period and error estimates.'
+
+        # the linear model
+        # y-intercepts
+        file.create_dataset('const', data=result_dict['const'])
+        file['const'].attrs['unit'] = 'median normalised flux'
+        file['const'].attrs['description'] = 'y-intercept per analysed sector'
+        file.create_dataset('c_err', data=result_dict['c_err'])
+        file['c_err'].attrs['unit'] = 'median normalised flux'
+        file['c_err'].attrs['description'] = 'errors in the y-intercept per analysed sector'
+        file.create_dataset('c_hdi', data=result_dict['c_hdi'])
+        file['c_hdi'].attrs['unit'] = 'median normalised flux'
+        file['c_hdi'].attrs['description'] = 'HDI for the y-intercept per analysed sector'
+
+        # slopes
+        file.create_dataset('slope', data=result_dict['slope'])
+        file['slope'].attrs['unit'] = 'median normalised flux / d'
+        file['slope'].attrs['description'] = 'slope per analysed sector'
+        file.create_dataset('sl_err', data=result_dict['sl_err'])
+        file['sl_err'].attrs['unit'] = 'median normalised flux / d'
+        file['sl_err'].attrs['description'] = 'error in the slope per analysed sector'
+        file.create_dataset('sl_hdi', data=result_dict['sl_hdi'])
+        file['sl_hdi'].attrs['unit'] = 'median normalised flux / d'
+        file['sl_hdi'].attrs['description'] = 'HDI for the slope per analysed sector'
+
+        # the sinusoid model
+        # frequencies
+        file.create_dataset('f_n', data=result_dict['f_n'])
+        file['f_n'].attrs['unit'] = '1 / d'
+        file['f_n'].attrs['description'] = 'frequencies of a number of sine waves'
+        file.create_dataset('f_n_err', data=result_dict['f_n_err'])
+        file['f_n_err'].attrs['unit'] = '1 / d'
+        file['f_n_err'].attrs['description'] = 'errors in the frequencies of a number of sine waves'
+        file.create_dataset('f_n_hdi', data=result_dict['f_n_hdi'])
+        file['f_n_hdi'].attrs['unit'] = '1 / d'
+        file['f_n_hdi'].attrs['description'] = 'HDI for the frequencies of a number of sine waves'
+
+        # amplitudes
+        file.create_dataset('a_n', data=result_dict['a_n'])
+        file['a_n'].attrs['unit'] = 'median normalised flux'
+        file['a_n'].attrs['description'] = 'amplitudes of a number of sine waves'
+        file.create_dataset('a_n_err', data=result_dict['a_n_err'])
+        file['a_n_err'].attrs['unit'] = 'median normalised flux'
+        file['a_n_err'].attrs['description'] = 'errors in the amplitudes of a number of sine waves'
+        file.create_dataset('a_n_hdi', data=result_dict['a_n_hdi'])
+        file['a_n_hdi'].attrs['unit'] = 'median normalised flux'
+        file['a_n_hdi'].attrs['description'] = 'HDI for the amplitudes of a number of sine waves'
+
+        # phases
+        file.create_dataset('ph_n', data=result_dict['ph_n'])
+        file['ph_n'].attrs['unit'] = 'radians'
+        file['ph_n'].attrs['description'] = 'phases of a number of sine waves, with reference point t_mean'
+        file.create_dataset('ph_n_err', data=result_dict['ph_n_err'])
+        file['ph_n_err'].attrs['unit'] = 'radians'
+        file['ph_n_err'].attrs['description'] = 'errors in the phases of a number of sine waves'
+        file.create_dataset('ph_n_hdi', data=result_dict['ph_n_hdi'])
+        file['ph_n_hdi'].attrs['unit'] = 'radians'
+        file['ph_n_hdi'].attrs['description'] = 'HDI for the phases of a number of sine waves'
+
+        # selection criteria
+        file.create_dataset('passed_sigma', data=result_dict['passed_sigma'])
+        file['passed_sigma'].attrs['description'] = 'sinusoids passing the sigma criterion'
+        file.create_dataset('passed_snr', data=result_dict['passed_snr'])
+        file['passed_snr'].attrs['description'] = 'sinusoids passing the signal to noise criterion'
+        file.create_dataset('passed_both', data=result_dict['passed_both'])
+        file['passed_both'].attrs[
+            'description'] = 'sinusoids passing both the sigma and the signal to noise criteria'
+        file.create_dataset('passed_harmonic', data=result_dict['passed_harmonic'])
+        file['passed_harmonic'].attrs['description'] = 'harmonic sinusoids passing the sigma criterion'
+
+    return None
+
+
+def save_result_csv(file_name, result_dict):
+    """Save results to several csv files.
+
+    Primarily for the api class Result.
+
+    Parameters
+    ----------
+    file_name: str
+        File name (including path) for saving the result.
+    result_dict: dict
+        Dictionary of the result attributes and fields
+
+    Returns
+    -------
+    None
+    """
+    # file extension
+    ext = os.path.splitext(os.path.basename(file_name))[1]
+
+    # linear model parameters
+    data = np.column_stack((result_dict['const'], result_dict['c_err'],
+                            result_dict['c_hdi'][:, 0], result_dict['c_hdi'][:, 1],
+                            result_dict['slope'], result_dict['sl_err'],
+                            result_dict['sl_hdi'][:, 0], result_dict['sl_hdi'][:, 1]))
+
+    hdr = 'const, c_err, c_hdi_l, c_hdi_r, slope, sl_err, sl_hdi_l, sl_hdi_r'
+    file_name_lin = file_name.replace(ext, '_linear.csv')
+    np.savetxt(file_name_lin, data, delimiter=',', header=hdr)
+
+    # sinusoid model parameters
+    data = np.column_stack((result_dict['f_n'], result_dict['f_n_err'],
+                            result_dict['f_n_hdi'][:, 0], result_dict['f_n_hdi'][:, 1],
+                            result_dict['a_n'], result_dict['a_n_err'],
+                            result_dict['a_n_hdi'][:, 0], result_dict['a_n_hdi'][:, 1],
+                            result_dict['ph_n'], result_dict['ph_n_err'],
+                            result_dict['ph_n_hdi'][:, 0], result_dict['ph_n_hdi'][:, 1],
+                            result_dict['passed_sigma'], result_dict['passed_snr'],
+                            result_dict['passed_both'], result_dict['passed_harmonic']))
+
+    hdr = ('f_n, f_n_err, f_n_hdi_l, f_n_hdi_r, a_n, a_n_err, a_n_hdi_l, a_n_hdi_r, '
+           'ph_n, ph_n_err, ph_n_hdi_l, ph_n_hdi_r, passed_sigma, passed_snr, passed_b, passed_h')
+    file_name_sin = file_name.replace(ext, '_sinusoid.csv')
+    np.savetxt(file_name_sin, data, delimiter=',', header=hdr)
+
+    # period and statistics
+    names = ('p_orb', 'p_err', 'p_hdi_l', 'p_hdi_r'  'n_param', 'bic', 'noise_level')
+    stats = (result_dict['p_orb'], result_dict['p_err'], result_dict['p_hdi'][0], result_dict['p_hdi'][1],
+             result_dict['n_param'], result_dict['bic'], result_dict['noise_level'])
+
+    desc = ['Orbital period', 'Error in the orbital period', 'Left bound HDI of the orbital period',
+            'Right bound HDI of the orbital period', 'Number of free parameters',
+            'Bayesian Information Criterion of the residuals', 'Standard deviation of the residuals']
+    data = np.column_stack((names, stats, desc))
+    hdr = f"{result_dict['target_id']}, {result_dict['data_id']}, Model statistics\nname, value, description"
+    file_name_stats = file_name.replace(ext, '_stats.csv')
+    np.savetxt(file_name_stats, data, delimiter=',', header=hdr, fmt='%s')
+
+    return None
 
 
 @nb.njit(cache=True)
@@ -276,7 +635,7 @@ def load_light_curve(file_list, apply_flags=True):
 def save_inference_data(file_name, inf_data):
     """Save the inference data object from Arviz/PyMC3
 
-        Parameters
+    Parameters
     ----------
     file_name: str
         File name (including path) for saving the results.

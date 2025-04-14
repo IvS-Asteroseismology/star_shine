@@ -7,11 +7,11 @@ Code written by: Luc IJspeert
 """
 import os
 import datetime
-import h5py
 import numpy as np
 
 from star_shine.core import utility as ut
 from star_shine.core import visualisation as vis
+from star_shine.utils import io
 from star_shine.config.helpers import get_config
 
 
@@ -203,7 +203,7 @@ class Data:
             file_list_dir = [os.path.join(instance.data_dir, file) for file in instance.file_list]
 
         # load the data from the list of files
-        lc_data = ut.load_light_curve(file_list_dir, apply_flags=config.apply_q_flags)
+        lc_data = io.load_light_curve(file_list_dir, apply_flags=config.apply_q_flags)
         instance.setter(time=lc_data[0], flux=lc_data[1], flux_err=lc_data[2], i_chunks=lc_data[3], medians=lc_data[4])
 
         # check for overlapping time stamps
@@ -239,40 +239,8 @@ class Data:
         Data
             Instance of the Data class with the loaded data.
         """
-        # to avoid dict in function defaults
-        if h5py_file_kwargs is None:
-            h5py_file_kwargs = {}
-
-        # add everything to a dict
-        data_dict = {}
-
-        # load the results from the file
-        with h5py.File(file_name, 'r', **h5py_file_kwargs) as file:
-            # file description
-            data_dict['target_id'] = file.attrs['target_id']
-            data_dict['data_id'] = file.attrs['data_id']
-            data_dict['description'] = file.attrs['description']
-            data_dict['date_time'] = file.attrs['date_time']
-
-            # original list of files
-            data_dict['data_dir'] = file.attrs['data_dir']
-            data_dict['file_list'] = np.copy(file['file_list'])
-
-            # summary statistics
-            data_dict['t_tot'] = file.attrs['t_tot']
-            data_dict['t_mean'] = file.attrs['t_mean']
-            data_dict['t_int'] = file.attrs['t_int']
-            data_dict['p_orb'] = file.attrs['p_orb']
-
-            # the time series data
-            data_dict['time'] = np.copy(file['time'])
-            data_dict['flux'] = np.copy(file['flux'])
-            data_dict['flux_err'] = np.copy(file['flux_err'])
-
-            # additional information
-            data_dict['i_chunks'] = np.copy(file['i_chunks'])
-            data_dict['flux_counts_medians'] = np.copy(file['flux_counts_medians'])
-            data_dict['t_mean_chunk'] = np.copy(file['t_mean_chunk'])
+        # io module handles opening the file
+        data_dict = io.load_data_hdf5(file_name, h5py_file_kwargs=None)
 
         # initiate the Results instance and fill in the results
         instance = cls()
@@ -297,49 +265,35 @@ class Data:
         -------
         None
         """
-        # file name must have hdf5 extension
-        ext = os.path.splitext(os.path.basename(file_name))[1]
-        if ext != '.hdf5':
-            file_name = file_name.replace(ext, '.hdf5')
+        # make a dictionary of the fields to be saved
+        data_dict = {}
+        data_dict['target_id'] = self.target_id
+        data_dict['data_id'] = self.data_id
+        data_dict['description'] = 'Star Shine data file'
+        data_dict['date_time'] = str(datetime.datetime.now())
 
-        # save to hdf5
-        with h5py.File(file_name, 'w') as file:
-            file.attrs['target_id'] = self.target_id
-            file.attrs['data_id'] = self.data_id
-            file.attrs['description'] = 'Star Shine data file'
-            file.attrs['date_time'] = str(datetime.datetime.now())
+        # original list of files
+        data_dict['data_dir'] = self.data_dir
+        data_dict['file_list'] = self.file_list
 
-            # original list of files
-            file.attrs['data_dir'] = self.data_dir  # original data directory
-            file.create_dataset('file_list', data=self.file_list)
-            file['file_list'].attrs['description'] = 'original list of files for the creation of this data file'
+        # summary statistics
+        data_dict['t_tot'] = self.t_tot
+        data_dict['t_mean'] = self.t_mean
+        data_dict['t_int'] = self.t_int
+        data_dict['p_orb'] = self.p_orb
 
-            # summary statistics
-            file.attrs['t_tot'] = self.t_tot  # Total time base of observations
-            file.attrs['t_mean'] = self.t_mean  # Time reference (zero) point of the full light curve
-            file.attrs['t_int'] = self.t_int  # Integration time of observations (median time step by default)
-            file.attrs['p_orb'] = self.p_orb  # orbital period, if applicable
+        # the time series data
+        data_dict['time'] = self.time
+        data_dict['flux'] = self.flux
+        data_dict['flux_err'] = self.flux_err
 
-            # the time series data
-            file.create_dataset('time', data=self.time)
-            file['time'].attrs['unit'] = 'time unit of the data (often days)'
-            file['time'].attrs['description'] = 'timestamps of the observations'
-            file.create_dataset('flux', data=self.flux)
-            file['flux'].attrs['unit'] = 'median normalised flux'
-            file['flux'].attrs['description'] = 'normalised flux measurements of the observations'
-            file.create_dataset('flux_err', data=self.flux_err)
-            file['flux_err'].attrs['unit'] = 'median normalised flux'
-            file['flux_err'].attrs['description'] = 'normalised error measurements in the flux'
+        # additional information
+        data_dict['i_chunks'] = self.i_chunks
+        data_dict['flux_counts_medians'] = self.flux_counts_medians
+        data_dict['t_mean_chunk'] = self.t_mean_chunk
 
-            # additional information
-            file.create_dataset('i_chunks', data=self.i_chunks)
-            file['i_chunks'].attrs['description'] = 'pairs of indices indicating time chunks of the data'
-            file.create_dataset('flux_counts_medians', data=self.flux_counts_medians)
-            file['flux_counts_medians'].attrs['unit'] = 'raw flux counts'
-            file['flux_counts_medians'].attrs['description'] = 'median flux level per time chunk'
-            file.create_dataset('t_mean_chunk', data=self.t_mean_chunk)
-            file['t_mean_chunk'].attrs['unit'] = 'time unit of the data (often days)'
-            file['t_mean_chunk'].attrs['description'] = 'time reference (zero) point of the each time chunk'
+        # io module handles writing to file
+        io.save_data_hdf5(file_name, data_dict)
 
         return None
 

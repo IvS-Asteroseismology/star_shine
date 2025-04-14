@@ -9,12 +9,15 @@ import os
 import time as systime
 import numpy as np
 
+from data import Data
+from result import Result
+
 from star_shine.core import timeseries_functions as tsf
 from star_shine.core import timeseries_fitting as tsfit
 from star_shine.core import analysis_functions as af
 from star_shine.core import mcmc_functions as mcf
 from star_shine.core import utility as ut
-from star_shine.config.helpers import get_config
+from star_shine.config.helpers import get_config, get_custom_logger
 
 
 # load configuration
@@ -70,7 +73,7 @@ class Pipeline:
             os.mkdir(full_dir)  # create the subdir
 
         # initialise custom logger
-        self.logger = ut.get_custom_logger(full_dir, self.data.target_id, config.verbose)
+        self.logger = get_custom_logger(full_dir, self.data.target_id, config.verbose)
 
         # check the input data
         if not isinstance(data, Data):
