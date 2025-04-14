@@ -9,6 +9,7 @@ import os
 import datetime
 import numpy as np
 
+import star_shine.config.dynamic_config
 from star_shine.core import utility as ut
 from star_shine.core import visualisation as vis
 from star_shine.core import io
@@ -218,7 +219,7 @@ class Data:
         instance.t_int = np.median(np.diff(instance.time))  # integration time, taken to be the median time step
 
         instance.f_min = 0.01 / instance.t_tot
-        instance.f_max = ut.frequency_upper_threshold(instance.time, func='min')
+        instance.f_max = star_shine.config.dynamic_config.frequency_upper_threshold(instance.time, func='min')
 
         return instance
 

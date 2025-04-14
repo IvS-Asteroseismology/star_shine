@@ -11,7 +11,7 @@ import numpy as np
 import numba as nb
 import itertools as itt
 
-from star_shine.core import utility as ut
+import star_shine.config.dynamic_config as dconfig
 
 
 @nb.njit(cache=True)
@@ -178,7 +178,7 @@ def remove_insignificant_snr(time, a_n, noise_at_f):
     Not to be confused with the noise on the individual data points of the
     time series.
     """
-    snr_threshold = ut.signal_to_noise_threshold(time)
+    snr_threshold = dconfig.signal_to_noise_threshold(time)
 
     # signal-to-noise below threshold
     a_insig_1 = (a_n / noise_at_f < snr_threshold)

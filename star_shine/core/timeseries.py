@@ -13,10 +13,11 @@ import scipy as sp
 import numba as nb
 import astropy.timeseries as apy
 
-from . import fitting as fit
-from . import analysis as anf
-from . import utility as ut
+from star_shine.core import fitting as fit
+from star_shine.core import analysis as anf
+from star_shine.core import utility as ut
 from star_shine.config.helpers import get_config
+from star_shine.config import dynamic_config as dconfig
 
 
 # load configuration
@@ -815,9 +816,7 @@ def scargle_phase(time, flux, fs):
     ("Phase estimation with the Lomb-Scargle periodogram method")
     https://www.researchgate.net/publication/283359043_Phase_estimation_with_the_Lomb-Scargle_periodogram_method
     (only difference is an extra pi/2 for changing cos phase to sin phase)
-    
-    Notes
-    -----
+
     The time array is mean subtracted to reduce correlation between
     frequencies and phases. The flux array is mean subtracted to avoid
     a large peak at frequency equal to zero.
@@ -898,7 +897,7 @@ def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
 
     Notes
     -----
-    Approximation using fft, much faster than the other scargle in mode='fast'.
+    Approximation using fft, much faster (in mode='fast') than the other scargle.
     Beware of computing narrower frequency windows, as there is inconsistency
     when doing this.
     
