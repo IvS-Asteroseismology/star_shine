@@ -44,7 +44,7 @@ class Config:
     stop_crit: str = 'bic'
     bic_thr: float = 2.
     snr_thr: float = -1.
-    f_max: float = -1.
+    nyquist: str = 'simple'
 
     # Optimisation settings
     optimise: str = 'fitter'

@@ -27,9 +27,9 @@ bic_thr: 2
 # Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1
 snr_thr: -1
 
-# f_max description:
-# Highest frequency allowed during extraction and for periodograms, uses built-in Nyquist if set to -1
-f_max: -1
+# nyquist description:
+# Calculation method for the Nyquist frequency, 'simple', or 'rigorous'
+nyquist: 'simple'
 
 # ---------------------------------------------- Optimisation settings -------------------------------------------------
 # optimise description:

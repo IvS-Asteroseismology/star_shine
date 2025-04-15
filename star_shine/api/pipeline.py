@@ -22,8 +22,7 @@ from star_shine.config.helpers import get_config, get_custom_logger
 
 # load configuration
 config = get_config()
-# todo: modelling red-noise with autoregressive model
-# todo: Nyquist for uneven sampling
+
 
 class Pipeline:
     """A class to analyze light curve data.

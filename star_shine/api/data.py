@@ -9,11 +9,10 @@ import os
 import datetime
 import numpy as np
 
-import star_shine.config.dynamic_config
-from star_shine.core import utility as ut
 from star_shine.core import visualisation as vis
 from star_shine.core import io
 from star_shine.config.helpers import get_config
+from star_shine.config import dynamic_config as dconfig
 
 
 # load configuration
@@ -217,9 +216,6 @@ class Data:
         instance.t_mean = np.mean(instance.time)
         instance.t_mean_chunk = np.array([np.mean(instance.time[ch[0]:ch[1]]) for ch in instance.i_chunks])
         instance.t_int = np.median(np.diff(instance.time))  # integration time, taken to be the median time step
-
-        instance.f_min = 0.01 / instance.t_tot
-        instance.f_max = star_shine.config.dynamic_config.frequency_upper_threshold(instance.time, func='min')
 
         return instance
 

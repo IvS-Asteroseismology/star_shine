@@ -6,6 +6,7 @@ This module contains functions that evaluate certain configuration attributes th
 Code written by: Luc IJspeert
 """
 import numpy as np
+import numba as nb
 
 from star_shine.config.helpers import get_config
 
@@ -53,13 +54,14 @@ def frequency_resolution(time, factor=1.5):
     """Calculate the frequency resolution of a time series
 
     Equation: factor / T, where T is the total time base of observations.
+    Recommended factor: 1.5. Common choices are 1, 1.5 (conservative), 2.5 (very conservative).
 
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series.
     factor: float, optional
-        Number that multiplies the resolution (1/T). Common choices are 1, 1.5 (conservative), 2.5 (very conservative).
+        Number that multiplies the resolution (1/T).
 
     Returns
     -------
@@ -76,6 +78,7 @@ def frequency_lower_threshold(time, factor=0.01):
     """Calculate the frequency resolution of a time series
 
     Equation: factor / T, where T is the total time base of observations.
+    Recommended factor: 1/100.
 
     Parameters
     ----------
@@ -95,41 +98,52 @@ def frequency_lower_threshold(time, factor=0.01):
     return f_min
 
 
-def frequency_upper_threshold(time, func='min'):
-    """Determines the maximum frequency for extraction and periodograms
+# @nb.njit(cache=True)
+def nyquist_sum_koen_2006(n, time, delta_t_min):
+    """"""
+    factor = n * np.pi / delta_t_min
 
-    If set in configuration, the user defined value is used. Otherwise, the Nyquist frequency is calculated
-    based on the time stamps, and using the desired built-in function.
+    # evaluate equation 5 from Koen 2006 at nu = 2pi*n/delta_t_min
+    ss = 0
+    for i in range(0, len(time) - 1):
+        for j in range(i + 1, len(time)):
+            ss += np.sin(factor * (time[j] - time[i]))
+
+    return ss
+
+
+def nyquist_frequency(time):
+    """Determines the maximum frequency for extraction and periodograms.
+
+    The Nyquist frequency is calculated using the configured built-in function.
+    The rigorous method implements equation 5 from Koen 2006.
+    https://ui.adsabs.harvard.edu/abs/2006MNRAS.371.1390K/abstract
 
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series.
-    func: str
-        Function name for the calculation of the Nyquist frequency. Choose from 'min', 'max', 'median', or 'rigorous'.
-
 
     Returns
     -------
     float
-        Maximum frequency to be calculated
+        Nyquist frequency of the time series
     """
-    # if user defined (unequal to -1), return the configured number
-    if config.f_max != -1:
-        return config.f_max
+    # smallest time interval
+    delta_t_min = np.min(time[1:] - time[:-1])
 
     # calculate the Nyquist frequency with the specified approach
-    if func == 'min':
-        f_max = 1 / (2 * np.min(time[1:] - time[:-1]))
-    elif func == 'max':
-        f_max = 1 / (2 * np.max(time[1:] - time[:-1]))
-    elif func == 'median':
-        f_max = 1 / (2 * np.median(time[1:] - time[:-1]))
-    elif func == 'rigorous':
-        # implement the rigorous way of calculating Nyquist
-        f_max = 1 / (2 * np.min(time[1:] - time[:-1]))
-    else:
-        # func name not recognised
-        f_max = 1 / (2 * np.min(time[1:] - time[:-1]))
+    if config.nyquist == 'rigorous':
+        # iterate n until sum returns zero
+        ss_nu = 0
+        n = 0
+        while ss_nu == 0:
+            n += 1
+            ss_nu = nyquist_sum_koen_2006(n, time, delta_t_min)
 
-    return f_max
+        f_nyquist = n / (2 * delta_t_min)
+    else:
+        # method == 'simple'
+        f_nyquist = 1 / (2 * delta_t_min)
+
+    return f_nyquist
