@@ -11,7 +11,7 @@ import numpy as np
 import numba as nb
 import itertools as itt
 
-import star_shine.config.dynamic_config as dconfig
+from star_shine.config import dynamic_config as dconfig
 
 
 @nb.njit(cache=True)

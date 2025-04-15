@@ -7,7 +7,11 @@ Code written by: Luc IJspeert
 """
 import numpy as np
 
-from star_shine.core.utility import config
+from star_shine.config.helpers import get_config
+
+
+# load configuration
+config = get_config()
 
 
 def signal_to_noise_threshold(time):
@@ -102,7 +106,7 @@ def frequency_upper_threshold(time, func='min'):
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series.
     func: str
-        Function name for the calculation of the Nyquist frequency. Choose from 'min', 'median', or 'rigorous'.
+        Function name for the calculation of the Nyquist frequency. Choose from 'min', 'max', 'median', or 'rigorous'.
 
 
     Returns
@@ -117,6 +121,8 @@ def frequency_upper_threshold(time, func='min'):
     # calculate the Nyquist frequency with the specified approach
     if func == 'min':
         f_max = 1 / (2 * np.min(time[1:] - time[:-1]))
+    elif func == 'max':
+        f_max = 1 / (2 * np.max(time[1:] - time[:-1]))
     elif func == 'median':
         f_max = 1 / (2 * np.median(time[1:] - time[:-1]))
     elif func == 'rigorous':

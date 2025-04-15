@@ -9,9 +9,8 @@ import os
 import time as systime
 import numpy as np
 
-import star_shine.core.timeseries
-from data import Data
-from result import Result
+from star_shine.api.data import Data
+from star_shine.api.result import Result
 
 from star_shine.core import timeseries as tsf
 from star_shine.core import fitting as fit
@@ -23,7 +22,8 @@ from star_shine.config.helpers import get_config, get_custom_logger
 
 # load configuration
 config = get_config()
-
+# todo: modelling red-noise with autoregressive model
+# todo: Nyquist for uneven sampling
 
 class Pipeline:
     """A class to analyze light curve data.

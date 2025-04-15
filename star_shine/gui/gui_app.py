@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QMenuBar, QMessageBox, 
     QTextEdit, QLineEdit, QLabel, QHBoxLayout
 from PySide6.QtGui import QAction
 
-import star_shine.config.helpers as hlp
+from star_shine.config import helpers as hlp
 
 
 class MainWindow(QMainWindow):
@@ -103,6 +103,7 @@ class MainWindow(QMainWindow):
         message = (f"STAR SHINE version {version}\n"
                    "Satellite Time-series Analysis Routine "
                    "using Sinusoids and Harmonics through Iterative Non-linear Extraction\n"
+                   "Repository: https://github.com/LucIJspeert/star_shine\n"
                    "Code written by: Luc IJspeert")
         QMessageBox.about(self, "About", message)
 

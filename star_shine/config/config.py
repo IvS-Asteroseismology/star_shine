@@ -32,7 +32,7 @@ class Config:
         Initializes default settings if the configuration file is not found or invalid.
     """
     _instance = None
-    _config_path = os.path.join(os.path.dirname(__file__), 'data', 'config.yaml')
+    _config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
 
     # default settings below
     # General settings
