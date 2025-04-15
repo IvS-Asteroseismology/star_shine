@@ -115,6 +115,35 @@ def mask_timestamps(time, stamps):
 
 
 @nb.njit(cache=True)
+def mark_gaps(time, min_gap=1.):
+    """Mark gaps in a series of time points.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series.
+    min_gap: float, optional
+        Minimum width for a gap (in time units).
+
+    Returns
+    -------
+    gaps: numpy.ndarray[Any, dtype[float]]
+        Gap timestamps in pairs.
+    """
+    # mark the gaps
+    t_sorted = np.sort(time)
+    t_diff = t_sorted[1:] - t_sorted[:-1]  # np.diff(a)
+    gaps = (t_diff > min_gap)
+
+    # get the timestamps
+    t_left = t_sorted[:-1][gaps]
+    t_right = t_sorted[1:][gaps]
+    gaps = np.column_stack((t_left, t_right))
+
+    return gaps
+
+
+@nb.njit(cache=True)
 def phase_dispersion(phases, flux, n_bins):
     """Phase dispersion, as in PDM, without overlapping bins.
     
@@ -1876,6 +1905,68 @@ def formal_uncertainties(time, residuals, flux_err, a_n, i_chunks):
     sigma_const, sigma_slope = formal_uncertainties_linear(time, residuals, i_chunks)
 
     return sigma_const, sigma_slope, sigma_f, sigma_a, sigma_ph
+
+
+def linear_regression_uncertainty_ephem(time, p_orb, sigma_t=1):
+    """Calculates the linear regression errors on period and t_zero
+
+    Parameters
+    ---------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series.
+    p_orb: float
+        Orbital period in days.
+    sigma_t: float
+        Error in the individual time measurements.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        p_err: float
+            Error in the period.
+        t_err: float
+            Error in t_zero.
+        p_t_corr: float
+            Covariance between the period and t_zero.
+
+    Notes
+    -----
+    The number of eclipses, computed from the period and
+    time base, is taken to be a contiguous set.
+    var_matrix:
+    [[std[0]**2          , std[0]*std[1]*corr],
+     [std[0]*std[1]*corr,           std[1]**2]]
+    """
+    # number of observed eclipses (technically contiguous)
+    n = int(abs(np.ptp(time) // p_orb)) + 1
+
+    # the arrays
+    x = np.arange(n, dtype=int)  # 'time' points
+    y = np.ones(n, dtype=int)  # 'positive measurement'
+
+    # remove points in gaps
+    gaps = mark_gaps(time, min_gap=1.)
+    mask = mask_timestamps(x * p_orb, gaps)  # convert x to time domain
+    x = x[~mask] - n//2  # also centre the time for minimal correlation
+    y = y[~mask]
+
+    # M
+    matrix = np.column_stack((x, y))
+
+    # M^-1
+    matrix_inv = np.linalg.pinv(matrix)  # inverse (of a general matrix)
+
+    # M^-1 S M^-1^T, S unit matrix times some sigma (no covariance in the data)
+    var_matrix = matrix_inv @ matrix_inv.T
+    var_matrix = var_matrix * sigma_t ** 2
+
+    # errors in the period and t_zero
+    p_err = np.sqrt(var_matrix[0, 0])
+    t_err = np.sqrt(var_matrix[1, 1])
+    p_t_corr = var_matrix[0, 1] / (t_err * p_err)  # or [1, 0]
+
+    return p_err, t_err, p_t_corr
 
 
 def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):

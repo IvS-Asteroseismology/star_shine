@@ -9,6 +9,7 @@ import os
 import time as systime
 import numpy as np
 
+import star_shine.core.timeseries
 from data import Data
 from result import Result
 
@@ -315,8 +316,8 @@ class Pipeline:
         # calculate formal uncertainties
         out_d = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
         self.result.setter(c_err=out_d[0], sl_err=out_d[1], f_n_err=out_d[2], a_n_err=out_d[3], ph_n_err=out_d[4])
-        p_err, _, _ = anf.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot,
-                                                        sigma_t=self.data.t_int / 2)
+        p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
+                                                              sigma_t=self.data.t_int / 2)
         self.result.setter(p_orb=np.array([self.result.p_orb, p_err, 0, 0]))
 
         # set the result description
@@ -371,8 +372,8 @@ class Pipeline:
             c_err, sl_err, f_n_err, a_n_err, ph_n_err = tsf.formal_uncertainties(self.data.time, resid,
                                                                                  self.data.flux_err, self.result.a_n,
                                                                                  self.data.i_chunks)
-            p_err, _, _ = anf.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot,
-                                                            sigma_t=self.data.t_int/2)
+            p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
+                                                                  sigma_t=self.data.t_int / 2)
 
             # do not include those frequencies that have too big uncertainty
             include = (ph_n_err < 1 / np.sqrt(6))  # circular distribution for ph_n cannot handle these
@@ -406,7 +407,8 @@ class Pipeline:
 
         # calculate formal uncertainties
         out_e = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
-        p_err, _, _ = anf.linear_regression_uncertainty(self.result.p_orb, self.data.t_tot, sigma_t=self.data.t_int / 2)
+        p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
+                                                              sigma_t=self.data.t_int / 2)
         self.result.setter(p_err=p_err, c_err=out_e[0], sl_err=out_e[1], f_n_err=out_e[2], a_n_err=out_e[3],
                            ph_n_err=out_e[4])
 

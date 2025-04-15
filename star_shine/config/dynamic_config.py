@@ -48,13 +48,14 @@ def signal_to_noise_threshold(time):
 def frequency_resolution(time, factor=1.5):
     """Calculate the frequency resolution of a time series
 
-    Equation: factor / T, where T is the total time base of observations
+    Equation: factor / T, where T is the total time base of observations.
 
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series.
-    factor
+    factor: float, optional
+        Number that multiplies the resolution (1/T). Common choices are 1, 1.5 (conservative), 2.5 (very conservative).
 
     Returns
     -------
@@ -62,9 +63,32 @@ def frequency_resolution(time, factor=1.5):
         Frequency resolution of the time series
     """
 
-    freq_res = factor / np.ptp(time)
+    f_res = factor / np.ptp(time)
 
-    return freq_res
+    return f_res
+
+
+def frequency_lower_threshold(time, factor=0.01):
+    """Calculate the frequency resolution of a time series
+
+    Equation: factor / T, where T is the total time base of observations.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series.
+    factor: float, optional
+        Number that multiplies the resolution (1/T).
+
+    Returns
+    -------
+    float
+        Frequency resolution of the time series
+    """
+
+    f_min = factor / np.ptp(time)
+
+    return f_min
 
 
 def frequency_upper_threshold(time, func='min'):
