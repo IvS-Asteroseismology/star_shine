@@ -50,7 +50,7 @@ def signal_to_noise_threshold(time):
     return snr_thr
 
 
-def frequency_resolution(time, factor=1.5):
+def frequency_resolution(time):
     """Calculate the frequency resolution of a time series
 
     Equation: factor / T, where T is the total time base of observations.
@@ -60,54 +60,42 @@ def frequency_resolution(time, factor=1.5):
     ----------
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series.
-    factor: float, optional
-        Number that multiplies the resolution (1/T).
 
     Returns
     -------
     float
         Frequency resolution of the time series
     """
-
-    f_res = factor / np.ptp(time)
+    f_res = config.resolution_factor / np.ptp(time)
 
     return f_res
 
 
-def frequency_lower_threshold(time, factor=0.01):
-    """Calculate the frequency resolution of a time series
-
-    Equation: factor / T, where T is the total time base of observations.
-    Recommended factor: 1/100.
+@nb.njit(cache=True)
+def nyquist_sum_koen_2006(n, time, delta_t_min):
+    """Calculate the Nyquist sum based on Koen (2006).
 
     Parameters
     ----------
+    n: int
+        The number of terms in the series.
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series.
-    factor: float, optional
-        Number that multiplies the resolution (1/T).
+    delta_t_min: float
+        Minimum time interval between observations.
 
     Returns
     -------
-    float
-        Frequency resolution of the time series
+    int
+        Result of the sum of squares calculation.
     """
-
-    f_min = factor / np.ptp(time)
-
-    return f_min
-
-
-# @nb.njit(cache=True)
-def nyquist_sum_koen_2006(n, time, delta_t_min):
-    """"""
     factor = n * np.pi / delta_t_min
 
     # evaluate equation 5 from Koen 2006 at nu = 2pi*n/delta_t_min
     ss = 0
     for i in range(0, len(time) - 1):
         for j in range(i + 1, len(time)):
-            ss += np.sin(factor * (time[j] - time[i]))
+            ss += np.sin(factor * (time[j] - time[i]))**2
 
     return ss
 
@@ -133,17 +121,21 @@ def nyquist_frequency(time):
     delta_t_min = np.min(time[1:] - time[:-1])
 
     # calculate the Nyquist frequency with the specified approach
-    if config.nyquist == 'rigorous':
+    if config.nyquist_method == 'rigorous':
         # iterate n until sum returns zero
-        ss_nu = 0
+        precision = 1e-10
+        ss_nu = 1e-9
         n = 0
-        while ss_nu == 0:
+        while (ss_nu > precision) | (n < 20):
             n += 1
             ss_nu = nyquist_sum_koen_2006(n, time, delta_t_min)
 
         f_nyquist = n / (2 * delta_t_min)
+    elif config.nyquist_method == 'custom':
+        # take user defined value if it is higher than simple est.
+        f_nyquist = max(1 / (2 * delta_t_min), config.nyquist_value)
     else:
-        # method == 'simple'
+        # config.nyquist == 'simple'
         f_nyquist = 1 / (2 * delta_t_min)
 
     return f_nyquist

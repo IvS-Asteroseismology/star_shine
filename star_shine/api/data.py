@@ -12,7 +12,7 @@ import numpy as np
 from star_shine.core import visualisation as vis
 from star_shine.core import io
 from star_shine.config.helpers import get_config
-from star_shine.config import dynamic_config as dconfig
+from star_shine.config import data_properties as dp
 
 
 # load configuration
@@ -49,16 +49,18 @@ class Data:
         Time reference (zero) point of the full light curve.
     t_mean_chunk: numpy.ndarray[Any, dtype[float]]
         Time reference (zero) point per chunk.
-    t_int: float
-        Integration time of observations (taken to be the median time step by default, may be changed).
+    t_step: float
+        Median time step of observations.
     p_orb: float
         The orbital period. Set to 0 to search for the best period.
         If the orbital period is known with certainty beforehand, it can
         be provided as initial value and no new period will be searched.
-    f_min: float
-        Minimum frequency for extraction and periodograms
-    f_max: float
-        Maximum frequency for extraction and periodograms
+    _snr_thr: float
+        Signal-to-noise threshold for the acceptance of sinusoids.
+    _f_nyquist: float
+        Nyquist frequency (max f) for extraction and periodograms.
+    _f_resolution: float
+        Frequency resolution for extraction and periodograms.
     """
 
     def __init__(self, target_id='', data_id=''):
@@ -86,16 +88,64 @@ class Data:
         self.flux_err = np.zeros((0,), dtype=np.float_)
         self.i_chunks = np.zeros((0, 2), dtype=np.int_)
         self.flux_counts_medians = np.zeros((0,), dtype=np.float_)
+
+        # Orbital period
+        self.p_orb = 0.        # Orbital period
+
+        # fixed data properties
         self.t_tot = 0.
         self.t_mean = 0.
         self.t_mean_chunk = np.zeros((0,), dtype=np.float_)
-        self.t_int = 0.
+        self.t_step = 0.
 
-        self.p_orb = 0.
-        self.f_min = 0.
-        self.f_max = 0.
+        # variable data properties
+        self._snr_threshold = 0.
+        self._f_nyquist = 0.
+        self._f_resolution = 0.
 
         return
+
+    @property
+    def snr_threshold(self):
+        """Get the signal-to-noise threshold for accepting frequencies.
+
+        Returns
+        -------
+        float
+            The calculated or cached signal-to-noise threshold.
+        """
+        if self._snr_threshold is None:
+            self._snr_threshold = dp.signal_to_noise_threshold(self.time)
+
+        return self._snr_threshold
+
+    @property
+    def f_nyquist(self):
+        """Get the Nyquist frequency of the time series.
+
+        Returns
+        -------
+        float
+            The calculated or cached Nyquist frequency.
+        """
+        if self._f_resolution is None:
+            self._f_resolution = dp.nyquist_frequency(self.time)
+
+        return self._f_resolution
+
+    @property
+    def f_resolution(self):
+        """Get the frequency resolution of the time series.
+
+        Returns
+        -------
+        float
+            The calculated or cached frequency resolution.
+        """
+        if self._f_resolution is None:
+            self._f_resolution = dp.frequency_resolution(self.time)
+
+        return self._f_resolution
 
     def _check_file_existence(self):
         """Checks whether the given file(s) exist.
@@ -215,7 +265,7 @@ class Data:
         instance.t_tot = np.ptp(instance.time)
         instance.t_mean = np.mean(instance.time)
         instance.t_mean_chunk = np.array([np.mean(instance.time[ch[0]:ch[1]]) for ch in instance.i_chunks])
-        instance.t_int = np.median(np.diff(instance.time))  # integration time, taken to be the median time step
+        instance.t_step = np.median(np.diff(instance.time))  # integration time, taken to be the median time step
 
         return instance
 
@@ -276,7 +326,7 @@ class Data:
         # summary statistics
         data_dict['t_tot'] = self.t_tot
         data_dict['t_mean'] = self.t_mean
-        data_dict['t_int'] = self.t_int
+        data_dict['t_int'] = self.t_step
         data_dict['p_orb'] = self.p_orb
 
         # the time series data

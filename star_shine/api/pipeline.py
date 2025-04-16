@@ -135,7 +135,7 @@ class Pipeline:
         # extract all frequencies with the iterative scheme
         out_b = tsf.extract_sinusoids(self.data.time, self.data.flux, self.data.i_chunks, self.result.p_orb,
                                       self.result.f_n, self.result.a_n, self.result.ph_n, bic_thr=config.bic_thr,
-                                      snr_thr=config.snr_thr, stop_crit=config.stop_crit, select=config.select,
+                                      snr_thr=config.snr_thr, stop_crit=config.stop_criterion, select=config.select_next,
                                       f0=self.data.f_min, fn=self.data.f_max, fit_each_step=config.optimise_step,
                                       verbose=config.verbose)
         self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
@@ -194,7 +194,7 @@ class Pipeline:
 
         # use the chosen optimisation method
         inf_data, par_mean, par_hdi = None, None, None
-        if config.optimise == 'fitter':
+        if config.optimise_method == 'fitter':
             par_mean = fit.fit_multi_sinusoid_per_group(self.data.time, self.data.flux, self.result.const,
                                                         self.result.slope, self.result.f_n, self.result.a_n,
                                                         self.result.ph_n, self.data.i_chunks, verbose=config.verbose)
@@ -316,7 +316,7 @@ class Pipeline:
         out_d = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
         self.result.setter(c_err=out_d[0], sl_err=out_d[1], f_n_err=out_d[2], a_n_err=out_d[3], ph_n_err=out_d[4])
         p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
-                                                              sigma_t=self.data.t_int / 2)
+                                                              sigma_t=self.data.t_step / 2)
         self.result.setter(p_orb=np.array([self.result.p_orb, p_err, 0, 0]))
 
         # set the result description
@@ -355,7 +355,7 @@ class Pipeline:
 
         # use the chosen optimisation method
         par_hdi = np.zeros((6, 2))
-        if config.optimise == 'fitter':
+        if config.optimise_method == 'fitter':
             par_mean = fit.fit_multi_sinusoid_harmonics_per_group(self.data.time, self.data.flux, self.result.p_orb,
                                                                   self.result.const, self.result.slope,
                                                                   self.result.f_n, self.result.a_n, self.result.ph_n,
@@ -372,7 +372,7 @@ class Pipeline:
                                                                                  self.data.flux_err, self.result.a_n,
                                                                                  self.data.i_chunks)
             p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
-                                                                  sigma_t=self.data.t_int / 2)
+                                                                  sigma_t=self.data.t_step / 2)
 
             # do not include those frequencies that have too big uncertainty
             include = (ph_n_err < 1 / np.sqrt(6))  # circular distribution for ph_n cannot handle these
@@ -407,7 +407,7 @@ class Pipeline:
         # calculate formal uncertainties
         out_e = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
         p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
-                                                              sigma_t=self.data.t_int / 2)
+                                                              sigma_t=self.data.t_step / 2)
         self.result.setter(p_err=p_err, c_err=out_e[0], sl_err=out_e[1], f_n_err=out_e[2], a_n_err=out_e[3],
                            ph_n_err=out_e[4])
 

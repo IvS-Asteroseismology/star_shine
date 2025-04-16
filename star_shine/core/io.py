@@ -64,7 +64,7 @@ def load_data_hdf5(file_name, h5py_file_kwargs=None):
         # summary statistics
         data_dict['t_tot'] = file.attrs['t_tot']
         data_dict['t_mean'] = file.attrs['t_mean']
-        data_dict['t_int'] = file.attrs['t_int']
+        data_dict['t_step'] = file.attrs['t_step']
         data_dict['p_orb'] = file.attrs['p_orb']
 
         # the time series data
@@ -116,7 +116,7 @@ def save_data_hdf5(file_name, data_dict):
         # summary statistics
         file.attrs['t_tot'] = data_dict['t_tot']  # Total time base of observations
         file.attrs['t_mean'] = data_dict['t_mean']  # Time reference (zero) point of the full light curve
-        file.attrs['t_int'] = data_dict['t_int']  # Integration time of observations (median time step by default)
+        file.attrs['t_step'] = data_dict['t_step']  # Median time step of observations
         file.attrs['p_orb'] = data_dict['p_orb']  # orbital period, if applicable
 
         # the time series data
@@ -573,7 +573,7 @@ def load_light_curve(file_list, apply_flags=True):
     flux = np.array([])
     flux_err = np.array([])
     qual_flags = np.array([])
-    i_chunks = np.zeros((0, 2))
+    i_chunks = np.zeros((0, 2), dtype=int)
 
     # load the data in list order
     for file in file_list:
@@ -590,10 +590,11 @@ def load_light_curve(file_list, apply_flags=True):
             cro = 1
 
         # keep track of the data belonging to each time chunk
-        chunk_index = [len(i_chunks), len(i_chunks) + len(ti)]
+        chunk_index = [[len(i_chunks), len(i_chunks) + len(ti)]]
         if config.halve_chunks & (file.endswith('.fits') | file.endswith('.fit')):
             chunk_index = [[len(i_chunks), len(i_chunks) + len(ti) // 2],
                            [len(i_chunks) + len(ti) // 2, len(i_chunks) + len(ti)]]
+
         i_chunks = np.append(i_chunks, chunk_index, axis=0)
 
         # append all other data

@@ -11,30 +11,38 @@ verbose: False
 stop_at_stage: 0
 
 # ----------------------------------------------- Extraction settings --------------------------------------------------
-# select description:
+# select_next description:
 # Select the next frequency in iterative extraction based on 'amp', 'snr', or 'hybrid' (first amp then snr)
-select: 'hybrid'
+select_next: 'hybrid'
 
-# stop_crit description:
+# stop_criterion description:
 # Stop criterion for the iterative extraction of sinusoids will be based on 'bic', or 'snr'
-stop_crit: 'bic'
+stop_criterion: 'bic'
 
 # bic_thr description:
 # Delta-BIC threshold for the acceptance of sinusoids
-bic_thr: 2
+bic_thr: 2.
 
 # snr_thr description:
 # Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1
-snr_thr: -1
+snr_thr: -1.
 
-# nyquist description:
-# Calculation method for the Nyquist frequency, 'simple', or 'rigorous'
-nyquist: 'simple'
+# nyquist_method description:
+# Calculation method for the Nyquist frequency, 'simple', 'rigorous', or 'custom'
+nyquist_method: 'simple'
+
+# nyquist_value description:
+# If the Nyquist method is 'custom', this overrides the simple Nyquist estimate if it is higher
+nyquist_value: -1.
+
+# resolution_factor description:
+# If the Nyquist method is 'custom', this overrides the simple Nyquist estimate if it is higher
+resolution_factor: 1.5
 
 # ---------------------------------------------- Optimisation settings -------------------------------------------------
-# optimise description:
+# optimise_method description:
 # 'fitter' or 'sampler' method is used for model optimisation
-optimise: 'fitter'
+optimise_method: 'fitter'
 
 # optimise_step description:
 # Optimise at every step (T) or only at the end (F)
@@ -58,7 +66,7 @@ save_dir: ''
 # Save ascii variants of the HDF5 result files
 save_ascii: False
 
-# --------------------------------------------- Tabulated data settings ------------------------------------------------
+# --------------------------------------------- Tabulated file settings ------------------------------------------------
 # cn_time description:
 # Column name for the time stamps
 cn_time: 'time'
@@ -71,7 +79,7 @@ cn_flux: 'flux'
 # Column name for the flux measurement errors
 cn_flux_err: 'flux_err'
 
-# ------------------------------------------------ Fits data settings --------------------------------------------------
+# ------------------------------------------------ Fits file settings --------------------------------------------------
 # cf_time description:
 # Column name for the time stamps
 cf_time: 'TIME'

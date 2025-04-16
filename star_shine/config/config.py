@@ -20,6 +20,9 @@ class Config:
     _config_path: str
         Path to the configuration file.
 
+    resolution_factor: float
+        Number that multiplies the resolution (1/T).
+
     Methods
     -------
     __new__(cls)
@@ -40,14 +43,16 @@ class Config:
     stop_at_stage: int = 0
 
     # Extraction settings
-    select: str = 'hybrid'
-    stop_crit: str = 'bic'
+    select_next: str = 'hybrid'
+    stop_criterion: str = 'bic'
     bic_thr: float = 2.
     snr_thr: float = -1.
-    nyquist: str = 'simple'
+    nyquist_method: str = 'simple'
+    nyquist_value: float = -1.
+    resolution_factor: float = 1.5
 
     # Optimisation settings
-    optimise: str = 'fitter'
+    optimise_method: str = 'fitter'
     optimise_step: bool = True
 
     # Data and file settings
@@ -56,12 +61,12 @@ class Config:
     save_dir: str = ''
     save_ascii: bool = False
 
-    # Tabulated data settings
+    # Tabulated files settings
     cn_time: str = 'time'
     cn_flux: str = 'flux'
     cn_flux_err: str = 'flux_err'
 
-    # Fits data settings
+    # Fits files settings
     cf_time: str = 'TIME'
     cf_flux: str = 'SAP_FLUX'
     cf_flux_err: str = 'SAP_FLUX_ERR'
