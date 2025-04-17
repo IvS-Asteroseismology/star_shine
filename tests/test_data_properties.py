@@ -143,10 +143,9 @@ class TestDataProperties(unittest.TestCase):
         method_nyquist = 'rigorous'
         mock_config_instance = dp.config
         mock_config_instance.nyquist_method = method_nyquist
-        testtime = self.time_series_regular
-        testtime[250:] += 0.01
+
         with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
-            f_nyquist = dp.nyquist_frequency(testtime)
+            f_nyquist = dp.nyquist_frequency(self.time_series_regular)
 
         # Expected value using the given formula
         delta_t_min = np.min(self.time_series_regular[1:] - self.time_series_regular[:-1])

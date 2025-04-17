@@ -128,7 +128,7 @@ def nyquist_frequency(time):
         precision = 1e-10
         ss_nu = 1e-9
         n = 0
-        while (ss_nu > precision) | (n < 20):
+        while (ss_nu > precision) & (n < 20):
             n += 1
             ss_nu = nyquist_sum_koen_2006(n, time, delta_t_min)
 
