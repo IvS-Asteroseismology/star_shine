@@ -68,11 +68,13 @@ class TestDataProperties(unittest.TestCase):
         # Expected value is the user-defined value
         self.assertEqual(snr_thr, fixed_snr_thr)
 
-    def test_frequency_resolution(self):
+    @patch('star_shine.config.helpers.get_config')
+    def test_frequency_resolution(self, mock_config):
         """Test the frequency resolution calculation for a regularly spaced time series."""
+        mock_config.resolution_factor = 1.5
+
         # Calculate frequency resolution for noisy time series
-        factor = 1.5
-        f_res = dp.frequency_resolution(self.time_series_regular, factor=factor)
+        f_res = dp.frequency_resolution(self.time_series_regular)
 
         # Expected value using the given formula with factor=1
         expected = 0.03006012
