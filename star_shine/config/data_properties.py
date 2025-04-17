@@ -107,6 +107,8 @@ def nyquist_frequency(time):
     The rigorous method implements equation 5 from Koen 2006.
     https://ui.adsabs.harvard.edu/abs/2006MNRAS.371.1390K/abstract
 
+    Currently limited to 20 times classical Nyquist for performance considerations.
+
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
