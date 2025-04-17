@@ -40,7 +40,7 @@ def get_version():
             with open(pyproject_path, 'rb') as f:
                 pyproject_data = tomllib.load(f)
 
-        except (FileNotFoundError, KeyError) as e:
+        except (FileNotFoundError, KeyError, tomllib.TOMLDecodeError) as e:
             raise FileNotFoundError("Could not find or parse version in pyproject.toml")
 
         version = pyproject_data['project']['version']
@@ -101,7 +101,8 @@ def get_custom_logger(save_dir, target_id, verbose):
 
     Returns
     -------
-     : None
+    logging.Logger
+        Customised logger object
     """
     # customize the logger
     logger = logging.getLogger(__name__)  # make an instance of the logging library
@@ -130,4 +131,4 @@ def get_custom_logger(save_dir, target_id, verbose):
     f_handler.setFormatter(f_format)
     logger.addHandler(f_handler)
 
-    return None
+    return logger

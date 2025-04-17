@@ -2,7 +2,6 @@ import unittest
 from star_shine.config.config import Config, get_config
 
 class TestConfig(unittest.TestCase):
-
     def setUp(self):
         """Setup method to initialize the config instance"""
         self.config_path = 'star_shine/data/config.yaml'
