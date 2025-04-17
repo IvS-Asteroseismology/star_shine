@@ -5,7 +5,7 @@ import numpy as np
 from star_shine.config import data_properties as dconfig
 
 
-class TestDynamicConfig(unittest.TestCase):
+class TestDataProperties(unittest.TestCase):
     def setUp(self):
         """Set up test cases with different types of time series data:
         - Regular time series without gaps.
@@ -40,7 +40,7 @@ class TestDynamicConfig(unittest.TestCase):
         mock_config_instance = dconfig.config
         mock_config_instance.snr_thr = fixed_snr_thr
 
-        with patch('star_shine.config.dynamic_config.get_config', return_value=mock_config_instance):
+        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             snr_thr = dconfig.signal_to_noise_threshold(self.time_series_noisy)
 
         # Expected value using the given formula
@@ -55,7 +55,7 @@ class TestDynamicConfig(unittest.TestCase):
         mock_config_instance = dconfig.config
         mock_config_instance.snr_thr = fixed_snr_thr
 
-        with patch('star_shine.config.dynamic_config.get_config', return_value=mock_config_instance):
+        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             snr_thr = dconfig.signal_to_noise_threshold(self.time_series_gap)
 
         # Expected value using the given formula
@@ -69,7 +69,7 @@ class TestDynamicConfig(unittest.TestCase):
         mock_config_instance = dconfig.config
         mock_config_instance.snr_thr = fixed_snr_thr
 
-        with patch('star_shine.config.dynamic_config.get_config', return_value=mock_config_instance):
+        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             snr_thr = dconfig.signal_to_noise_threshold(self.time_series_noisy)
 
         # Expected value is the user-defined value
@@ -119,7 +119,7 @@ class TestDynamicConfig(unittest.TestCase):
         mock_config_instance = dconfig.config
         mock_config_instance.nyquist_method = method_nyquist
 
-        with patch('star_shine.config.dynamic_config.get_config', return_value=mock_config_instance):
+        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             f_nyquist = dconfig.nyquist_frequency(self.time_series_regular)
 
         # Expected value using the given formula
@@ -135,7 +135,7 @@ class TestDynamicConfig(unittest.TestCase):
         mock_config_instance = dconfig.config
         mock_config_instance.nyquist_method = method_nyquist
 
-        with patch('star_shine.config.dynamic_config.get_config', return_value=mock_config_instance):
+        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             f_nyquist = dconfig.nyquist_frequency(self.time_series_noisy)
 
         # Expected value using the given formula
@@ -152,7 +152,7 @@ class TestDynamicConfig(unittest.TestCase):
         mock_config_instance.nyquist_method = method_nyquist
         testtime = self.time_series_regular
         testtime[250:] += 0.01
-        with patch('star_shine.config.dynamic_config.get_config', return_value=mock_config_instance):
+        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             f_nyquist = dconfig.nyquist_frequency(testtime)
 
         # Expected value using the given formula
@@ -168,7 +168,7 @@ class TestDynamicConfig(unittest.TestCase):
         mock_config_instance = dconfig.config
         mock_config_instance.nyquist_method = method_nyquist
 
-        with patch('star_shine.config.dynamic_config.get_config', return_value=mock_config_instance):
+        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             f_nyquist = dconfig.nyquist_frequency(self.adjusted_time)
 
         # Expected value using the given formula
@@ -186,7 +186,7 @@ class TestDynamicConfig(unittest.TestCase):
         mock_config_instance.nyquist_method = method_nyquist
         mock_config_instance.nyquist_value = custom_nyquist
 
-        with patch('star_shine.config.dynamic_config.get_config', return_value=mock_config_instance):
+        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             f_nyquist = dconfig.nyquist_frequency(self.time_series_noisy)
 
         # Expected value using the given formula

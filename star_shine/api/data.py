@@ -43,6 +43,10 @@ class Data:
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     flux_counts_medians: numpy.ndarray[Any, dtype[float]]
         Median flux counts per chunk.
+    p_orb: float
+        The orbital period. Set to 0 to search for the best period.
+        If the orbital period is known with certainty beforehand, it can
+        be provided as initial value and no new period will be searched.
     t_tot: float
         Total time base of observations.
     t_mean: float
@@ -51,15 +55,11 @@ class Data:
         Time reference (zero) point per chunk.
     t_step: float
         Median time step of observations.
-    p_orb: float
-        The orbital period. Set to 0 to search for the best period.
-        If the orbital period is known with certainty beforehand, it can
-        be provided as initial value and no new period will be searched.
-    _snr_thr: float
+    snr_threshold: float
         Signal-to-noise threshold for the acceptance of sinusoids.
-    _f_nyquist: float
+    f_nyquist: float
         Nyquist frequency (max f) for extraction and periodograms.
-    _f_resolution: float
+    f_resolution: float
         Frequency resolution for extraction and periodograms.
     """
 
@@ -92,60 +92,18 @@ class Data:
         # Orbital period
         self.p_orb = 0.        # Orbital period
 
-        # fixed data properties
+        # independent data properties
         self.t_tot = 0.
         self.t_mean = 0.
         self.t_mean_chunk = np.zeros((0,), dtype=np.float_)
         self.t_step = 0.
 
-        # variable data properties
-        self._snr_threshold = 0.
-        self._f_nyquist = 0.
-        self._f_resolution = 0.
+        # data properties relying on config
+        self.snr_threshold = 0.
+        self.f_nyquist = 0.
+        self.f_resolution = 0.
 
         return
-
-    @property
-    def snr_threshold(self):
-        """Get the signal-to-noise threshold for accepting frequencies.
-
-        Returns
-        -------
-        float
-            The calculated or cached signal-to-noise threshold.
-        """
-        if self._snr_threshold is None:
-            self._snr_threshold = dp.signal_to_noise_threshold(self.time)
-
-        return self._snr_threshold
-
-    @property
-    def f_nyquist(self):
-        """Get the Nyquist frequency of the time series.
-
-        Returns
-        -------
-        float
-            The calculated or cached Nyquist frequency.
-        """
-        if self._f_resolution is None:
-            self._f_resolution = dp.nyquist_frequency(self.time)
-
-        return self._f_resolution
-
-    @property
-    def f_resolution(self):
-        """Get the frequency resolution of the time series.
-
-        Returns
-        -------
-        float
-            The calculated or cached frequency resolution.
-        """
-        if self._f_resolution is None:
-            self._f_resolution = dp.frequency_resolution(self.time)
-
-        return self._f_resolution
 
     def _check_file_existence(self):
         """Checks whether the given file(s) exist.
@@ -196,6 +154,28 @@ class Data:
         # set any attribute that exists if it is in the kwargs
         for key in kwargs.keys():
             setattr(self, key, kwargs[key])
+
+        return None
+
+    def calculate_properties(self):
+        """Calculate the properties of the data and fill them in.
+
+        Running this function again will re-evaluate the properties. This can be useful if the configuration changed.
+
+        Returns
+        -------
+        None
+        """
+        # set independent data properties
+        self.t_tot = np.ptp(self.time)
+        self.t_mean = np.mean(self.time)
+        self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
+        self.t_step = np.median(np.diff(self.time))
+
+        # set data properties relying on config
+        self.snr_threshold = dp.signal_to_noise_threshold(self.time)
+        self.f_nyquist = dp.nyquist_frequency(self.time)
+        self.f_resolution = dp.frequency_resolution(self.time)
 
         return None
 
@@ -261,11 +241,8 @@ class Data:
             if config.verbose:
                 print("The time array chunks include overlap.")
 
-        # set derived attributes
-        instance.t_tot = np.ptp(instance.time)
-        instance.t_mean = np.mean(instance.time)
-        instance.t_mean_chunk = np.array([np.mean(instance.time[ch[0]:ch[1]]) for ch in instance.i_chunks])
-        instance.t_step = np.median(np.diff(instance.time))  # integration time, taken to be the median time step
+        # calculate properties of the data
+        instance.calculate_properties()
 
         return instance
 
