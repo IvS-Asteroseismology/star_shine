@@ -174,7 +174,7 @@ class TestDataProperties(unittest.TestCase):
         """Test the Nyquist frequency calculation for a noisy time series."""
         # Calculate Nyquist frequency for regular time series
         method_nyquist = 'custom'
-        custom_nyquist = 500.
+        custom_nyquist = 50.
         mock_config_instance = dp.config
         mock_config_instance.nyquist_method = method_nyquist
         mock_config_instance.nyquist_value = custom_nyquist
@@ -182,11 +182,7 @@ class TestDataProperties(unittest.TestCase):
         with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             f_nyquist = dp.nyquist_frequency(self.time_series_noisy)
 
-        # Expected value using the given formula
-        delta_t_min = np.min(self.time_series_noisy[1:] - self.time_series_noisy[:-1])
-        expected = 0.5 / delta_t_min
-        print(f_nyquist)
-        self.assertAlmostEqual(f_nyquist, expected)
+        self.assertAlmostEqual(f_nyquist, custom_nyquist)
 
 
 if __name__ == '__main__':
