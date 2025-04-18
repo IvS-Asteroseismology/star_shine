@@ -24,22 +24,41 @@ config = hlp.get_config()
 
 
 class PlotWidget(QWidget):
-    def __init__(self, title="Plot"):
+    def __init__(self, title='Plot', xlabel='x', ylabel='y'):
         super().__init__()
+        # store some info
+        self.title = title
+        self.xlabel = xlabel
+        self.ylabel = ylabel
+
+        # set up the figure and canvas with an axis
         self.figure = mpl.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
-        self.title = title
-        self.ax = self.figure.add_subplot(111)
-        # self.ax.set_title(title)
 
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_title(title)
+        self.ax.set_xlabel(xlabel)
+        self.ax.set_ylabel(ylabel)
+        self.figure.tight_layout()
+
+        # make the layout and add the canvas widget
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
         self.setLayout(layout)
 
     def plot(self, x, y):
         self.ax.clear()
+
+        # plot the thing
         self.ax.plot(x, y)
+
+        # re-set some info
         self.ax.set_title(self.title)
+        self.ax.set_xlabel(self.xlabel)
+        self.ax.set_ylabel(self.ylabel)
+
+        # fix layout and draw
+        self.figure.tight_layout()
         self.canvas.draw()
 
 
@@ -194,9 +213,7 @@ class MainWindow(QMainWindow):
             return None
 
         # load a data into instance
-        print(file_paths)
-        self.data_instance.load_data(file_paths)
-        print(self.data_instance.time)
+        self.data_instance = Data.load_data(file_list=file_paths)
 
         # update the plots
         time, flux = self.data_instance.time, self.data_instance.flux
