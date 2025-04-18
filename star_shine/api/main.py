@@ -11,7 +11,6 @@ from star_shine.config.helpers import get_config
 # load configuration
 config = get_config()
 # todo: modelling red-noise with autoregressive model
-# todo: Nyquist for uneven sampling
 # todo: amplitude factor for each sector (linear model)
 
 

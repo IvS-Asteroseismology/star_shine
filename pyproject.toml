@@ -33,6 +33,9 @@ mcmc = [
     "arviz>=0.11.4,<1.0.0",
     "fastprogress>=1.0.0,<2.0.0"
 ]
+gui = [
+    "pyside6>=6.0.0,<7.0.0",
+]
 
 [project.scripts]
 starshine-gui = "star_shine.gui.gui_app:launch_gui"

@@ -104,3 +104,12 @@ apply_q_flags: True
 # Cut the time chunks in half (TESS data often has a discontinuity mid-sector)
 halve_chunks: False
 ########################################################################################################################
+# --------------------------------------------------- GUI settings -----------------------------------------------------
+# h_size_frac description:
+# Horizontal window size as a fraction of the screen width
+h_size_frac: 0.8
+
+# v_size_frac description:
+# Vertical window size as a fraction of the screen height
+v_size_frac: 0.8
+########################################################################################################################

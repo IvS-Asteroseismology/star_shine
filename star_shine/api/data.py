@@ -9,6 +9,7 @@ import os
 import datetime
 import numpy as np
 
+from star_shine.core import timeseries as tsf
 from star_shine.core import visualisation as vis
 from star_shine.core import io
 from star_shine.config.helpers import get_config
@@ -90,7 +91,7 @@ class Data:
         self.flux_counts_medians = np.zeros((0,), dtype=np.float_)
 
         # Orbital period
-        self.p_orb = 0.        # Orbital period
+        self.p_orb = 0.
 
         # independent data properties
         self.t_tot = 0.
@@ -300,11 +301,14 @@ class Data:
         data_dict['data_dir'] = self.data_dir
         data_dict['file_list'] = self.file_list
 
+        # Orbital period
+        data_dict['p_orb'] = self.p_orb
+
         # summary statistics
         data_dict['t_tot'] = self.t_tot
         data_dict['t_mean'] = self.t_mean
-        data_dict['t_int'] = self.t_step
-        data_dict['p_orb'] = self.p_orb
+        data_dict['t_mean_chunk'] = self.t_mean_chunk
+        data_dict['t_step'] = self.t_step
 
         # the time series data
         data_dict['time'] = self.time
@@ -314,12 +318,24 @@ class Data:
         # additional information
         data_dict['i_chunks'] = self.i_chunks
         data_dict['flux_counts_medians'] = self.flux_counts_medians
-        data_dict['t_mean_chunk'] = self.t_mean_chunk
 
         # io module handles writing to file
         io.save_data_hdf5(file_name, data_dict)
 
         return None
+
+    def periodogram(self):
+        """Compute the Lomb-Scargle periodogram of the time series
+
+        Returns
+        -------
+        tuple
+            Contains the frequencies numpy.ndarray[Any, dtype[float]]
+            and the spectrum numpy.ndarray[Any, dtype[float]]
+        """
+        f, a = tsf.astropy_scargle(self.time, self.flux, f0=0, fn=0, df=0, norm='amplitude')
+
+        return f, a
 
     def plot_light_curve(self, file_name=None, show=True):
         """Plot the light curve data.
@@ -336,6 +352,7 @@ class Data:
         None
         """
         vis.plot_lc(self.time, self.flux, self.flux_err, self.i_chunks, file_name=file_name, show=show)
+
         return None
 
     def plot_periodogram(self, plot_per_chunk=False, file_name=None, show=True):
@@ -355,4 +372,5 @@ class Data:
         None
         """
         vis.plot_pd(self.time, self.flux, self.i_chunks, plot_per_chunk=plot_per_chunk, file_name=file_name, show=show)
+
         return None

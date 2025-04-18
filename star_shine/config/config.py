@@ -74,6 +74,10 @@ class Config:
     apply_q_flags: bool = True
     halve_chunks: bool = False
 
+    # GUI settings
+    h_size_frac: float = 0.8
+    v_size_frac: float = 0.8
+
     def __new__(cls):
         """Ensures that only one instance of the Config class is created.
 
