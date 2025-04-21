@@ -62,7 +62,7 @@ def get_custom_gui_logger(text_edit, save_dir, target_id):
 
     # add a different stream handler
     qtext_edit_handler = QTextEditLogger(text_edit)
-    qtext_edit_handler.setLevel(logging.INFO)  # print everything with level 20 or above
+    qtext_edit_handler.setLevel(logging.EXTRA)  # print everything with level 15 or above
     s_format = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     qtext_edit_handler.setFormatter(s_format)
     logger.addHandler(qtext_edit_handler)

@@ -77,9 +77,9 @@ class Pipeline:
 
         # check the input data
         if not isinstance(data, Data):
-            self.logger.info("Input `data` should be a Data object.")
+            self.logger.warning("Input `data` should be a Data object.")
         elif len(data.time) == 0:
-            self.logger.info("Data object does not contain time series data.")
+            self.logger.warning("Data object does not contain time series data.")
 
         return
 
@@ -123,7 +123,7 @@ class Pipeline:
         t_a = systime.time()
         n_f_init = len(self.result.f_n)
         if config.verbose:
-            print(f"{n_f_init} frequencies. Looking for more...")
+            self.logger.info(f"{n_f_init} frequencies. Looking for more...")
 
         # start by looking for more harmonics
         if self.result.p_orb != 0:
@@ -170,13 +170,9 @@ class Pipeline:
         # print some useful info
         t_b = systime.time()
         if config.verbose:
-            print(f"\033[1;32;48mExtraction of sinusoids complete.\033[0m")
-            print(f"\033[0;32;48m{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
-                  f"Time taken: {t_b - t_a:1.1f}s\033[0m\n")
-
-        # log if nothing found
-        if len(self.result.f_n) == 0:
-            self.logger.info("No frequencies found.")
+            self.logger.info("Extraction of sinusoids complete.")
+            self.logger.extra(f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
+                              f"Time taken: {t_b - t_a:1.1f}")
 
         return self.result
 
@@ -190,7 +186,7 @@ class Pipeline:
         """
         t_a = systime.time()
         if config.verbose:
-            print("Starting multi-sinusoid NL-LS optimisation.")
+            self.logger.info("Starting multi-sinusoid NL-LS optimisation.")
 
         # use the chosen optimisation method
         inf_data, par_mean, par_hdi = None, None, None
@@ -248,9 +244,9 @@ class Pipeline:
         # print some useful info
         t_b = systime.time()
         if config.verbose:
-            print(f"\033[1;32;48mOptimisation of sinusoids complete.\033[0m")
-            print(f"\033[0;32;48m{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
-                  f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s\033[0m\n")
+            self.logger.info("Optimisation of sinusoids complete.")
+            self.logger.extra(f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
+                              f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s")
 
         return self.result
 
@@ -274,7 +270,7 @@ class Pipeline:
         """
         t_a = systime.time()
         if config.verbose:
-            print("Coupling the harmonic frequencies to the orbital frequency...")
+            self.logger.info("Coupling the harmonic frequencies to the orbital frequency...")
 
         # if given, the input p_orb is refined locally, otherwise the period is searched for globally
         if self.data.p_orb == 0:
@@ -326,18 +322,18 @@ class Pipeline:
         t_b = systime.time()
         if config.verbose:
             rnd_p_orb = max(ut.decimal_figures(p_err, 2), ut.decimal_figures(self.result.p_orb, 2))
-            print(f"\033[1;32;48mOrbital harmonic frequencies coupled.\033[0m")
-            print(f"\033[0;32;48mp_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{p_err:.{rnd_p_orb}f}), \n"
-                  f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
-                  f"Time taken: {t_b - t_a:1.1f}s\033[0m\n")
+            self.logger.info("Orbital harmonic frequencies coupled.")
+            self.logger.extra(f"p_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{p_err:.{rnd_p_orb}f}), "
+                              f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
+                              f"Time taken: {t_b - t_a:1.1f}s")
 
         # log if short time span or few harmonics
         if self.data.t_tot / self.result.p_orb < 1.1:
-            self.logger.info(f"Period over time-base is less than two: {self.data.t_tot / self.result.p_orb}; "
-                             f"period (days): {self.result.p_orb}; time-base (days): {self.data.t_tot}")
+            self.logger.warning(f"Period over time-base is less than two: {self.data.t_tot / self.result.p_orb}; "
+                                f"period (days): {self.result.p_orb}; time-base (days): {self.data.t_tot}")
         elif len(harmonics) < 2:
-            self.logger.info(f"Not enough harmonics found: {len(harmonics)}; "
-                             f"period (days): {self.result.p_orb}; time-base (days): {self.data.t_tot}")
+            self.logger.warning(f"Not enough harmonics found: {len(harmonics)}; "
+                                f"period (days): {self.result.p_orb}; time-base (days): {self.data.t_tot}")
 
         return self.result
 
@@ -351,7 +347,7 @@ class Pipeline:
         """
         t_a = systime.time()
         if config.verbose:
-            print("Starting multi-sine NL-LS optimisation with harmonics.")
+            self.logger.info("Starting multi-sine NL-LS optimisation with harmonics.")
 
         # use the chosen optimisation method
         par_hdi = np.zeros((6, 2))
@@ -420,10 +416,10 @@ class Pipeline:
         if config.verbose:
             rnd_p_orb = max(ut.decimal_figures(self.result.p_err, 2),
                             ut.decimal_figures(self.result.p_orb, 2))
-            print(f"\033[1;32;48mOptimisation with coupled harmonics complete.\033[0m")
-            print(f"\033[0;32;48mp_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{self.result.p_err:.{rnd_p_orb}f}), \n"
-                  f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
-                  f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s\033[0m\n")
+            self.logger.info("Optimisation with coupled harmonics complete.")
+            self.logger.extra(f"p_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{self.result.p_err:.{rnd_p_orb}f}), "
+                              f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
+                              f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s")
 
         return self.result
 

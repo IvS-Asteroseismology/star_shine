@@ -153,7 +153,7 @@ class MainWindow(QMainWindow):
         # Text area for displaying results
         self.text_field = QTextEdit()
         self.text_field.setReadOnly(True)  # Make the text edit read-only
-        self.text_field.setPlainText("Output field\r")
+        self.text_field.setPlainText("Output field")
         l_col_layout.addWidget(self.text_field)
 
         return l_col_widget

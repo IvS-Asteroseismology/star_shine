@@ -87,6 +87,59 @@ def get_mpl_stylesheet_path():
     return stylesheet_path
 
 
+def add_logging_level(level_name, level_num, method_name=None):
+    """Comprehensively adds a new logging level to the `logging` module and the
+    currently configured logging class.
+
+    `levelName` becomes an attribute of the `logging` module with the value
+    `levelNum`. `methodName` becomes a convenience method for both `logging`
+    itself and the class returned by `logging.getLoggerClass()` (usually just
+    `logging.Logger`). If `methodName` is not specified, `levelName.lower()` is
+    used.
+
+    To avoid accidental clobberings of existing attributes, this method will
+    raise an `AttributeError` if the level name is already an attribute of the
+    `logging` module or if the method name is already present
+
+    http://stackoverflow.com/q/2183233/2988730
+
+    Example
+    -------
+    >>> addLoggingLevel('TRACE', logging.DEBUG - 5)
+    >>> logging.getLogger(__name__).setLevel("TRACE")
+    >>> logging.getLogger(__name__).trace('that worked')
+    >>> logging.trace('so did this')
+    >>> logging.TRACE
+    5
+
+    """
+    if not method_name:
+        method_name = level_name.lower()
+
+    if hasattr(logging, level_name):
+       raise AttributeError('{} already defined in logging module'.format(level_name))
+    if hasattr(logging, method_name):
+       raise AttributeError('{} already defined in logging module'.format(method_name))
+    if hasattr(logging.getLoggerClass(), method_name):
+       raise AttributeError('{} already defined in logger class'.format(method_name))
+
+    # This method was inspired by the answers to Stack Overflow post
+    # http://stackoverflow.com/q/2183233/2988730, especially
+    # http://stackoverflow.com/a/13638084/2988730
+    def logForLevel(self, message, *args, **kwargs):
+        if self.isEnabledFor(level_num):
+            self._log(level_num, message, args, **kwargs)
+    def logToRoot(message, *args, **kwargs):
+        logging.log(level_num, message, *args, **kwargs)
+
+    logging.addLevelName(level_num, level_name)
+    setattr(logging, level_name, level_num)
+    setattr(logging.getLoggerClass(), method_name, logForLevel)
+    setattr(logging, method_name, logToRoot)
+
+    return None
+
+
 def get_custom_logger(save_dir, target_id, verbose):
     """Create a custom logger for logging to file and to stdout
 
@@ -104,9 +157,12 @@ def get_custom_logger(save_dir, target_id, verbose):
     logging.Logger
         Customised logger object
     """
+    # define a custom logging level
+    add_logging_level('EXTRA', logging.INFO - 5, method_name=None)
+
     # customize the logger
     logger = logging.getLogger(__name__)  # make an instance of the logging library
-    logger.setLevel(logging.INFO)  # set base activation level for logger
+    logger.setLevel(logging.EXTRA)  # set base activation level for logger
 
     # make formatters for the handlers
     s_format = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -120,7 +176,7 @@ def get_custom_logger(save_dir, target_id, verbose):
     # make stream handler
     if verbose:
         s_handler = logging.StreamHandler()  # for printing
-        s_handler.setLevel(logging.INFO)  # print everything with level 20 or above
+        s_handler.setLevel(logging.EXTRA)  # print everything with level 15 or above
         s_handler.setFormatter(s_format)
         logger.addHandler(s_handler)
 
