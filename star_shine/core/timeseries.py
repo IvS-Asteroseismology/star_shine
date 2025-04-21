@@ -1444,62 +1444,6 @@ def calc_ddd_normal_likelihood(time, residuals, flux_err):
     return like
 
 
-def calc_likelihood(time=None, flux=None, residual=None, flux_err=None, func=calc_iid_normal_likelihood):
-    """Natural logarithm of the likelihood function.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]], optional
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]], optional
-        Measurement values of the time series
-    residual: numpy.ndarray[Any, dtype[float]], optional
-        Residual is flux - model
-    flux_err: numpy.ndarray[Any, dtype[float]], optional
-        Errors in the measurement values
-    func: function, optional
-        The likelihood function to use for the calculation
-        Choose from: calc_iid_normal_likelihood, calc_approx_did_likelihood,
-        calc_whittle_likelihood, calc_did_normal_likelihood,
-        calc_ddd_normal_likelihood
-
-    Returns
-    -------
-    float
-        Natural logarithm of the likelihood
-
-    Notes
-    -----
-    Choose between a conventional iid simplification of the likelihood,
-    a full matrix implementation that costs a lot of memory for large datasets,
-    or some approximations in-between.
-    """
-    # make a dict of the given arguments
-    kwargs = {'time': time, 'flux': flux, 'residuals': residual, 'flux_err': flux_err}
-
-    # check what the chosen function needs
-    func_args = list(inspect.signature(func).parameters)
-
-    # make a dict of those
-    args_dict = {k: kwargs.pop(k) for k in dict(kwargs) if k in func_args}
-
-    # check None for function input
-    if np.any([value is None for value in args_dict.values()]):
-        raise ValueError("Relevant input arrays must not be None.")
-
-    # check empty input and input length
-    input_len = [len(value) for value in args_dict.values()]
-    if np.any([l == 0 for l in input_len]):
-        raise ValueError("Relevant input arrays must not be empty.")
-    elif np.any([l != input_len[0] for l in input_len]):
-        raise ValueError("Relevant input arrays must have equal length.")
-
-    # feed to the function
-    like = func(**args_dict)
-
-    return like
-
-
 @nb.njit(cache=True)
 def calc_bic(residuals, n_param):
     """Bayesian Information Criterion.
@@ -1536,33 +1480,6 @@ def calc_bic(residuals, n_param):
     # originally JIT-ted function, but with for loop is slightly quicker
     sum_r_2 = ut.std_unb(residuals, n)
     bic = n * np.log(2 * np.pi * sum_r_2 / n) + n + n_param * np.log(n)
-
-    return bic
-
-
-def calc_bic_2(residuals, n_param, flux_err=None):
-    """Bayesian Information Criterion with correlated likelihood function.
-
-    BIC = k ln(n) − 2 ln(L(θ))
-    where L is the likelihood as function of the parameters θ, n the number of data points
-    and k the number of free parameters.
-
-    Parameters
-    ----------
-    residuals: numpy.ndarray[Any, dtype[float]]
-        Residual is flux - model
-    n_param: int
-        Number of free parameters in the model
-    flux_err: None, numpy.ndarray[Any, dtype[float]]
-        Errors in the measurement values
-
-    Returns
-    -------
-    float
-        Bayesian Information Criterion
-    """
-    n = len(residuals)
-    bic = n_param * np.log(n) - 2 * calc_likelihood(residuals, flux_err=flux_err)
 
     return bic
 

@@ -43,7 +43,7 @@ class Pipeline:
         Instance of the logging library.
     """
 
-    def __init__(self, data, save_dir=''):
+    def __init__(self, data, save_dir='', logger=None):
         """Initialises the Pipeline object.
 
         Parameters
@@ -68,12 +68,12 @@ class Pipeline:
         self.save_subdir = f"{self.data.target_id}_analysis"
 
         # for saving, make a folder if not there yet
-        full_dir = os.path.join(save_dir, self.save_subdir)
+        full_dir = os.path.join(self.save_dir, self.save_subdir)
         if not os.path.isdir(full_dir):
             os.mkdir(full_dir)  # create the subdir
 
         # initialise custom logger
-        self.logger = get_custom_logger(full_dir, self.data.target_id, config.verbose)
+        self.logger = logger or get_custom_logger(full_dir, self.data.target_id, config.verbose)
 
         # check the input data
         if not isinstance(data, Data):
@@ -136,7 +136,7 @@ class Pipeline:
         out_b = tsf.extract_sinusoids(self.data.time, self.data.flux, self.data.i_chunks, self.result.p_orb,
                                       self.result.f_n, self.result.a_n, self.result.ph_n, bic_thr=config.bic_thr,
                                       snr_thr=config.snr_thr, stop_crit=config.stop_criterion, select=config.select_next,
-                                      f0=self.data.f_min, fn=self.data.f_max, fit_each_step=config.optimise_step,
+                                      f0=0, fn=self.data.f_nyquist, fit_each_step=config.optimise_step,
                                       verbose=config.verbose)
         self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
 

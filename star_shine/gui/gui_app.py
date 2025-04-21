@@ -5,17 +5,16 @@ This Python module contains the graphical user interface.
 
 Code written by: Luc IJspeert
 """
+import os
 import sys
 
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QSplitter, QMenuBar
-from PySide6.QtWidgets import QLabel, QPushButton, QTextEdit, QLineEdit, QFileDialog, QMessageBox, QTableView
+from PySide6.QtWidgets import QLabel, QTextEdit, QLineEdit, QFileDialog, QMessageBox, QPushButton
+from PySide6.QtWidgets import QTableView, QHeaderView
 from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel
 
-import matplotlib as mpl
-import matplotlib.figure
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-
 from star_shine.api import Data, Result, Pipeline
+from star_shine.gui import gui_log, gui_plot
 from star_shine.config import helpers as hlp
 
 
@@ -23,46 +22,12 @@ from star_shine.config import helpers as hlp
 config = hlp.get_config()
 
 
-class PlotWidget(QWidget):
-    def __init__(self, title='Plot', xlabel='x', ylabel='y'):
-        super().__init__()
-        # store some info
-        self.title = title
-        self.xlabel = xlabel
-        self.ylabel = ylabel
-
-        # set up the figure and canvas with an axis
-        self.figure = mpl.figure.Figure()
-        self.canvas = FigureCanvas(self.figure)
-
-        self.ax = self.figure.add_subplot(111)
-        self.ax.set_title(title)
-        self.ax.set_xlabel(xlabel)
-        self.ax.set_ylabel(ylabel)
-        self.figure.tight_layout()
-
-        # make the layout and add the canvas widget
-        layout = QVBoxLayout()
-        layout.addWidget(self.canvas)
-        self.setLayout(layout)
-
-    def plot(self, x, y):
-        self.ax.clear()
-
-        # plot the thing
-        self.ax.plot(x, y)
-
-        # re-set some info
-        self.ax.set_title(self.title)
-        self.ax.set_xlabel(self.xlabel)
-        self.ax.set_ylabel(self.ylabel)
-
-        # fix layout and draw
-        self.figure.tight_layout()
-        self.canvas.draw()
-
-
 class MainWindow(QMainWindow):
+    """The main window of the Star Shine application.
+
+    Contains a graphical user interface for loading data, performing analysis,
+    displaying results, and visualizing plots.
+    """
     def __init__(self):
         super().__init__()
 
@@ -92,8 +57,15 @@ class MainWindow(QMainWindow):
 
         # add the api classes for functionality
         self.data_instance = Data()
+        self.pipeline_instance = None
+        self.result_instance = Result()
+
+        # some things that are needed
+        self.save_dir = config.save_dir
+        self.save_subdir = ''
 
     def _setup_central_widget(self):
+        """Set up the central widget and its layout."""
         # Create a central widget
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -107,6 +79,7 @@ class MainWindow(QMainWindow):
         self.central_widget.layout().addWidget(self.splitter)
 
     def _add_widgets_to_layout(self):
+        """Add widgets to the main window layout."""
         # Left column: input and text output field
         left_column = self._create_left_column()
         self.splitter.addWidget(left_column)
@@ -121,9 +94,10 @@ class MainWindow(QMainWindow):
 
         # Set initial sizes for each column
         h_size = self.width()
-        self.splitter.setSizes([h_size*2//7, h_size*2//7, h_size*3//7])
+        self.splitter.setSizes([h_size*3//9, h_size*2//9, h_size*4//9])
 
     def _setup_menu_bar(self):
+        """Set up the menu bar with file and info menus."""
         menu_bar = QMenuBar()
         self.setMenuBar(menu_bar)
 
@@ -134,6 +108,11 @@ class MainWindow(QMainWindow):
         load_data_action = QAction("Load Data", self)
         load_data_action.triggered.connect(self.load_data)  # Connect the action to a custom method
         file_menu.addAction(load_data_action)
+
+        # Add "Save Location" button to "File" menu
+        set_save_location_action = QAction("Save Location", self)
+        set_save_location_action.triggered.connect(self.set_save_location)  # Connect the action to a custom method
+        file_menu.addAction(set_save_location_action)
 
         # Add "Exit" button to "File" menu
         exit_action = QAction("Exit", self)
@@ -147,6 +126,13 @@ class MainWindow(QMainWindow):
         info_menu.addAction(about_action)
 
     def _create_left_column(self):
+        """Create and return the left column widget.
+
+        Returns
+        -------
+        QWidget
+            The left column widget containing input fields, buttons, and text output.
+        """
         # create a vertical layout for in the left column of the main layout
         l_col_widget = QWidget()
         l_col_layout = QVBoxLayout(l_col_widget)
@@ -165,14 +151,21 @@ class MainWindow(QMainWindow):
         l_col_layout.addWidget(self.analyze_button)
 
         # Text area for displaying results
-        self.result_text_edit = QTextEdit()
-        self.result_text_edit.setReadOnly(True)  # Make the text edit read-only
-        self.result_text_edit.setPlainText("Output")
-        l_col_layout.addWidget(self.result_text_edit)
+        self.text_field = QTextEdit()
+        self.text_field.setReadOnly(True)  # Make the text edit read-only
+        self.text_field.setPlainText("Output field\r")
+        l_col_layout.addWidget(self.text_field)
 
         return l_col_widget
 
     def _create_middle_column(self):
+        """Create and return the middle column widget.
+
+        Returns
+        -------
+        QWidget
+            The middle column widget containing a table view.
+        """
         # create a vertical layout for in the middle column of the main layout
         m_col_widget = QWidget()
         m_col_layout = QVBoxLayout(m_col_widget)
@@ -183,27 +176,48 @@ class MainWindow(QMainWindow):
         self.table_model.setHorizontalHeaderLabels(["Frequency", "Amplitude", "Phase"])
         self.table_view.setModel(self.table_model)
 
+        # Set the horizontal header's stretch mode for each column
+        header = self.table_view.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)  # Stretch all columns proportionally
+
         # Add the button and table view to the middle column layout
         m_col_layout.addWidget(self.table_view)
 
         return m_col_widget
 
     def _create_right_column(self):
+        """Create and return the right column widget.
+
+        Returns
+        -------
+        QWidget
+            The right column widget containing plot areas.
+        """
         # create a vertical layout for in the right column of the main layout
         r_col_widget = QWidget()
         r_col_layout = QVBoxLayout(r_col_widget)
 
         # upper plot area for the data
-        self.upper_plot_area = PlotWidget(title="Data")
+        self.upper_plot_area = gui_plot.PlotWidget(title='Data', xlabel='time', ylabel='flux')
         r_col_layout.addWidget(self.upper_plot_area)
 
         # lower plot area for the periodogram
-        self.lower_plot_area = PlotWidget(title="Periodogram")
+        self.lower_plot_area = gui_plot.PlotWidget(title='Periodogram', xlabel='frequency', ylabel='amplitude')
         r_col_layout.addWidget(self.lower_plot_area)
 
         return r_col_widget
 
+    def set_save_location(self):
+        """Open a dialog to select the save location."""
+        # Open a directory selection dialog
+        new_dir = QFileDialog.getExistingDirectory(self, caption="Select Save Location", dir=self.save_dir)
+
+        if new_dir:
+            self.save_dir = new_dir
+            QMessageBox.information(self, "Save Location Set", f"Save location set to: {self.save_dir}")
+
     def load_data(self):
+        """Load data from a file dialog and update plots."""
         # get the path(s) from a standard file selection screen
         file_paths, _ = QFileDialog.getOpenFileNames(self, caption="Load Data", dir="",
                                                      filter="All Files (*);;Text Files (*.txt)")
@@ -214,46 +228,39 @@ class MainWindow(QMainWindow):
 
         # load a data into instance
         self.data_instance = Data.load_data(file_list=file_paths)
+        self.save_subdir = f"{self.data_instance.target_id}_analysis"
 
         # update the plots
         time, flux = self.data_instance.time, self.data_instance.flux
         freqs, ampls = self.data_instance.periodogram()
-        self.upper_plot_area.plot(time, flux)
+        self.upper_plot_area.scatter(time, flux)
         self.lower_plot_area.plot(freqs, ampls)
 
         return None
 
     def perform_analysis(self):
-        file_path = self.file_path_edit.text().strip()
-        if not file_path:
-            QMessageBox.warning(self, "Input Error", "Please provide a valid file path.")
-            return
+        """Perform analysis on the loaded data and display results."""
+        # check whether data is loaded
+        if len(self.data_instance.file_list) == 0:
+            QMessageBox.warning(self, "Input Error", "Please provide data files.")
+            return None
 
-        # Load data using your Data class
-        file_paths = [path.strip() for path in file_path.split(',')]
-        data_instance = Data(file_paths)
-        loaded_data = data_instance.load_data()
+        # for saving, make a folder if not there yet
+        full_dir = os.path.join(self.save_dir, self.save_subdir)
+        if not os.path.isdir(full_dir):
+            os.mkdir(full_dir)  # create the subdir
 
-        if isinstance(loaded_data, dict) and 'x' in loaded_data and 'y' in loaded_data:
-            x = np.array(loaded_data['x'])
-            y = np.array(loaded_data['y'])
+        # redirect logging to text output
+        logger = gui_log.get_custom_gui_logger(self.text_field, full_dir, self.data_instance.target_id)
 
-            # Perform analysis using your Pipeline class
-            pipeline_instance = Pipeline(data=data_instance)
-            analysis_results = pipeline_instance.run_analysis()
+        # Perform analysis using your Pipeline class
+        self.pipeline_instance = Pipeline(data=self.data_instance, save_dir=self.save_dir, logger=logger)
+        self.result_instance = self.pipeline_instance.run()
 
-            # Format results using your Result class
-            result_instance = Result(analysis_results=analysis_results)
-            formatted_results = result_instance.format_results()
-
-            self.result_text_edit.setPlainText(formatted_results)
-
-            # Update plots if needed (already done in load_data)
-        else:
-            QMessageBox.warning(self, "Data Error", "Loaded data format is incorrect.")
-            return
+        return None
 
     def show_about_dialog(self):
+        """Show an 'about' dialog with information about the application."""
         version = hlp.get_version()
         message = (f"STAR SHINE version {version}\n"
                    "Satellite Time-series Analysis Routine "
@@ -264,7 +271,7 @@ class MainWindow(QMainWindow):
 
 
 def launch_gui():
-    """Launch the Star Shine GUI"""
+    """Launch the Star Shine GUI."""
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

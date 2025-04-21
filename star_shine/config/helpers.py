@@ -125,7 +125,7 @@ def get_custom_logger(save_dir, target_id, verbose):
         logger.addHandler(s_handler)
 
     # file handler
-    logname = os.path.join(save_dir, f'{target_id}_analysis', f'{target_id}.log')
+    logname = os.path.join(save_dir, f'{target_id}.log')
     f_handler = logging.FileHandler(logname, mode='a')  # for saving
     f_handler.setLevel(logging.INFO)  # save everything with level 20 or above
     f_handler.setFormatter(f_format)
