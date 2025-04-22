@@ -223,6 +223,11 @@ class Result:
         Result
             Instance of the Result class with the loaded results.
         """
+        # guard for existing file
+        if not os.path.isfile(file_name):
+            instance = cls()
+            return instance
+
         # add everything to a dict
         result_dict = io.load_result_hdf5(file_name, h5py_file_kwargs)
 

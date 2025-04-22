@@ -315,8 +315,7 @@ def save_result_hdf5(file_name, result_dict):
         file.create_dataset('passed_snr', data=result_dict['passed_snr'])
         file['passed_snr'].attrs['description'] = 'sinusoids passing the signal to noise criterion'
         file.create_dataset('passed_both', data=result_dict['passed_both'])
-        file['passed_both'].attrs[
-            'description'] = 'sinusoids passing both the sigma and the signal to noise criteria'
+        file['passed_both'].attrs['description'] = 'sinusoids passing both the sigma and the signal to noise criteria'
         file.create_dataset('passed_harmonic', data=result_dict['passed_harmonic'])
         file['passed_harmonic'].attrs['description'] = 'harmonic sinusoids passing the sigma criterion'
 

@@ -295,24 +295,3 @@ def launch_gui():
 
 if __name__ == "__main__":
     launch_gui()
-
-    """
-    Traceback (most recent call last):
-  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/gui/gui_app.py", line 273, in perform_analysis
-    self.result_instance = self.pipeline_instance.run()
-                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/api/pipeline.py", line 497, in run
-    self.result.save_conditional(file_name)
-  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/api/result.py", line 318, in save_conditional
-    self.save(file_name)
-  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/api/result.py", line 281, in save
-    io.save_result_hdf5(file_name, result_dict)
-  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/core/io.py", line 263, in save_result_hdf5
-    file.create_dataset('c_hdi', data=result_dict['c_hdi'])
-  File "/home/lijspeert/miniconda3/envs/star_shadow/lib/python3.12/site-packages/h5py/_hl/group.py", line 183, in create_dataset
-    dsid = dataset.make_new_dset(group, shape, dtype, data, name, **kwds)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/lijspeert/miniconda3/envs/star_shadow/lib/python3.12/site-packages/h5py/_hl/dataset.py", line 53, in make_new_dset
-    raise TypeError("One of data, shape or dtype must be specified")
-TypeError: One of data, shape or dtype must be specified
-    """

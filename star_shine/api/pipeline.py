@@ -281,6 +281,7 @@ class Pipeline:
         # if time series too short, or no harmonics found, log and warn and maybe cut off the analysis
         freq_res = 1.5 / self.data.t_tot  # Rayleigh criterion
         harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=freq_res / 2)
+
         if (self.data.t_tot / self.result.p_orb > 1.1) & (len(harmonics) > 1):
             # couple the harmonics to the period. likely removes more frequencies that need re-extracting
             out_a = tsf.fix_harmonic_frequency(self.data.time, self.data.flux, self.result.p_orb,  self.result.const,
@@ -313,7 +314,7 @@ class Pipeline:
         self.result.setter(c_err=out_d[0], sl_err=out_d[1], f_n_err=out_d[2], a_n_err=out_d[3], ph_n_err=out_d[4])
         p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
                                                               sigma_t=self.data.t_step / 2)
-        self.result.setter(p_orb=np.array([self.result.p_orb, p_err, 0, 0]))
+        self.result.setter(p_orb=self.result.p_orb, p_err=p_err, p_hdi=np.zeros(2))
 
         # set the result description
         self.result.setter(description='Harmonic frequencies coupled to the orbital period.')
@@ -482,12 +483,19 @@ class Pipeline:
         for step in range(len(step_names)):
             file_name = os.path.join(self.save_dir, self.save_subdir, f"{self.data.target_id}_result_{step + 1}.hdf5")
 
-            # Load existing file if not overwriting
-            self.result = Result.load_conditional(file_name)  # returns empty Result if no file
+            # Load existing result from this step if not overwriting (returns empty Result if no file)
+            self.result = Result.load_conditional(file_name)
 
-            # if existing results were loaded, go to the next step
+            # if existing result was loaded, go to the next step
             if self.result.target_id != '':
                 continue
+
+            # Load result from previous step (returns empty Result if no file)
+            self.result = Result.load(file_name.replace(f'result_{step + 1}', f'result_{step}'))
+
+            # if empty result, set target and data id
+            if self.result.target_id == '':
+                self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
 
             # do the analysis step
             analysis_step = getattr(self, step_names[step])

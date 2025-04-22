@@ -87,7 +87,7 @@ def get_mpl_stylesheet_path():
     return stylesheet_path
 
 
-def add_logging_level(level_name, level_num, method_name=None):
+def add_logging_level(level_name, level_num, method_name=None, verbose=False):
     """Comprehensively adds a new logging level to the `logging` module and the
     currently configured logging class.
 
@@ -117,11 +117,17 @@ def add_logging_level(level_name, level_num, method_name=None):
         method_name = level_name.lower()
 
     if hasattr(logging, level_name):
-       raise AttributeError('{} already defined in logging module'.format(level_name))
+        if verbose:
+            print(f'{level_name} already defined in logging module')
+        return None
     if hasattr(logging, method_name):
-       raise AttributeError('{} already defined in logging module'.format(method_name))
+        if verbose:
+            print(f'{method_name} already defined in logging module')
+        return None
     if hasattr(logging.getLoggerClass(), method_name):
-       raise AttributeError('{} already defined in logger class'.format(method_name))
+        if verbose:
+            print(f'{method_name} already defined in logger class')
+        return None
 
     # This method was inspired by the answers to Stack Overflow post
     # http://stackoverflow.com/q/2183233/2988730, especially
