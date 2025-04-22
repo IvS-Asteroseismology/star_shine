@@ -17,7 +17,6 @@ from star_shine.core import fitting as fit
 from star_shine.core import analysis as anf
 from star_shine.core import utility as ut
 from star_shine.config.helpers import get_config
-from star_shine.config import data_properties as dconfig
 
 
 # load configuration

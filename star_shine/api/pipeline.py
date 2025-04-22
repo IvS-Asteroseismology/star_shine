@@ -36,7 +36,7 @@ class Pipeline:
     result: Result object
         Instance of the Result class holding the parameters of the result.
     save_dir: str
-        Root directory where the save files are stored.
+        Root directory where the result files will be stored.
     save_subdir: str
         Sub-directory that is made to contain the save files.
     logger: Logger object
@@ -49,9 +49,10 @@ class Pipeline:
         Parameters
         ----------
         data: Data object
-            Instance of the Data class with the data tto be analysed.
+            Instance of the Data class with the data to be analysed.
         save_dir: str, optional
-            Root directory where the data files are stored. Added to the file name. If empty, it is loaded from config.
+            Root directory where result files will be stored. Added to the file name.
+            If empty, it is loaded from config.
 
         Notes
         -----
@@ -189,7 +190,6 @@ class Pipeline:
             self.logger.info("Starting multi-sinusoid NL-LS optimisation.")
 
         # use the chosen optimisation method
-        inf_data, par_mean, par_hdi = None, None, None
         if config.optimise_method == 'fitter':
             par_mean = fit.fit_multi_sinusoid_per_group(self.data.time, self.data.flux, self.result.const,
                                                         self.result.slope, self.result.f_n, self.result.a_n,
@@ -215,10 +215,10 @@ class Pipeline:
                                          f_n, a_n, ph_n,  self.result.c_err, self.result.sl_err, f_n_err, a_n_err,
                                          ph_n_err, noise_level, self.data.i_chunks, verbose=config.verbose)
             inf_data, par_mean, par_hdi = output
+            self.result.setter(c_hdi=par_hdi[0], sl_hdi=par_hdi[1], f_n_hdi=par_hdi[2], a_n_hdi=par_hdi[3],
+                               ph_n_hdi=par_hdi[4])
 
-        self.result.setter(const=par_mean[0], slope=par_mean[1], f_n=par_mean[2], a_n=par_mean[3], ph_n=par_mean[4],
-                           c_hdi=par_hdi[0], sl_hdi=par_hdi[1], f_n_hdi=par_hdi[2], a_n_hdi=par_hdi[3],
-                           ph_n_hdi=par_hdi[4])
+        self.result.setter(const=par_mean[0], slope=par_mean[1], f_n=par_mean[2], a_n=par_mean[3], ph_n=par_mean[4])
 
         # select frequencies based on some significance criteria
         out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, 0, self.result.const,
@@ -350,7 +350,6 @@ class Pipeline:
             self.logger.info("Starting multi-sine NL-LS optimisation with harmonics.")
 
         # use the chosen optimisation method
-        par_hdi = np.zeros((6, 2))
         if config.optimise_method == 'fitter':
             par_mean = fit.fit_multi_sinusoid_harmonics_per_group(self.data.time, self.data.flux, self.result.p_orb,
                                                                   self.result.const, self.result.slope,
@@ -381,10 +380,11 @@ class Pipeline:
                                            self.result.sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
                                            self.data.i_chunks, verbose=config.verbose)
             inf_data, par_mean, par_hdi = output
+            self.result.setter(p_hdi=par_hdi[0], c_hdi=par_hdi[1], sl_hdi=par_hdi[2], f_n_hdi=par_hdi[3],
+                               a_n_hdi=par_hdi[4], ph_n_hdi=par_hdi[5])
 
         self.result.setter(p_orb=par_mean[0], const=par_mean[1], slope=par_mean[2], f_n=par_mean[3], a_n=par_mean[4],
-                           ph_n=par_mean[5], p_hdi=par_hdi[0], c_hdi=par_hdi[1], sl_hdi=par_hdi[2], f_n_hdi=par_hdi[3],
-                           a_n_hdi=par_hdi[4], ph_n_hdi=par_hdi[5])
+                           ph_n=par_mean[5])
 
         # select frequencies based on some significance criteria
         out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,

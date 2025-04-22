@@ -7,7 +7,9 @@
 verbose: False
 
 # stop_at_stage description:
-# Run the analysis up to and including this stage, 0 means all stages are run
+# Run the analysis up to and including this stage; 0 means all stages are run
+# [WIP] current steps: 1: 'iterative_prewhitening', 2: 'optimise_sinusoid', 3: 'couple_harmonics',
+#  4: 'iterative_prewhitening', 5: 'optimise_sinusoid_h'
 stop_at_stage: 0
 
 # ----------------------------------------------- Extraction settings --------------------------------------------------
@@ -55,11 +57,11 @@ optimise_step: True
 overwrite: False
 
 # data_dir description:
-# Root directory of the data, if empty will use current dir
+# Root directory where the data files to be analysed are located; if empty will use current dir
 data_dir: ''
 
 # save_dir description:
-# Save directory for analysis results, if empty will use current dir
+# Save directory where analysis results will be stored; if empty will use current dir
 save_dir: ''
 
 # save_ascii description:

@@ -28,7 +28,7 @@ class Data:
     file_list: list[str]
         List of ascii light curve files or (TESS) data product '.fits' files.
     data_dir: str
-        Root directory where the data files are stored.
+        Root directory where the data files to be analysed are located.
     target_id: str
         User defined identification integer for the target under investigation.
     data_id: str
@@ -187,7 +187,8 @@ class Data:
         Parameters
         ----------
         data_dir: str, optional
-            Root directory where the data files are stored. Added to the file name. If empty, it is loaded from config.
+            Root directory where the data files to be analysed are located. Added to the file name.
+            If empty, it is loaded from config.
         target_id: str, optional
             User defined identification number or name for the target under investigation. If empty, the file name
             of the first file in file_list is used.

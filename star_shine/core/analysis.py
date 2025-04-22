@@ -11,7 +11,7 @@ import numpy as np
 import numba as nb
 import itertools as itt
 
-from star_shine.config import data_properties as dconfig
+from star_shine.config import data_properties as dp
 
 
 @nb.njit(cache=True)
@@ -149,7 +149,6 @@ def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3., sigma_f=1
     return remove
 
 
-@nb.njit(cache=True)
 def remove_insignificant_snr(time, a_n, noise_at_f):
     """Removes insufficiently significant frequencies in terms of S/N.
     
@@ -178,7 +177,7 @@ def remove_insignificant_snr(time, a_n, noise_at_f):
     Not to be confused with the noise on the individual data points of the
     time series.
     """
-    snr_threshold = dconfig.signal_to_noise_threshold(time)
+    snr_threshold = dp.signal_to_noise_threshold(time)
 
     # signal-to-noise below threshold
     a_insig_1 = (a_n / noise_at_f < snr_threshold)

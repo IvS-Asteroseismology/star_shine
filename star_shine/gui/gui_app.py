@@ -11,7 +11,7 @@ import sys
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QSplitter, QMenuBar
 from PySide6.QtWidgets import QLabel, QTextEdit, QLineEdit, QFileDialog, QMessageBox, QPushButton
 from PySide6.QtWidgets import QTableView, QHeaderView
-from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel
+from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QTextCursor
 
 from star_shine.api import Data, Result, Pipeline
 from star_shine.gui import gui_log, gui_plot
@@ -61,6 +61,7 @@ class MainWindow(QMainWindow):
         self.result_instance = Result()
 
         # some things that are needed
+        self.data_dir = config.data_dir
         self.save_dir = config.save_dir
         self.save_subdir = ''
 
@@ -153,7 +154,7 @@ class MainWindow(QMainWindow):
         # Text area for displaying results
         self.text_field = QTextEdit()
         self.text_field.setReadOnly(True)  # Make the text edit read-only
-        self.text_field.setPlainText("Output field")
+        self.text_field.setPlainText("Output field\n")
         l_col_layout.addWidget(self.text_field)
 
         return l_col_widget
@@ -207,6 +208,20 @@ class MainWindow(QMainWindow):
 
         return r_col_widget
 
+    def append_text(self, text):
+        """Append a line of text at the end of the plain text output box.
+
+        Parameters
+        ----------
+        text : str
+            The text to append.
+        """
+        cursor = self.text_field.textCursor()
+        cursor.movePosition(QTextCursor.End)  # Move cursor to the end of the text
+        cursor.insertText(text + '\n')
+        self.text_field.setTextCursor(cursor)
+        self.text_field.ensureCursorVisible()
+
     def set_save_location(self):
         """Open a dialog to select the save location."""
         # Open a directory selection dialog
@@ -214,12 +229,12 @@ class MainWindow(QMainWindow):
 
         if new_dir:
             self.save_dir = new_dir
-            QMessageBox.information(self, "Save Location Set", f"Save location set to: {self.save_dir}")
+            self.append_text(f"Save location set to: {self.save_dir}")
 
     def load_data(self):
         """Load data from a file dialog and update plots."""
         # get the path(s) from a standard file selection screen
-        file_paths, _ = QFileDialog.getOpenFileNames(self, caption="Load Data", dir="",
+        file_paths, _ = QFileDialog.getOpenFileNames(self, caption="Load Data", dir=self.save_dir,
                                                      filter="All Files (*);;Text Files (*.txt)")
 
         # do nothing in case no file(s) selected
@@ -227,7 +242,7 @@ class MainWindow(QMainWindow):
             return None
 
         # load a data into instance
-        self.data_instance = Data.load_data(file_list=file_paths)
+        self.data_instance = Data.load_data(file_list=file_paths, data_dir=config.data_dir, target_id='', data_id='')
         self.save_subdir = f"{self.data_instance.target_id}_analysis"
 
         # update the plots
@@ -280,3 +295,24 @@ def launch_gui():
 
 if __name__ == "__main__":
     launch_gui()
+
+    """
+    Traceback (most recent call last):
+  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/gui/gui_app.py", line 273, in perform_analysis
+    self.result_instance = self.pipeline_instance.run()
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/api/pipeline.py", line 497, in run
+    self.result.save_conditional(file_name)
+  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/api/result.py", line 318, in save_conditional
+    self.save(file_name)
+  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/api/result.py", line 281, in save
+    io.save_result_hdf5(file_name, result_dict)
+  File "/home/lijspeert/PycharmProjects/star_shine/star_shine/core/io.py", line 263, in save_result_hdf5
+    file.create_dataset('c_hdi', data=result_dict['c_hdi'])
+  File "/home/lijspeert/miniconda3/envs/star_shadow/lib/python3.12/site-packages/h5py/_hl/group.py", line 183, in create_dataset
+    dsid = dataset.make_new_dset(group, shape, dtype, data, name, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lijspeert/miniconda3/envs/star_shadow/lib/python3.12/site-packages/h5py/_hl/dataset.py", line 53, in make_new_dset
+    raise TypeError("One of data, shape or dtype must be specified")
+TypeError: One of data, shape or dtype must be specified
+    """
