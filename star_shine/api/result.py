@@ -207,7 +207,7 @@ class Result:
         return result_dict
 
     @classmethod
-    def load(cls, file_name, h5py_file_kwargs=None):
+    def load(cls, file_name, h5py_file_kwargs=None, logger=None):
         """Load a result file in hdf5 format.
 
         Parameters
@@ -217,6 +217,8 @@ class Result:
         h5py_file_kwargs: dict, optional
             Keyword arguments for opening the h5py file.
             Example: {'locking': False}, for a drive that does not support locking.
+        logger: logging.Logger, optional
+            Instance of the logging library.
 
         Returns
         -------
@@ -229,27 +231,29 @@ class Result:
             return instance
 
         # add everything to a dict
-        result_dict = io.load_result_hdf5(file_name, h5py_file_kwargs)
+        result_dict = io.load_result_hdf5(file_name, h5py_file_kwargs=h5py_file_kwargs)
 
         # initiate the Results instance and fill in the results
         instance = cls()
         instance.setter(**result_dict)
 
-        if config.verbose:
-            print(f"Loaded analysis file with target identifier: {result_dict['target_id']}, "
-                  f"created on {result_dict['date_time']}. \n"
-                  f"Data identifier: {result_dict['data_id']}. Description: {result_dict['description']} \n")
+        if logger is not None:
+            logger.info(f"Loaded analysis file with target identifier: {result_dict['target_id']}, "
+                        f"created on {result_dict['date_time']}. Data identifier: {result_dict['data_id']}. "
+                        f"Description: {result_dict['description']}")
 
         return instance
 
     @classmethod
-    def load_conditional(cls, file_name):
+    def load_conditional(cls, file_name, logger=None):
         """Load a result file into a Result instance only if it exists and if no overwriting.
 
         Parameters
         ----------
         file_name: str
             File name to load the results from
+        logger: logging.Logger, optional
+            Instance of the logging library.
 
         Returns
         -------
@@ -263,7 +267,7 @@ class Result:
             return instance
 
         # make the Data instance and load the data
-        instance = cls.load(file_name)
+        instance = cls.load(file_name, logger=logger)
 
         return instance
 

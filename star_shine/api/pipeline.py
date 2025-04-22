@@ -123,8 +123,7 @@ class Pipeline:
         """
         t_a = systime.time()
         n_f_init = len(self.result.f_n)
-        if config.verbose:
-            self.logger.info(f"{n_f_init} frequencies. Looking for more...")
+        self.logger.info(f"{n_f_init} frequencies. Looking for more...")
 
         # start by looking for more harmonics
         if self.result.p_orb != 0:
@@ -170,10 +169,9 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        if config.verbose:
-            self.logger.info("Extraction of sinusoids complete.")
-            self.logger.extra(f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
-                              f"Time taken: {t_b - t_a:1.1f}")
+        self.logger.info("Extraction of sinusoids complete.")
+        self.logger.extra(f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
+                          f"Time taken: {t_b - t_a:1.1f}")
 
         return self.result
 
@@ -186,8 +184,7 @@ class Pipeline:
             Instance of the Result class containing the analysis results
         """
         t_a = systime.time()
-        if config.verbose:
-            self.logger.info("Starting multi-sinusoid NL-LS optimisation.")
+        self.logger.info("Starting multi-sinusoid NL-LS optimisation.")
 
         # use the chosen optimisation method
         if config.optimise_method == 'fitter':
@@ -243,10 +240,9 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        if config.verbose:
-            self.logger.info("Optimisation of sinusoids complete.")
-            self.logger.extra(f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
-                              f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s")
+        self.logger.info("Optimisation of sinusoids complete.")
+        self.logger.extra(f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
+                          f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s")
 
         return self.result
 
@@ -269,8 +265,7 @@ class Pipeline:
         Removes any frequencies that end up not making the statistical cut.
         """
         t_a = systime.time()
-        if config.verbose:
-            self.logger.info("Coupling the harmonic frequencies to the orbital frequency...")
+        self.logger.info("Coupling the harmonic frequencies to the orbital frequency...")
 
         # if given, the input p_orb is refined locally, otherwise the period is searched for globally
         if self.data.p_orb == 0:
@@ -321,12 +316,11 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        if config.verbose:
-            rnd_p_orb = max(ut.decimal_figures(p_err, 2), ut.decimal_figures(self.result.p_orb, 2))
-            self.logger.info("Orbital harmonic frequencies coupled.")
-            self.logger.extra(f"p_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{p_err:.{rnd_p_orb}f}), "
-                              f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
-                              f"Time taken: {t_b - t_a:1.1f}s")
+        rnd_p_orb = max(ut.decimal_figures(p_err, 2), ut.decimal_figures(self.result.p_orb, 2))
+        self.logger.info("Orbital harmonic frequencies coupled.")
+        self.logger.extra(f"p_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{p_err:.{rnd_p_orb}f}), "
+                          f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
+                          f"Time taken: {t_b - t_a:1.1f}s")
 
         # log if short time span or few harmonics
         if self.data.t_tot / self.result.p_orb < 1.1:
@@ -347,8 +341,7 @@ class Pipeline:
             Instance of the Result class containing the analysis results
         """
         t_a = systime.time()
-        if config.verbose:
-            self.logger.info("Starting multi-sine NL-LS optimisation with harmonics.")
+        self.logger.info("Starting multi-sine NL-LS optimisation with harmonics.")
 
         # use the chosen optimisation method
         if config.optimise_method == 'fitter':
@@ -414,13 +407,12 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        if config.verbose:
-            rnd_p_orb = max(ut.decimal_figures(self.result.p_err, 2),
-                            ut.decimal_figures(self.result.p_orb, 2))
-            self.logger.info("Optimisation with coupled harmonics complete.")
-            self.logger.extra(f"p_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{self.result.p_err:.{rnd_p_orb}f}), "
-                              f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
-                              f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s")
+        rnd_p_orb = max(ut.decimal_figures(self.result.p_err, 2),
+                        ut.decimal_figures(self.result.p_orb, 2))
+        self.logger.info("Optimisation with coupled harmonics complete.")
+        self.logger.extra(f"p_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{self.result.p_err:.{rnd_p_orb}f}), "
+                          f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
+                          f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s")
 
         return self.result
 
@@ -491,7 +483,8 @@ class Pipeline:
                 continue
 
             # Load result from previous step (returns empty Result if no file)
-            self.result = Result.load(file_name.replace(f'result_{step + 1}', f'result_{step}'))
+            self.result = Result.load(file_name.replace(f'result_{step + 1}', f'result_{step}'),
+                                      logger=self.logger)
 
             # if empty result, set target and data id
             if self.result.target_id == '':

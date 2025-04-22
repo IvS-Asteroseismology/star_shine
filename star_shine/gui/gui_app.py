@@ -12,9 +12,10 @@ from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, Q
 from PySide6.QtWidgets import QLabel, QTextEdit, QLineEdit, QFileDialog, QMessageBox, QPushButton
 from PySide6.QtWidgets import QTableView, QHeaderView
 from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QTextCursor
+from PySide6.QtCore import Signal
 
 from star_shine.api import Data, Result, Pipeline
-from star_shine.gui import gui_log, gui_plot
+from star_shine.gui import gui_log, gui_plot, gui_analysis
 from star_shine.config import helpers as hlp
 
 
@@ -55,9 +56,18 @@ class MainWindow(QMainWindow):
         # Add widgets to the layout
         self._add_widgets_to_layout()
 
+        # setup signal receiving
+        self.log_signal = Signal(str)
+        self.result_signal = Signal(object)
+
+        # actions to do when the signal is received
+        self.log_signal.connect(self.append_text)
+        self.result_signal.connect(self.receive_results)
+
         # add the api classes for functionality
         self.data_instance = Data()
         self.pipeline_instance = None
+        self.pipeline_thread = None
         self.result_instance = Result()
 
         # some things that are needed
@@ -222,6 +232,33 @@ class MainWindow(QMainWindow):
         self.text_field.setTextCursor(cursor)
         self.text_field.ensureCursorVisible()
 
+    def receive_results(self, result):
+        """Handle the results emitted from the analysis thread."""
+        # Update the GUI with the results
+        if result is not None:
+            self.append_text("Analysis completed successfully.")
+
+            self.result_instance = result
+
+            # # Example: Display some of the results in the table view or plot area
+            # # You can customize this part based on your Result class and what you want to display
+            # frequencies = result.frequencies  # Assuming Result has a 'frequencies' attribute
+            # amplitudes = result.amplitudes  # Assuming Result has an 'amplitudes' attribute
+            #
+            # self.table_model.setRowCount(len(frequencies))
+            # for row, (freq, amp) in enumerate(zip(frequencies, amplitudes)):
+            #     freq_item = QStandardItem(str(freq))
+            #     amp_item = QStandardItem(str(amp))
+            #     phase_item = QStandardItem("0.0")  # Assuming phase is not available or set to default
+            #     self.table_model.setItem(row, 0, freq_item)
+            #     self.table_model.setItem(row, 1, amp_item)
+            #     self.table_model.setItem(row, 2, phase_item)
+            #
+            # # Example: Update the lower plot area with the periodogram results
+            # self.lower_plot_area.plot(frequencies, amplitudes)
+        else:
+            self.append_text("Analysis failed to produce results.")
+
     def set_save_location(self):
         """Open a dialog to select the save location."""
         # Open a directory selection dialog
@@ -266,11 +303,17 @@ class MainWindow(QMainWindow):
             os.mkdir(full_dir)  # create the subdir
 
         # redirect logging to text output
-        logger = gui_log.get_custom_gui_logger(self.text_field, full_dir, self.data_instance.target_id)
+        logger = gui_log.get_custom_gui_logger(self.log_signal, full_dir, self.data_instance.target_id)
 
         # Perform analysis using your Pipeline class
         self.pipeline_instance = Pipeline(data=self.data_instance, save_dir=self.save_dir, logger=logger)
-        self.result_instance = self.pipeline_instance.run()
+
+        # set up a new thread for the analysis
+        self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline_instance)
+
+        self.pipeline_thread.start()
+
+        self.result_instance = self.pipeline_thread.run()
 
         return None
 

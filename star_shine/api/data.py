@@ -106,10 +106,15 @@ class Data:
 
         return
 
-    def _check_file_existence(self):
+    def _check_file_existence(self, logger=None):
         """Checks whether the given file(s) exist.
 
         Removes missing files from the file list
+
+        Parameters
+        ----------
+        logger: logging.Logger, optional
+            Instance of the logging library.
 
         Returns
         -------
@@ -181,11 +186,14 @@ class Data:
         return None
 
     @classmethod
-    def load_data(cls, file_list, data_dir='', target_id='', data_id=''):
+    def load_data(cls, file_list, data_dir='', target_id='', data_id='', logger=None):
         """Load light curve data from the file list.
 
         Parameters
         ----------
+        file_list: list[str]
+            List of ascii light curve files or (TESS) data product '.fits' files. Exclude the path given to 'data_dir'.
+            If only one file is given, its file name is used for target_id (if 'none').
         data_dir: str, optional
             Root directory where the data files to be analysed are located. Added to the file name.
             If empty, it is loaded from config.
@@ -194,9 +202,8 @@ class Data:
             of the first file in file_list is used.
         data_id: str, optional
             User defined identification name for the dataset used.
-        file_list: list[str]
-            List of ascii light curve files or (TESS) data product '.fits' files. Exclude the path given to 'data_dir'.
-            If only one file is given, its file name is used for target_id (if 'none').
+        logger: logging.Logger, optional
+            Instance of the logging library.
 
         Returns
         -------
@@ -212,16 +219,16 @@ class Data:
 
         # guard against empty list
         if len(file_list) == 0:
-            if config.verbose:
-                print("Empty file list provided.")
-            return
+            if logger is not None:
+                logger.warning("Empty file list provided.")
+            return cls()
 
         # Check if the file(s) exist(s)
         instance._check_file_existence()
         if len(instance.file_list) == 0:
-            if config.verbose:
-                print("No existing files in file list")
-            return
+            if logger is not None:
+                logger.warning("No existing files in file list")
+            return cls()
 
         # set IDs
         if target_id == '':
@@ -239,9 +246,8 @@ class Data:
         instance.setter(time=lc_data[0], flux=lc_data[1], flux_err=lc_data[2], i_chunks=lc_data[3], medians=lc_data[4])
 
         # check for overlapping time stamps
-        if np.any(np.diff(instance.time) <= 0):
-            if config.verbose:
-                print("The time array chunks include overlap.")
+        if np.any(np.diff(instance.time) <= 0) & (logger is not None):
+            logger.warning("The time array chunks include overlap.")
 
         # calculate properties of the data
         instance.calculate_properties()
@@ -249,7 +255,7 @@ class Data:
         return instance
 
     @classmethod
-    def load(cls, file_name, h5py_file_kwargs):
+    def load(cls, file_name, h5py_file_kwargs=None, logger=None):
         """Load a data file in hdf5 format.
 
         Parameters
@@ -259,6 +265,8 @@ class Data:
         h5py_file_kwargs: dict, optional
             Keyword arguments for opening the h5py file.
             Example: {'locking': False}, for a drive that does not support locking.
+        logger: logging.Logger, optional
+            Instance of the logging library.
 
         Returns
         -------
@@ -266,16 +274,15 @@ class Data:
             Instance of the Data class with the loaded data.
         """
         # io module handles opening the file
-        data_dict = io.load_data_hdf5(file_name, h5py_file_kwargs=None)
+        data_dict = io.load_data_hdf5(file_name, h5py_file_kwargs=h5py_file_kwargs)
 
         # initiate the Results instance and fill in the results
         instance = cls()
         instance.setter(**data_dict)
 
-        if config.verbose:
-            print(f"Loaded data file with target identifier: {data_dict['target_id']}, "
-                  f"created on {data_dict['date_time']}. \n"
-                  f"Data identifier: {data_dict['data_id']}. \n")
+        if logger is not None:
+            logger.info(f"Loaded data file with target identifier: {data_dict['target_id']}, "
+                        f"created on {data_dict['date_time']}. Data identifier: {data_dict['data_id']}.")
 
         return instance
 
