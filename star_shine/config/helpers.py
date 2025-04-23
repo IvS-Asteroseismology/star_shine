@@ -146,17 +146,17 @@ def add_logging_level(level_name, level_num, method_name=None, verbose=False):
     return None
 
 
-def get_custom_logger(save_dir, target_id, verbose):
+def get_custom_logger(target_id, save_dir, verbose):
     """Create a custom logger for logging to file and to stdout
 
     Parameters
     ----------
-    save_dir: str
-        folder to save the log file
     target_id: str
-        Identifier to use for the log file
+        Identifier to use for the log file.
+    save_dir: str
+        Folder to save the log file. If empty, no saving happens.
     verbose: bool
-        If set to True, information will be printed by the logger
+        If set to True, information will be printed by the logger.
 
     Returns
     -------
@@ -167,7 +167,7 @@ def get_custom_logger(save_dir, target_id, verbose):
     add_logging_level('EXTRA', logging.INFO - 5, method_name=None)
 
     # customize the logger
-    logger = logging.getLogger(__name__)  # make an instance of the logging library
+    logger = logging.getLogger(target_id)  # make an instance of the logging library
     logger.setLevel(logging.EXTRA)  # set base activation level for logger
 
     # make formatters for the handlers
@@ -187,10 +187,11 @@ def get_custom_logger(save_dir, target_id, verbose):
         logger.addHandler(s_handler)
 
     # file handler
-    logname = os.path.join(save_dir, f'{target_id}.log')
-    f_handler = logging.FileHandler(logname, mode='a')  # for saving
-    f_handler.setLevel(logging.INFO)  # save everything with level 20 or above
-    f_handler.setFormatter(f_format)
-    logger.addHandler(f_handler)
+    if save_dir != '':
+        log_name = os.path.join(save_dir, f'{target_id}.log')
+        f_handler = logging.FileHandler(log_name, mode='a')  # for saving
+        f_handler.setLevel(logging.INFO)  # save everything with level 20 or above
+        f_handler.setFormatter(f_format)
+        logger.addHandler(f_handler)
 
     return logger

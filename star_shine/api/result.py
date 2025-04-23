@@ -23,11 +23,11 @@ class Result:
 
     Attributes
     ----------
-    target_id: str, optional
+    target_id: str
         User defined identification number or name for the target under investigation.
-    data_id: str, optional
+    data_id: str
         User defined identification name for the dataset used.
-    description: str, optional
+    description: str
         User defined description of the result in question.
     n_param: int
         Number of free parameters in the model.
@@ -238,7 +238,7 @@ class Result:
         instance.setter(**result_dict)
 
         if logger is not None:
-            logger.info(f"Loaded analysis file with target identifier: {result_dict['target_id']}, "
+            logger.info(f"Loaded result file with target identifier: {result_dict['target_id']}, "
                         f"created on {result_dict['date_time']}. Data identifier: {result_dict['data_id']}. "
                         f"Description: {result_dict['description']}")
 

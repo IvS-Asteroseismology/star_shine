@@ -109,7 +109,7 @@ class TestHelpers(unittest.TestCase):
         target_id = 'test_target'
         verbose = True
 
-        logger = get_custom_logger(save_dir, target_id, verbose)
+        logger = get_custom_logger(target_id, save_dir, verbose)
 
         # Verify that handlers are added to the logger
         self.assertEqual(len(logger.handlers), 2)

@@ -137,7 +137,7 @@ class Data:
             message = f"Missing files {missing_files}{dir_text}, removing from list."
 
             if config.verbose:
-                print(message)
+                logger.warning(message)
 
             # remove the files
             for i in missing:
@@ -162,6 +162,47 @@ class Data:
             setattr(self, key, kwargs[key])
 
         return None
+
+    def get_dict(self):
+        """Make a dictionary of the attributes.
+
+        Primarily for saving to file.
+
+        Returns
+        -------
+        data_dict: dict
+            Dictionary of the data attributes and fields
+        """
+        # make a dictionary of the fields to be saved
+        data_dict = {}
+        data_dict['target_id'] = self.target_id
+        data_dict['data_id'] = self.data_id
+        data_dict['description'] = 'Star Shine data file'
+        data_dict['date_time'] = ut.datetime_formatted()
+
+        # original list of files
+        data_dict['data_dir'] = self.data_dir
+        data_dict['file_list'] = self.file_list
+
+        # Orbital period
+        data_dict['p_orb'] = self.p_orb
+
+        # summary statistics
+        data_dict['t_tot'] = self.t_tot
+        data_dict['t_mean'] = self.t_mean
+        data_dict['t_mean_chunk'] = self.t_mean_chunk
+        data_dict['t_step'] = self.t_step
+
+        # the time series data
+        data_dict['time'] = self.time
+        data_dict['flux'] = self.flux
+        data_dict['flux_err'] = self.flux_err
+
+        # additional information
+        data_dict['i_chunks'] = self.i_chunks
+        data_dict['flux_counts_medians'] = self.flux_counts_medians
+
+        return data_dict
 
     def calculate_properties(self):
         """Calculate the properties of the data and fill them in.
@@ -224,7 +265,7 @@ class Data:
             return cls()
 
         # Check if the file(s) exist(s)
-        instance._check_file_existence()
+        instance._check_file_existence(logger=logger)
         if len(instance.file_list) == 0:
             if logger is not None:
                 logger.warning("No existing files in file list")
@@ -236,7 +277,7 @@ class Data:
         instance.setter(target_id=target_id, data_id=data_id)
 
         # add data_dir for loading files, if not None
-        if instance.data_dir is None:
+        if instance.data_dir == '':
             file_list_dir = instance.file_list
         else:
             file_list_dir = [os.path.join(instance.data_dir, file) for file in instance.file_list]
@@ -252,16 +293,22 @@ class Data:
         # calculate properties of the data
         instance.calculate_properties()
 
+        if logger is not None:
+            logger.info(f"Loaded data from external file(s).")
+
         return instance
 
     @classmethod
-    def load(cls, file_name, h5py_file_kwargs=None, logger=None):
+    def load(cls, file_name, data_dir='', h5py_file_kwargs=None, logger=None):
         """Load a data file in hdf5 format.
 
         Parameters
         ----------
         file_name: str
             File name to load the data from
+        data_dir: str, optional
+            Root directory where the data files to be analysed are located. Added to the file name.
+            If empty, it is loaded from config.
         h5py_file_kwargs: dict, optional
             Keyword arguments for opening the h5py file.
             Example: {'locking': False}, for a drive that does not support locking.
@@ -273,11 +320,22 @@ class Data:
         Data
             Instance of the Data class with the loaded data.
         """
+        # initiate the Data instance
+        instance = cls()
+
+        # set the file list and data directory
+        if data_dir == '':
+            data_dir = config.data_dir
+        instance.setter(data_dir=data_dir)
+
+        # add data_dir for loading file, if not None
+        if instance.data_dir != '':
+            file_name = os.path.join(instance.data_dir, file_name)
+
         # io module handles opening the file
         data_dict = io.load_data_hdf5(file_name, h5py_file_kwargs=h5py_file_kwargs)
 
-        # initiate the Results instance and fill in the results
-        instance = cls()
+        # fill in the data
         instance.setter(**data_dict)
 
         if logger is not None:
@@ -299,33 +357,7 @@ class Data:
         None
         """
         # make a dictionary of the fields to be saved
-        data_dict = {}
-        data_dict['target_id'] = self.target_id
-        data_dict['data_id'] = self.data_id
-        data_dict['description'] = 'Star Shine data file'
-        data_dict['date_time'] = ut.datetime_formatted()
-
-        # original list of files
-        data_dict['data_dir'] = self.data_dir
-        data_dict['file_list'] = self.file_list
-
-        # Orbital period
-        data_dict['p_orb'] = self.p_orb
-
-        # summary statistics
-        data_dict['t_tot'] = self.t_tot
-        data_dict['t_mean'] = self.t_mean
-        data_dict['t_mean_chunk'] = self.t_mean_chunk
-        data_dict['t_step'] = self.t_step
-
-        # the time series data
-        data_dict['time'] = self.time
-        data_dict['flux'] = self.flux
-        data_dict['flux_err'] = self.flux_err
-
-        # additional information
-        data_dict['i_chunks'] = self.i_chunks
-        data_dict['flux_counts_medians'] = self.flux_counts_medians
+        data_dict = self.get_dict()
 
         # io module handles writing to file
         io.save_data_hdf5(file_name, data_dict)

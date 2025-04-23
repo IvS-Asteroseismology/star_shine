@@ -36,17 +36,17 @@ class QTextEditLogger(logging.Handler):
         self.log_signal.emit(msg)
 
 
-def get_custom_gui_logger(log_signal, save_dir, target_id):
+def get_custom_gui_logger(log_signal, target_id, save_dir):
     """Create a custom logger for logging to file and to the gui.
 
     Parameters
     ----------
     log_signal: Signal
         The Signal that is on the receiving end.
-    save_dir: str
-        folder to save the log file.
     target_id: str
         Identifier to use for the log file.
+    save_dir: str
+        folder to save the log file. If empty, no saving happens.
 
     Returns
     -------
@@ -54,7 +54,7 @@ def get_custom_gui_logger(log_signal, save_dir, target_id):
         Customised logger object
     """
     # get the normal non-verbose logger
-    logger = hlp.get_custom_logger(save_dir, target_id, verbose=False)
+    logger = hlp.get_custom_logger(target_id, save_dir=save_dir, verbose=False)
 
     # add a different stream handler
     qtext_edit_handler = QTextEditLogger(log_signal)

@@ -65,6 +65,9 @@ class MainWindow(QMainWindow):
         self.log_signal.connect(self.append_text)
         self.result_signal.connect(self.receive_results)
 
+        # custom gui-specific logger
+        self.logger = gui_log.get_custom_gui_logger(self.log_signal, 'gui_logger', '')
+
         # add the api classes for functionality
         self.data_instance = Data()
         self.pipeline_instance = None
@@ -113,29 +116,58 @@ class MainWindow(QMainWindow):
         menu_bar = QMenuBar()
         self.setMenuBar(menu_bar)
 
-        # Add "File" menu
+        # Add "File" menu and set it up
         file_menu = menu_bar.addMenu("File")
-
-        # Add "Load Data" button to "File" menu
-        load_data_action = QAction("Load Data", self)
-        load_data_action.triggered.connect(self.load_data)  # Connect the action to a custom method
-        file_menu.addAction(load_data_action)
-
-        # Add "Save Location" button to "File" menu
-        set_save_location_action = QAction("Save Location", self)
-        set_save_location_action.triggered.connect(self.set_save_location)  # Connect the action to a custom method
-        file_menu.addAction(set_save_location_action)
-
-        # Add "Exit" button to "File" menu
-        exit_action = QAction("Exit", self)
-        exit_action.triggered.connect(self.close)  # Connect the action to the close method
-        file_menu.addAction(exit_action)
+        self._setup_file_menu(file_menu)
 
         # Add "Info" menu
         info_menu = menu_bar.addMenu("Info")
         about_action = QAction("About", self)
-        about_action.triggered.connect(self.show_about_dialog)  # Connect the action to a custom method
+        about_action.triggered.connect(self.show_about_dialog)
         info_menu.addAction(about_action)
+
+    def _setup_file_menu(self, file_menu):
+        """Set up the file menu."""
+        # Add "Load Data" button to "File" menu
+        load_data_action = QAction("Load Data", self)
+        load_data_action.triggered.connect(self.load_data_external)
+        file_menu.addAction(load_data_action)
+
+        # Add "Save Location" button to "File" menu
+        set_save_location_action = QAction("Save Location", self)
+        set_save_location_action.triggered.connect(self.set_save_location)
+        file_menu.addAction(set_save_location_action)
+
+        # Add a horizontal separator
+        file_menu.addSeparator()
+
+        # Add "Load Data Object" button to "File" menu
+        load_data_object_action = QAction("Load Data Object", self)
+        load_data_object_action.triggered.connect(self.load_data)
+        file_menu.addAction(load_data_object_action)
+
+        # Add "Save Data Object" button to "File" menu
+        save_data_object_action = QAction("Save Data Object", self)
+        save_data_object_action.triggered.connect(self.save_data)
+        file_menu.addAction(save_data_object_action)
+
+        # Add "Load Result Object" button to "File" menu
+        load_result_object_action = QAction("Load Result Object", self)
+        load_result_object_action.triggered.connect(self.load_result)
+        file_menu.addAction(load_result_object_action)
+
+        # Add "Save Result Object" button to "File" menu
+        save_result_object_action = QAction("Save Result Object", self)
+        save_result_object_action.triggered.connect(self.save_result)
+        file_menu.addAction(save_result_object_action)
+
+        # Add a horizontal separator
+        file_menu.addSeparator()
+
+        # Add "Exit" button to "File" menu
+        exit_action = QAction("Exit", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
 
     def _create_left_column(self):
         """Create and return the left column widget.
@@ -162,10 +194,10 @@ class MainWindow(QMainWindow):
         self.analyze_button.clicked.connect(self.perform_analysis)  # Connect the action to a custom method
         l_col_layout.addWidget(self.analyze_button)
 
-        # Text area for displaying results
+        # Log area
         self.text_field = QTextEdit()
         self.text_field.setReadOnly(True)  # Make the text edit read-only
-        self.text_field.setPlainText("Output field\n")
+        self.text_field.setPlainText("Log\n")
         l_col_layout.addWidget(self.text_field)
 
         return l_col_widget
@@ -189,8 +221,12 @@ class MainWindow(QMainWindow):
         self.table_view.setModel(self.table_model)
 
         # Set the horizontal header's stretch mode for each column
-        header = self.table_view.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)  # Stretch all columns proportionally
+        h_header = self.table_view.horizontalHeader()
+        h_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)  # Stretch all columns proportionally
+
+        # Set the vertical header's stretch mode for each row
+        v_header = self.table_view.verticalHeader()
+        v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
         # Add the button and table view to the middle column layout
         m_col_layout.addWidget(self.table_view)
@@ -305,22 +341,90 @@ class MainWindow(QMainWindow):
             self.save_dir = new_dir
             self.append_text(f"Save location set to: {self.save_dir}")
 
-    def load_data(self):
-        """Load data from a file dialog and update plots."""
+        return None
+
+    def load_data_external(self):
+        """Read data from a file or multiple files using a dialog window."""
         # get the path(s) from a standard file selection screen
-        file_paths, _ = QFileDialog.getOpenFileNames(self, caption="Load Data", dir=self.save_dir,
-                                                     filter="All Files (*);;Text Files (*.txt)")
+        file_paths, _ = QFileDialog.getOpenFileNames(self, caption="Read Data", dir=self.save_dir,
+                                                     filter="All Files (*)")
 
         # do nothing in case no file(s) selected
         if not file_paths:
             return None
 
-        # load a data into instance
-        self.data_instance = Data.load_data(file_list=file_paths, data_dir=config.data_dir, target_id='', data_id='')
+        # load data into instance
+        self.data_instance = Data.load_data(file_list=file_paths, data_dir='', target_id='', data_id='',
+                                            logger=self.logger)
         self.save_subdir = f"{self.data_instance.target_id}_analysis"
 
         # clear and update the plots
         self.update_plots()
+
+        return None
+
+    def load_data(self):
+        """Load data from a file using a dialog window."""
+        # get the path(s) from a standard file selection screen
+        file_path, _ = QFileDialog.getOpenFileName(self, caption="Load Data", dir=self.save_dir,
+                                                    filter="HDF5 Files (*.hdf5);;All Files (*)")
+
+        # do nothing in case no file selected
+        if not file_path:
+            return None
+
+        # load data into instance
+        self.data_instance = Data.load(file_name=file_path, data_dir='', logger=self.logger)
+        self.save_subdir = f"{self.data_instance.target_id}_analysis"
+
+        # clear and update the plots
+        self.update_plots()
+
+        return None
+
+    def save_data(self):
+        """Save data to a file using a dialog window."""
+        suggested_path = os.path.join(self.save_dir, self.data_instance.target_id + '_data.hdf5')
+        file_path, _ = QFileDialog.getSaveFileName(self, caption="Save Data", dir=suggested_path,
+                                                   filter="HDF5 Files (*.hdf5);;All Files (*)")
+
+        # do nothing in case no file selected
+        if not file_path:
+            return None
+
+        self.data_instance.save(file_path)
+
+        return None
+
+    def load_result(self):
+        """Load result from a file using a dialog window."""
+        # get the path(s) from a standard file selection screen
+        file_path, _ = QFileDialog.getOpenFileName(self, caption="Load Result", dir=self.save_dir,
+                                                    filter="HDF5 Files (*.hdf5);;All Files (*)")
+
+        # do nothing in case no file selected
+        if not file_path:
+            return None
+
+        # load result into instance
+        self.result_instance = Result.load(file_name=file_path, logger=self.logger)
+
+        # clear and update the plots
+        self.update_plots()
+
+        return None
+
+    def save_result(self):
+        """Save result to a file using a dialog window."""
+        suggested_path = os.path.join(self.save_dir, self.data_instance.target_id + '_result.hdf5')
+        file_path, _ = QFileDialog.getSaveFileName(self, caption="Save Data", dir=suggested_path,
+                                                   filter="HDF5 Files (*.hdf5);;All Files (*)")
+
+        # do nothing in case no file selected
+        if not file_path:
+            return None
+
+        self.result_instance.save(file_path)
 
         return None
 
@@ -354,7 +458,7 @@ class MainWindow(QMainWindow):
             os.mkdir(full_dir)  # create the subdir
 
         # redirect logging to text output
-        logger = gui_log.get_custom_gui_logger(self.log_signal, full_dir, self.data_instance.target_id)
+        logger = gui_log.get_custom_gui_logger(self.log_signal, self.data_instance.target_id, full_dir)
 
         # Perform analysis using your Pipeline class
         self.pipeline_instance = Pipeline(data=self.data_instance, save_dir=self.save_dir, logger=logger)

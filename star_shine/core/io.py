@@ -117,6 +117,10 @@ def save_data_hdf5(file_name, data_dict):
         file.attrs['t_tot'] = data_dict['t_tot']  # Total time base of observations
         file.attrs['t_mean'] = data_dict['t_mean']  # Time reference (zero) point of the full light curve
         file.attrs['t_step'] = data_dict['t_step']  # Median time step of observations
+        file.create_dataset('t_mean_chunk', data=data_dict['t_mean_chunk'])
+        file['t_mean_chunk'].attrs['unit'] = 'time unit of the data (often days)'
+        file['t_mean_chunk'].attrs['description'] = 'time reference (zero) point of the each time chunk'
+
         file.attrs['p_orb'] = data_dict['p_orb']  # orbital period, if applicable
 
         # the time series data
@@ -136,9 +140,6 @@ def save_data_hdf5(file_name, data_dict):
         file.create_dataset('flux_counts_medians', data=data_dict['flux_counts_medians'])
         file['flux_counts_medians'].attrs['unit'] = 'raw flux counts'
         file['flux_counts_medians'].attrs['description'] = 'median flux level per time chunk'
-        file.create_dataset('t_mean_chunk', data=data_dict['t_mean_chunk'])
-        file['t_mean_chunk'].attrs['unit'] = 'time unit of the data (often days)'
-        file['t_mean_chunk'].attrs['description'] = 'time reference (zero) point of the each time chunk'
 
     return None
 

@@ -74,7 +74,7 @@ class Pipeline:
             os.mkdir(full_dir)  # create the subdir
 
         # initialise custom logger
-        self.logger = logger or get_custom_logger(full_dir, self.data.target_id, config.verbose)
+        self.logger = logger or get_custom_logger(self.data.target_id, full_dir, config.verbose)
 
         # check the input data
         if not isinstance(data, Data):
