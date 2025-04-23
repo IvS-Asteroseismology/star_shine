@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
         # Set font size for the entire application
         font = QFont()
         font.setPointSize(11)
-        self.setFont(font)
+        QApplication.setFont(font)
 
         # Create the central widget and set the layout
         self._setup_central_widget()
@@ -213,6 +213,10 @@ class MainWindow(QMainWindow):
         # create a vertical layout for in the middle column of the main layout
         m_col_widget = QWidget()
         m_col_layout = QVBoxLayout(m_col_widget)
+
+        # add the data model formula above the table
+        formula_label = QLabel("Model: flux = sum(a_i sin(2pi f_i t + ph_i) + b t + c)")
+        m_col_layout.addWidget(formula_label)
 
         # Create the table view and model
         self.table_view = QTableView()

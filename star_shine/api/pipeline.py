@@ -117,7 +117,7 @@ class Pipeline:
             Contains the frequencies numpy.ndarray[Any, dtype[float]]
             and the spectrum numpy.ndarray[Any, dtype[float]]
         """
-        flux = self.data.flux
+        flux = np.copy(self.data.flux)
 
         # subtract the model for the residuals
         if residual:
