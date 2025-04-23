@@ -48,15 +48,26 @@ class PlotWidget(QWidget):
         self.toolbar = PlotToolbar(self.canvas, self)
 
         self.ax = self.figure.add_subplot(111)
-        self.ax.set_title(title)
-        self.ax.set_xlabel(xlabel)
-        self.ax.set_ylabel(ylabel)
+        self.set_labels()
 
         # make the layout and add the canvas widget
         layout = QVBoxLayout()
         layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
         self.setLayout(layout)
+
+    def set_labels(self):
+        """Set the axes labels and title."""
+        self.ax.set_title(self.title)
+        self.ax.set_xlabel(self.xlabel)
+        self.ax.set_ylabel(self.ylabel)
+
+    def clear_plot(self):
+        """Clear the plot"""
+        self.ax.clear()
+
+        # re-apply some elements
+        self.set_labels()
 
     def plot(self, x, y, **kwargs):
         """Plot a line graph on the widget.
@@ -70,15 +81,8 @@ class PlotWidget(QWidget):
         **kwargs : dict, optional
             Additional keyword arguments to pass to matplotlib's plot function.
         """
-        self.ax.clear()
-
         # plot the thing
         self.ax.plot(x, y, **kwargs)
-
-        # re-set some info
-        self.ax.set_title(self.title)
-        self.ax.set_xlabel(self.xlabel)
-        self.ax.set_ylabel(self.ylabel)
 
         # fix layout and draw
         self.figure.tight_layout()
@@ -98,15 +102,8 @@ class PlotWidget(QWidget):
         **kwargs : dict, optional
             Additional keyword arguments to pass to matplotlib's scatter function.
         """
-        self.ax.clear()
-
         # plot the thing
         self.ax.scatter(x, y, marker=marker, **kwargs)
-
-        # re-set some info
-        self.ax.set_title(self.title)
-        self.ax.set_xlabel(self.xlabel)
-        self.ax.set_ylabel(self.ylabel)
 
         # fix layout and draw
         self.figure.tight_layout()

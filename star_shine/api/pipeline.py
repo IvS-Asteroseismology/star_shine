@@ -108,6 +108,26 @@ class Pipeline:
 
         return curve
 
+    def periodogram(self, residual=True):
+        """Compute the Lomb-Scargle periodogram of the time series
+
+        Returns
+        -------
+        tuple
+            Contains the frequencies numpy.ndarray[Any, dtype[float]]
+            and the spectrum numpy.ndarray[Any, dtype[float]]
+        """
+        flux = self.data.flux
+
+        # subtract the model for the residuals
+        if residual:
+            flux -= self.model_linear()
+            flux -= self.model_sinusoid()
+
+        f, a = tsf.astropy_scargle(self.data.time, flux, f0=0, fn=0, df=0, norm='amplitude')
+
+        return f, a
+
     def iterative_prewhitening(self):
         """Iterative prewhitening of the input flux time series in the form of sine waves and a piece-wise linear curve.
 
@@ -316,9 +336,9 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        rnd_p_orb = max(ut.decimal_figures(p_err, 2), ut.decimal_figures(self.result.p_orb, 2))
+        p_orb_formatted = ut.float_to_str_scientific(self.result.p_orb, p_err, error=True, brackets=True)
         self.logger.info("Orbital harmonic frequencies coupled.")
-        self.logger.extra(f"p_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{p_err:.{rnd_p_orb}f}), "
+        self.logger.extra(f"p_orb: {p_orb_formatted}, "
                           f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
                           f"Time taken: {t_b - t_a:1.1f}s")
 
@@ -407,12 +427,11 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        rnd_p_orb = max(ut.decimal_figures(self.result.p_err, 2),
-                        ut.decimal_figures(self.result.p_orb, 2))
+        p_orb_formatted = ut.float_to_str_scientific(self.result.p_orb, self.result.p_err, error=True, brackets=True)
         self.logger.info("Optimisation with coupled harmonics complete.")
-        self.logger.extra(f"p_orb: {self.result.p_orb:.{rnd_p_orb}f} (+-{self.result.p_err:.{rnd_p_orb}f}), "
-                          f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
-                          f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s")
+        self.logger.extra(f"p_orb: {p_orb_formatted}, {len(self.result.f_n)} frequencies, "
+                          f"{self.result.n_param} free parameters, BIC: {self.result.bic:1.2f}. "
+                          f"Time taken: {t_b - t_a:1.1f}s")
 
         return self.result
 

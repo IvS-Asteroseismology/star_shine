@@ -11,9 +11,10 @@ import sys
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QSplitter, QMenuBar
 from PySide6.QtWidgets import QLabel, QTextEdit, QLineEdit, QFileDialog, QMessageBox, QPushButton
 from PySide6.QtWidgets import QTableView, QHeaderView
-from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QTextCursor
+from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor
 from PySide6.QtCore import Signal
 
+from star_shine.core import utility as ut
 from star_shine.api import Data, Result, Pipeline
 from star_shine.gui import gui_log, gui_plot, gui_analysis
 from star_shine.config import helpers as hlp
@@ -29,6 +30,10 @@ class MainWindow(QMainWindow):
     Contains a graphical user interface for loading data, performing analysis,
     displaying results, and visualizing plots.
     """
+    # setup signal receiving
+    log_signal = Signal(str)
+    result_signal = Signal(object)
+
     def __init__(self):
         super().__init__()
 
@@ -56,11 +61,7 @@ class MainWindow(QMainWindow):
         # Add widgets to the layout
         self._add_widgets_to_layout()
 
-        # setup signal receiving
-        self.log_signal = Signal(str)
-        self.result_signal = Signal(object)
-
-        # actions to do when the signal is received
+        # Connect signals to slots
         self.log_signal.connect(self.append_text)
         self.result_signal.connect(self.receive_results)
 
@@ -223,41 +224,77 @@ class MainWindow(QMainWindow):
 
         Parameters
         ----------
-        text : str
+        text: str
             The text to append.
+
+        Returns
+        -------
+        None
         """
         cursor = self.text_field.textCursor()
         cursor.movePosition(QTextCursor.End)  # Move cursor to the end of the text
-        cursor.insertText(text + '\n')
+        cursor.insertText(text + '\n')  # insert the text
         self.text_field.setTextCursor(cursor)
         self.text_field.ensureCursorVisible()
 
-    def receive_results(self, result):
-        """Handle the results emitted from the analysis thread."""
-        # Update the GUI with the results
-        if result is not None:
-            self.append_text("Analysis completed successfully.")
+        return None
 
-            self.result_instance = result
+    def update_table(self, display_errors=True):
+        """Fill the table with the given data.
 
-            # # Example: Display some of the results in the table view or plot area
-            # # You can customize this part based on your Result class and what you want to display
-            # frequencies = result.frequencies  # Assuming Result has a 'frequencies' attribute
-            # amplitudes = result.amplitudes  # Assuming Result has an 'amplitudes' attribute
-            #
-            # self.table_model.setRowCount(len(frequencies))
-            # for row, (freq, amp) in enumerate(zip(frequencies, amplitudes)):
-            #     freq_item = QStandardItem(str(freq))
-            #     amp_item = QStandardItem(str(amp))
-            #     phase_item = QStandardItem("0.0")  # Assuming phase is not available or set to default
-            #     self.table_model.setItem(row, 0, freq_item)
-            #     self.table_model.setItem(row, 1, amp_item)
-            #     self.table_model.setItem(row, 2, phase_item)
-            #
-            # # Example: Update the lower plot area with the periodogram results
-            # self.lower_plot_area.plot(frequencies, amplitudes)
-        else:
-            self.append_text("Analysis failed to produce results.")
+        Returns
+        -------
+        None
+        """
+        # get the result parameters
+        col1 = self.result_instance.f_n
+        col2 = self.result_instance.a_n
+        col3 = self.result_instance.ph_n
+        col1_err = self.result_instance.f_n_err
+        col2_err = self.result_instance.a_n_err
+        col3_err = self.result_instance.ph_n_err
+
+        # display sinusoid parameters in the table
+        self.table_model.setRowCount(len(col1))
+        for row, row_items in enumerate(zip(col1, col2, col3, col1_err, col2_err, col3_err)):
+            # convert to strings
+            c1 = ut.float_to_str_scientific(row_items[0], row_items[3], error=display_errors, brackets=False)
+            c2 = ut.float_to_str_scientific(row_items[1], row_items[4], error=display_errors, brackets=False)
+            c3 = ut.float_to_str_scientific(row_items[2], row_items[5], error=display_errors, brackets=False)
+
+            # convert to table items
+            c1_item = QStandardItem(c1)
+            c2_item = QStandardItem(c2)
+            c3_item = QStandardItem(c3)
+
+            # insert into table
+            self.table_model.setItem(row, 0, c1_item)
+            self.table_model.setItem(row, 1, c2_item)
+            self.table_model.setItem(row, 2, c3_item)
+
+        return None
+
+    def update_plots(self):
+        """Update the plotting area with the current data."""
+        # clear the plots
+        self.upper_plot_area.clear_plot()
+        self.lower_plot_area.clear_plot()
+
+        # update the plots with data
+        time, flux = self.data_instance.time, self.data_instance.flux
+        freqs, ampls = self.data_instance.periodogram()
+        self.upper_plot_area.scatter(time, flux)
+        self.lower_plot_area.plot(freqs, ampls)
+
+        # include result attributes if present
+        if self.result_instance.target_id != '':
+            model = self.pipeline_instance.model_linear()
+            model += self.pipeline_instance.model_sinusoid()
+            freqs, ampls = self.pipeline_instance.periodogram(residual=True)
+            self.upper_plot_area.plot(time, model)
+            self.lower_plot_area.plot(freqs, ampls)
+
+        return None
 
     def set_save_location(self):
         """Open a dialog to select the save location."""
@@ -282,11 +319,25 @@ class MainWindow(QMainWindow):
         self.data_instance = Data.load_data(file_list=file_paths, data_dir=config.data_dir, target_id='', data_id='')
         self.save_subdir = f"{self.data_instance.target_id}_analysis"
 
-        # update the plots
-        time, flux = self.data_instance.time, self.data_instance.flux
-        freqs, ampls = self.data_instance.periodogram()
-        self.upper_plot_area.scatter(time, flux)
-        self.lower_plot_area.plot(freqs, ampls)
+        # clear and update the plots
+        self.update_plots()
+
+        return None
+
+    def receive_results(self, result):
+        """Handle the results emitted from the analysis thread."""
+        # Update the GUI with the results
+        if result is None:
+            return None
+
+        # set result instance to received result
+        self.result_instance = result
+
+        # display sinusoid parameters in the table
+        self.update_table(display_errors=True)
+
+        # Update the plot area with the results
+        self.update_plots()
 
         return None
 
@@ -308,12 +359,9 @@ class MainWindow(QMainWindow):
         # Perform analysis using your Pipeline class
         self.pipeline_instance = Pipeline(data=self.data_instance, save_dir=self.save_dir, logger=logger)
 
-        # set up a new thread for the analysis
-        self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline_instance)
-
+        # set up and start a new thread for the analysis
+        self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline_instance, self.result_signal)
         self.pipeline_thread.start()
-
-        self.result_instance = self.pipeline_thread.run()
 
         return None
 

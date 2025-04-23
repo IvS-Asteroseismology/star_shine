@@ -6,10 +6,10 @@ This Python module contains the result class for handling the analysis results.
 Code written by: Luc IJspeert
 """
 import os
-import datetime
 import numpy as np
 
 from star_shine.core import timeseries as tsf
+from star_shine.core import utility as ut
 from star_shine.core import io
 from star_shine.config.helpers import get_config
 
@@ -162,7 +162,7 @@ class Result:
         result_dict['target_id'] = self.target_id
         result_dict['data_id'] = self.data_id
         result_dict['description'] = self.description
-        result_dict['date_time'] = str(datetime.datetime.now())
+        result_dict['date_time'] = ut.datetime_formatted()
 
         result_dict['n_param'] = self.n_param  # number of free parameters
         result_dict['bic'] = self.bic  # Bayesian Information Criterion of the residuals

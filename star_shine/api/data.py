@@ -6,11 +6,11 @@ This Python module contains the data class for handling the user defined data to
 Code written by: Luc IJspeert
 """
 import os
-import datetime
 import numpy as np
 
 from star_shine.core import timeseries as tsf
 from star_shine.core import visualisation as vis
+from star_shine.core import utility as ut
 from star_shine.core import io
 from star_shine.config.helpers import get_config
 from star_shine.config import data_properties as dp
@@ -303,7 +303,7 @@ class Data:
         data_dict['target_id'] = self.target_id
         data_dict['data_id'] = self.data_id
         data_dict['description'] = 'Star Shine data file'
-        data_dict['date_time'] = str(datetime.datetime.now())
+        data_dict['date_time'] = ut.datetime_formatted()
 
         # original list of files
         data_dict['data_dir'] = self.data_dir

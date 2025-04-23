@@ -5,6 +5,7 @@ This module contains utility functions for data processing, unit conversions.
 
 Code written by: Luc IJspeert
 """
+import datetime
 import numpy as np
 import numba as nb
 
@@ -13,6 +14,20 @@ from star_shine.config.helpers import get_config
 
 # load configuration
 config = get_config()
+
+
+def datetime_formatted():
+    """Return datetime string without microseconds.
+
+    Returns
+    -------
+    str
+        Date and time without microseconds
+    """
+    dt = datetime.datetime.now()
+    dt_str = str(dt.date()) + ' ' + str(dt.hour) + ':' + str(dt.minute) + ':' + str(dt.second)
+
+    return dt_str
 
 
 @nb.njit(cache=True)
@@ -95,14 +110,14 @@ def decimal_figures(x, n_sf):
     Parameters
     ----------
     x: float
-        Value to determine the number of decimals for
+        Value to determine the number of decimals for.
     n_sf: int
-        Number of significant figures to compute
+        Number of significant figures to compute.
     
     Returns
     -------
     int
-        Number of decimal places to round to
+        Number of decimal places to round to.
     """
     if x != 0:
         decimals = (n_sf - 1) - int(np.floor(np.log10(abs(x))))
@@ -110,6 +125,46 @@ def decimal_figures(x, n_sf):
         decimals = 1
 
     return decimals
+
+
+def float_to_str_scientific(x, x_err, error=True, brackets=False):
+    """Conversion of a number with an error margin to string in scientific notation.
+
+    Uses two significant figures by default as no distinction is made between having a 1, 2 or higher number
+    in the error value.
+
+    Parameters
+    ----------
+    x: float
+        Value to determine the number of decimals for.
+    x_err: float
+        Value to determine the number of decimals for.
+    error: bool, optional
+        Include the error value.
+    brackets: bool, optional
+        Place the error value in brackets.
+
+    Returns
+    -------
+    str
+        Formatted string conversion.
+    """
+    # determine the decimal places to round to
+    rnd_x = max(decimal_figures(x_err, 2), decimal_figures(x, 2))
+
+    # format the error value
+    if brackets:
+        err_str = f"(\u00B1{x_err:.{rnd_x}f})"
+    else:
+        err_str = f"\u00B1 {x_err:.{rnd_x}f}"
+
+    # format the rest of the string
+    if error:
+        number_str = f"{x:.{rnd_x}f} {err_str}"
+    else:
+        number_str = f"{x:.{rnd_x}f}"
+
+    return number_str
 
 
 def group_frequencies_for_fit(a_n, g_min=20, g_max=25):

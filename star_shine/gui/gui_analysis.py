@@ -12,15 +12,12 @@ from PySide6.QtCore import QThread, Signal
 class PipelineThread(QThread):
     """A QThread subclass to perform analysis in the background."""
 
-    # Define a signal that will be emitted when a log message needs to be added
-    log_signal = Signal(str)
-
-    # Signal to emit when results are ready
-    result_signal = Signal(object)
-
-    def __init__(self, pipeline_instance):
+    def __init__(self, pipeline_instance, result_signal):
         super().__init__()
         self.pipeline_instance = pipeline_instance
+
+        # signal to emit results to
+        self.result_signal = result_signal
 
     def run(self):
         """Run the analysis pipeline in a separate thread."""
