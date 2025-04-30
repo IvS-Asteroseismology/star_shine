@@ -482,6 +482,9 @@ class Pipeline:
         step_names = ['iterative_prewhitening', 'optimise_sinusoid', 'couple_harmonics', 'iterative_prewhitening',
                       'optimise_sinusoid_h']
 
+        # if we have predefined periods, repeat the harmonic steps
+        harmonic_step_names = ['couple_harmonics', 'iterative_prewhitening', 'optimise_sinusoid_h']
+
         # run steps until config number
         if config.stop_at_stage != 0:
             step_names = step_names[:config.stop_at_stage]
