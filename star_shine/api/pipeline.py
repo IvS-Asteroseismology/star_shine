@@ -149,7 +149,7 @@ class Pipeline:
         if self.result.p_orb != 0:
             out_a = tsf.extract_harmonics(self.data.time, self.data.flux, self.result.p_orb, self.data.i_chunks,
                                           config.bic_thr, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                          verbose=config.verbose)
+                                          logger=self.logger)
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         # extract all frequencies with the iterative scheme
@@ -157,20 +157,20 @@ class Pipeline:
                                       self.result.f_n, self.result.a_n, self.result.ph_n, bic_thr=config.bic_thr,
                                       snr_thr=config.snr_thr, stop_crit=config.stop_criterion, select=config.select_next,
                                       f0=0, fn=self.data.f_nyquist, fit_each_step=config.optimise_step,
-                                      verbose=config.verbose)
+                                      logger=self.logger)
         self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
 
         # remove any frequencies that end up not making the statistical cut
         out_c = tsf.reduce_sinusoids(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
                                      self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                     self.data.i_chunks, verbose=config.verbose)
+                                     self.data.i_chunks, logger=self.logger)
         self.result.setter(const=out_c[0], slope=out_c[1], f_n=out_c[2], a_n=out_c[3], ph_n=out_c[4])
 
         # select frequencies based on some significance criteria
         out_d = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
                                      self.result.const, self.result.slope,
                                      self.result.f_n, self.result.a_n, self.result.ph_n, self.data.i_chunks,
-                                     verbose=config.verbose)
+                                     logger=self.logger)
         self.result.setter(passed_sigma=out_d[0], passed_snr=out_d[1], passed_both=out_d[2], passed_harmonic=out_d[3])
 
         # main function done, calculate the rest of the stats
@@ -210,7 +210,7 @@ class Pipeline:
         if config.optimise_method == 'fitter':
             par_mean = fit.fit_multi_sinusoid_per_group(self.data.time, self.data.flux, self.result.const,
                                                         self.result.slope, self.result.f_n, self.result.a_n,
-                                                        self.result.ph_n, self.data.i_chunks, verbose=config.verbose)
+                                                        self.result.ph_n, self.data.i_chunks, logger=self.logger)
         else:
             # make model including everything to calculate noise level
             resid = self.data.flux - self.model_linear() - self.model_sinusoid()
@@ -230,7 +230,7 @@ class Pipeline:
             # Monte Carlo sampling of the model
             output = mcf.sample_sinusoid(self.data.time, self.data.flux, self.result.const, self.result.slope,
                                          f_n, a_n, ph_n,  self.result.c_err, self.result.sl_err, f_n_err, a_n_err,
-                                         ph_n_err, noise_level, self.data.i_chunks, verbose=config.verbose)
+                                         ph_n_err, noise_level, self.data.i_chunks, logger=self.logger)
             inf_data, par_mean, par_hdi = output
             self.result.setter(c_hdi=par_hdi[0], sl_hdi=par_hdi[1], f_n_hdi=par_hdi[2], a_n_hdi=par_hdi[3],
                                ph_n_hdi=par_hdi[4])
@@ -240,7 +240,7 @@ class Pipeline:
         # select frequencies based on some significance criteria
         out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, 0, self.result.const,
                                      self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                     self.data.i_chunks, verbose=config.verbose)
+                                     self.data.i_chunks, logger=self.logger)
         self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
 
         # main function done, calculate the rest of the stats
@@ -301,19 +301,19 @@ class Pipeline:
             # couple the harmonics to the period. likely removes more frequencies that need re-extracting
             out_a = tsf.fix_harmonic_frequency(self.data.time, self.data.flux, self.result.p_orb,  self.result.const,
                                                self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                               self.data.i_chunks, verbose=config.verbose)
+                                               self.data.i_chunks, logger=self.logger)
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         # remove any frequencies that end up not making the statistical cut
         out_b = tsf.reduce_sinusoids(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
                                      self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                     self.data.i_chunks, verbose=config.verbose)
+                                     self.data.i_chunks, logger=self.logger)
         self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
 
         # select frequencies based on some significance criteria
         out_c = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
                                      self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
-                                     self.result.ph_n, self.data.i_chunks, verbose=config.verbose)
+                                     self.result.ph_n, self.data.i_chunks, logger=self.logger)
         self.result.setter(passed_sigma=out_c[0], passed_snr=out_c[1], passed_both=out_c[2], passed_harmonic=out_c[3])
 
         # main function done, calculate the rest of the stats
@@ -368,7 +368,7 @@ class Pipeline:
             par_mean = fit.fit_multi_sinusoid_harmonics_per_group(self.data.time, self.data.flux, self.result.p_orb,
                                                                   self.result.const, self.result.slope,
                                                                   self.result.f_n, self.result.a_n, self.result.ph_n,
-                                                                  self.data.i_chunks, verbose=config.verbose)
+                                                                  self.data.i_chunks, logger=self.logger)
         else:
             # make model including everything to calculate noise level
             resid = self.data.flux - self.model_linear() - self.model_sinusoid()
@@ -392,7 +392,7 @@ class Pipeline:
             output = mcf.sample_sinusoid_h(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
                                            self.result.slope, f_n, a_n, ph_n, self.result.p_err, self.result.c_err,
                                            self.result.sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
-                                           self.data.i_chunks, verbose=config.verbose)
+                                           self.data.i_chunks, logger=self.logger)
             inf_data, par_mean, par_hdi = output
             self.result.setter(p_hdi=par_hdi[0], c_hdi=par_hdi[1], sl_hdi=par_hdi[2], f_n_hdi=par_hdi[3],
                                a_n_hdi=par_hdi[4], ph_n_hdi=par_hdi[5])
@@ -403,7 +403,7 @@ class Pipeline:
         # select frequencies based on some significance criteria
         out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
                                      self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
-                                     self.result.ph_n, self.data.i_chunks, verbose=config.verbose)
+                                     self.result.ph_n, self.data.i_chunks, logger=self.logger)
         self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
 
         # main function done, calculate the rest of the stats
@@ -495,7 +495,7 @@ class Pipeline:
             file_name = os.path.join(self.save_dir, self.save_subdir, f"{self.data.target_id}_result_{step + 1}.hdf5")
 
             # Load existing result from this step if not overwriting (returns empty Result if no file)
-            self.result = Result.load_conditional(file_name)
+            self.result = Result.load_conditional(file_name, logger=self.logger)
 
             # if existing result was loaded, go to the next step
             if self.result.target_id != '':

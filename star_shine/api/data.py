@@ -136,7 +136,7 @@ class Data:
                 dir_text = f" in directory {self.data_dir}"
             message = f"Missing files {missing_files}{dir_text}, removing from list."
 
-            if config.verbose:
+            if logger is not None:
                 logger.warning(message)
 
             # remove the files

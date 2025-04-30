@@ -27,7 +27,7 @@ from star_shine.core import analysis as af
 
 
 def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
-                    i_chunks, verbose=False):
+                    i_chunks, logger=None):
     """NUTS sampling of a linear + sinusoid + eclipse model
     
     Parameters
@@ -61,8 +61,8 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -83,7 +83,7 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
     lin_shape = (len(const),)
     sin_shape = (len(f_n),)
     # progress bar
-    if verbose:
+    if logger is not None:
         fastprogress.printing = lambda: True
         mc_logger = logging.getLogger('pymc3')
         mc_logger.setLevel(logging.INFO)
@@ -112,10 +112,10 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
     
     # do the sampling
     with lc_model:
-        inf_data = pm.sample(draws=1000, tune=1000, init='adapt_diag', cores=1, progressbar=verbose,
+        inf_data = pm.sample(draws=1000, tune=1000, init='adapt_diag', cores=1, progressbar=(logger is not None),
                              return_inferencedata=True)
     
-    if verbose:
+    if logger is not None:
         az.summary(inf_data, round_to=2, circ_var_names=['ph_n'])
     # stacked parameter chains
     const_ch = inf_data.posterior.const.stack(dim=['chain', 'draw']).to_numpy()
@@ -147,7 +147,7 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
 
 
 def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_err, sl_err, f_n_err, a_n_err,
-                      ph_n_err, noise_level, i_chunks, verbose=False):
+                      ph_n_err, noise_level, i_chunks, logger=None):
     """NUTS sampling of a linear + sinusoid + eclipse model
     
     Parameters
@@ -185,8 +185,8 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -210,7 +210,7 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
     sin_shape = (len(f_n[non_harm]),)
     harm_shape = (len(f_n[harmonics]),)
     # progress bar
-    if verbose:
+    if logger is not None:
         fastprogress.printing = lambda: True
         mc_logger = logging.getLogger('pymc3')
         mc_logger.setLevel(logging.INFO)
@@ -251,10 +251,10 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
     
     # do the sampling
     with lc_model:
-        inf_data = pm.sample(draws=1000, tune=1000, init='adapt_diag', cores=1, progressbar=verbose,
+        inf_data = pm.sample(draws=1000, tune=1000, init='adapt_diag', cores=1, progressbar=(logger is not None),
                              return_inferencedata=True)
     
-    if verbose:
+    if logger is not None:
         az.summary(inf_data, round_to=2, circ_var_names=['ph_n'])
     # stacked parameter chains
     p_orb_ch = inf_data.posterior.p_orb.stack(dim=['chain', 'draw']).to_numpy()

@@ -215,7 +215,8 @@ class MainWindow(QMainWindow):
         m_col_layout = QVBoxLayout(m_col_widget)
 
         # add the data model formula above the table
-        formula_label = QLabel("Model: flux = sum(a_i sin(2pi f_i t + ph_i) + b t + c)")
+        equation_str = "Model: flux = \u2211\u1D62 (a\u1D62 sin(2\u03C0f\u1D62t + \u03C6\u1D62)) + bt + c"
+        formula_label = QLabel(equation_str)
         m_col_layout.addWidget(formula_label)
 
         # Create the table view and model

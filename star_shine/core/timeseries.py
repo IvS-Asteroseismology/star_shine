@@ -7,7 +7,6 @@ specifically for the fitting of stellar oscillations and harmonic sinusoids.
 Code written by: Luc IJspeert
 """
 
-import inspect
 import numpy as np
 import scipy as sp
 import numba as nb
@@ -1885,7 +1884,7 @@ def linear_regression_uncertainty_ephem(time, p_orb, sigma_t=1):
     return p_err, t_err, p_t_corr
 
 
-def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
+def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
     """Extract a single frequency from a time series using oversampling
     of the periodogram.
     
@@ -1903,8 +1902,8 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
         If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
     select: str
         Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
     
     Returns
     -------
@@ -1952,8 +1951,8 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
 
     # check if we pick the boundary frequency
     if p1 in [0, len(freqs) - 1]:
-        if verbose:
-            print(f'Edge of frequency range {freqs[p1]} at position {p1} during extraction phase 1.')
+        if logger is not None:
+            logger.warning(f'Edge of frequency range {freqs[p1]} at position {p1} during extraction phase 1.')
 
     # now refine once by increasing the frequency resolution x100
     f_left = max(freqs[p1] - df, df / 10)  # may not get too low
@@ -1963,8 +1962,8 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
 
     # check if we pick the boundary frequency
     if p2 in [0, len(f_refine) - 1]:
-        if verbose:
-            print(f'Edge of frequency range {f_refine[p2]} at position {p2} during extraction phase 2.')
+        if logger is not None:
+            logger.warning(f'Edge of frequency range {f_refine[p2]} at position {p2} during extraction phase 2.')
     f_final = f_refine[p2]
     a_final = a_refine[p2]
 
@@ -1975,89 +1974,7 @@ def extract_single(time, flux, f0=0, fn=0, select='a', verbose=True):
     return f_final, a_final, ph_final
 
 
-@nb.njit(cache=True)
-def extract_single_narrow(time, flux, f0=0, fn=0, verbose=True):
-    """Extract a single frequency from a time series using oversampling
-    of the periodogram.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    f0: float
-        Starting frequency of the periodogram.
-        If left zero, default is f0 = 1/(100*T)
-    fn: float
-        Last frequency of the periodogram.
-        If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
-    verbose: bool
-        If set to True, this function will print some information
-
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        f_final: float
-            Frequency of the extracted sinusoid
-        a_final: float
-            Amplitude of the extracted sinusoid
-        ph_final: float
-            Phase of the extracted sinusoid
-
-    See Also
-    --------
-    scargle, scargle_phase_single
-
-    Notes
-    -----
-    The extracted frequency is based on the highest amplitude in the
-    periodogram (over the interval where it is calculated). The highest
-    peak is oversampled by a factor 100 to get a precise measurement.
-
-    If and only if the full periodogram is calculated using the defaults
-    for f0 and fn, the fast implementation of astropy scargle is used.
-    It is accurate to a very high degree when used like this and gives
-    a significant speed increase.
-    
-    Same as extract_single, but meant for narrow frequency ranges. Much
-    slower on the full frequency range, even though JIT-ted.
-    """
-    df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
-
-    # full LS periodogram (over a narrow range)
-    freqs, ampls = scargle(time, flux, f0=f0, fn=fn, df=df)
-    p1 = np.argmax(ampls)
-
-    # check if we pick the boundary frequency
-    if p1 in [0, len(freqs) - 1]:
-        if verbose:
-            print(f'Edge of frequency range {ut.float_to_str(freqs[p1], dec=2)} at position {p1} '
-                  f'during extraction phase 1.')
-
-    # now refine once by increasing the frequency resolution x100
-    f_left = max(freqs[p1] - df, df / 10)  # may not get too low
-    f_right = freqs[p1] + df
-    f_refine, a_refine = scargle(time, flux, f0=f_left, fn=f_right, df=df/100)
-    p2 = np.argmax(a_refine)
-
-    # check if we pick the boundary frequency
-    if p2 in [0, len(f_refine) - 1]:
-        if verbose:
-            print(f'Edge of frequency range {ut.float_to_str(f_refine[p2], dec=2)} at position {p2} '
-                  f'during extraction phase 2.')
-    f_final = f_refine[p2]
-    a_final = a_refine[p2]
-
-    # finally, compute the phase (and make sure it stays within + and - pi)
-    ph_final = scargle_phase_single(time, flux, f_final)
-    ph_final = (ph_final + np.pi) % (2 * np.pi) - np.pi
-
-    return f_final, a_final, ph_final
-
-
-def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=True):
+def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Refine a subset of frequencies that are within the Rayleigh criterion of each other,
     taking into account (and not changing the frequencies of) harmonics if present.
     
@@ -2084,8 +2001,8 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
     
     Returns
     -------
@@ -2145,7 +2062,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             else:
                 f0 = f_n_temp[j] - freq_res
                 fn = f_n_temp[j] + freq_res
-                f_j, a_j, ph_j = extract_single(time, resid, f0=f0, fn=fn, select='a', verbose=verbose)
+                f_j, a_j, ph_j = extract_single(time, resid, f0=f0, fn=fn, select='a', logger=logger)
 
             f_n_temp[j], a_n_temp[j], ph_n_temp[j] = f_j, a_j, ph_j
             cur_resid -= sum_sines(time, np.array([f_j]), np.array([a_j]), np.array([ph_j]))
@@ -2163,12 +2080,12 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             bic_prev = bic
             accept = True
 
-        if verbose:
+        if logger is not None:
             print(f'N_f= {n_f}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) '
-                  f'- N_refine= {n_g}, f= {f_j:1.6f}, a= {a_j:1.6f}', end='\r')
+                  f'- N_refine= {n_g}, f= {f_j:1.6f}, a= {a_j:1.6f}')
 
-    if verbose:
-        print(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f}) - end refinement', end='\r')
+    if logger is not None:
+        print(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f}) - end refinement')
 
     # redo the constant and slope without the last iteration of changes
     resid = flux - (model_sinusoid_ncf + sum_sines(time, f_n[close_f], a_n[close_f], ph_n[close_f]))
@@ -2178,7 +2095,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
 
 
 def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=None, bic_thr=2, snr_thr=0,
-                      stop_crit='bic', select='hybrid', f0=0, fn=0, fit_each_step=False, verbose=True):
+                      stop_crit='bic', select='hybrid', n_extract=0, f0=0, fn=0, fit_each_step=False, logger=None):
     """Extract all the frequencies from a periodic flux.
 
     Parameters
@@ -2207,6 +2124,8 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     select: str, optional
         Select the next frequency based on amplitude ('a'),
         signal-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).
+    n_extract: int, optional
+        Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.
     f0: float
         Lowest allowed frequency for extraction.
         If left zero, default is f0 = 1/(100*T)
@@ -2216,8 +2135,8 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     fit_each_step: bool
         If set to True, a non-linear least-squares fit of all extracted sinusoids in groups is performed at each
         iteration. While this increases the quality of the extracted signals, it drastically slows down the code.
-    verbose: bool, optional
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -2269,12 +2188,14 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         a_n = np.array([])
     if ph_n is None:
         ph_n = np.array([])
+    if n_extract == 0:
+        n_extract = 10**6  # 'a lot'
 
     # setup
     freq_res = 1.5 / np.ptp(time)  # frequency resolution
     n_sectors = len(i_chunks)
-    n_freq = len(f_n)
-    if n_freq > 0:
+    n_freq_init = len(f_n)
+    if n_freq_init > 0:
         harmonics, harmonic_n = anf.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     else:
         harmonics = np.array([])
@@ -2291,11 +2212,13 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     cur_resid = flux - sum_sines(time, f_n, a_n, ph_n)
     const, slope = linear_pars(time, cur_resid, i_chunks)
     resid = cur_resid - linear_curve(time, const, slope, i_chunks)
-    n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq - n_harm)
+    n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq_init - n_harm)
     bic_prev = calc_bic(resid, n_param)  # initialise current BIC to the mean (and slope) subtracted flux
     bic_init = bic_prev
-    if verbose:
-        print(f'N_f= {len(f_n)}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
+
+    # log a message
+    if logger is not None:
+        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
 
     # stop the loop when the BIC decreases by less than 2 (or increases)
     n_freq_cur = -1
@@ -2309,31 +2232,37 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         n_freq_cur = len(f_n)
 
         # attempt to extract the next frequency
-        f_i, a_i, ph_i = extract_single(time, resid, f0=f0, fn=fn, select=select, verbose=verbose)
+        f_i, a_i, ph_i = extract_single(time, resid, f0=f0, fn=fn, select=select, logger=logger)
 
-        # now improve frequencies
+        # now improve frequencies - make a temporary array including the current one
         f_n_temp, a_n_temp, ph_n_temp = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
         if fit_each_step:
-            # fit all frequencies for best improvement
+            # select all frequencies for the full fit
             close_f = np.arange((len(f_n)))  # all f
-            model_sinusoid_r = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
-            model_sinusoid_r -= sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
-            fit_out = fit.fit_multi_sinusoid_per_group(time, flux, const, slope, f_n_temp, a_n_temp, ph_n_temp,
-                                                       i_chunks, verbose=verbose)
-            const, slope, f_n_temp, a_n_temp, ph_n_temp = fit_out
         else:
-            # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
+            # select only close frequencies for iteration
             close_f = anf.f_within_rayleigh(n_freq_cur, f_n_temp, freq_res)
-            model_sinusoid_r = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
-            model_sinusoid_r -= sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
-            if len(close_f) > 1:
-                refine_out = refine_subset(time, flux, close_f, p_orb, const, slope, f_n_temp, a_n_temp, ph_n_temp,
-                                           i_chunks, verbose=verbose)
-                const, slope, f_n_temp, a_n_temp, ph_n_temp = refine_out
 
-        # as a last model-refining step, redetermine the constant and slope
+        # make a model of only the close sinusoids and subtract the current sinusoid
+        model_sinusoid_r = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
+        model_sinusoid_r -= sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+
+        if fit_each_step:
+            # fit all frequencies for best improvement
+            fit_out = fit.fit_multi_sinusoid_per_group(time, flux, const, slope, f_n_temp, a_n_temp, ph_n_temp,
+                                                       i_chunks, logger=logger)
+            const, slope, f_n_temp, a_n_temp, ph_n_temp = fit_out
+        elif len(close_f) > 1:
+            # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
+            refine_out = refine_subset(time, flux, close_f, p_orb, const, slope, f_n_temp, a_n_temp, ph_n_temp,
+                                       i_chunks, logger=logger)
+            const, slope, f_n_temp, a_n_temp, ph_n_temp = refine_out
+
+        # make the model of the updated close sinusoids and determine new residuals
         model_sinusoid_n = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
         cur_resid -= (model_sinusoid_n - model_sinusoid_r)  # add the changes to the sinusoid residuals
+
+        # as a last model-refining step, redetermine the constant and slope
         const, slope = linear_pars(time, cur_resid, i_chunks)
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
 
@@ -2349,7 +2278,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
             condition = snr > snr_thr
 
         # check acceptance condition before moving to the next iteration
-        if condition:
+        if condition & (n_freq_cur - n_freq_init < n_extract):
             # accept the new frequency
             f_n, a_n, ph_n = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
 
@@ -2357,12 +2286,12 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
             f_n[close_f], a_n[close_f], ph_n[close_f] = f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f]
             bic_prev = bic
 
-        if verbose:
-            print(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) - '
-                  f'f= {f_i:1.6f}, a= {a_i:1.6f}', end='\r')
+        if logger is not None:
+            logger.extra(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) - '
+                         f'f= {f_i:1.6f}, a= {a_i:1.6f}')
 
-    if verbose:
-        print(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f}) - end extraction')
+    if logger is not None:
+        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f}) - end extraction')
 
     # lastly re-determine slope and const
     cur_resid += (model_sinusoid_n - model_sinusoid_r)  # undo last change
@@ -2371,7 +2300,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     return const, slope, f_n, a_n, ph_n
 
 
-def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, ph_n=None, verbose=True):
+def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, ph_n=None, logger=None):
     """Tries to extract more harmonics from the flux
     
     Parameters
@@ -2393,8 +2322,8 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
     bic_thr: float
         The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
-    verbose: bool, optional
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
     
     Returns
     -------
@@ -2452,8 +2381,8 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
     n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq - n_harm)
     bic_init = calc_bic(resid, n_param)
     bic_prev = bic_init
-    if verbose:
-        print(f'N_f= {n_freq}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
+    if logger is not None:
+        logger.extra(f'N_f= {n_freq}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
 
     # loop over candidates and try to extract (BIC decreases by 2 or more)
     n_h_acc = []
@@ -2485,18 +2414,19 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
             const, slope = linear_pars(time, cur_resid, i_chunks)
             resid = cur_resid - linear_curve(time, const, slope, i_chunks)
 
-        if verbose:
-            print(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) - '
-                  f'h= {h_c}', end='\r')
+        if logger is not None:
+            logger.extra(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f})'
+                         f' - h= {h_c}')
 
-    if verbose:
-        print(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f}) - end extraction')
-        print(f'Successfully extracted harmonics {n_h_acc}')
+    if logger is not None:
+        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f}) - end extraction')
+        if len(n_h_acc) > 0:
+            logger.extra(f'Successfully extracted harmonics {n_h_acc}')
 
     return const, slope, f_n, a_n, ph_n
 
 
-def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=True):
+def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Fixes the frequency of harmonics to the theoretical value, then
     re-determines the amplitudes and phases.
 
@@ -2521,8 +2451,8 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -2582,8 +2512,8 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
         # add to freq list and removal list
         f_new, a_new, ph_new = np.append(f_new, f_i), np.append(a_new, a_i), np.append(ph_new, ph_i)
         remove_harm_c = np.append(remove_harm_c, remove)
-        if verbose:
-            print(f'Harmonic number {n} re-extracted, replacing {len(remove)} candidates', end='\r')
+        if logger is not None:
+            logger.extra(f'Harmonic number {n} re-extracted, replacing {len(remove)} candidates')
 
     # lastly re-determine slope and const (not needed here)
     # const, slope = linear_pars(time, cur_resid, i_chunks)
@@ -2607,7 +2537,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
 
         # extract the updated frequency
         fl, fr = f_n[i] - freq_res, f_n[i] + freq_res
-        f_n[i], a_n[i], ph_n[i] = extract_single(time, resid, f0=fl, fn=fr, select='a', verbose=verbose)
+        f_n[i], a_n[i], ph_n[i] = extract_single(time, resid, f0=fl, fn=fr, select='a', logger=logger)
         ph_n[i] = np.mod(ph_n[i] + np.pi, 2 * np.pi) - np.pi  # make sure the phase stays within + and - pi
         if (f_n[i] <= fl) | (f_n[i] >= fr):
             remove_non_harm = np.append(remove_non_harm, [i])
@@ -2626,18 +2556,18 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
     const, slope = linear_pars(time, cur_resid, i_chunks)  # lastly re-determine slope and const
 
-    if verbose:
+    if logger is not None:
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
         n_param = 2 * n_sectors + 1 + 2 * n_harm + 3 * (n_freq - n_harm)
         bic = calc_bic(resid, n_param)
-        print(f'Candidate harmonics replaced: {n_harm_init} ({n_harm} left). ')
-        print(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {bic_init - bic:1.2f})')
+        logger.extra(f'Candidate harmonics replaced: {n_harm_init} ({n_harm} left). '
+                     f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {bic_init - bic:1.2f})')
 
     return const, slope, f_n, a_n, ph_n
 
 
-@nb.njit(cache=True)
-def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=True):
+# @nb.njit(cache=True)
+def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Attempt the removal of individual frequencies
     
     Parameters
@@ -2661,8 +2591,8 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
     
     Returns
     -------
@@ -2734,17 +2664,17 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     a_n = np.delete(a_n, remove_single)
     ph_n = np.delete(ph_n, remove_single)
 
-    if verbose:
+    if logger is not None:
         str_bic = ut.float_to_str(bic_prev, dec=2)
         str_delta = ut.float_to_str(bic_init - bic_prev, dec=2)
-        print(f'Single frequencies removed: {n_freq - len(f_n)}')
-        print(f'N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})')
+        logger.extra(f'Single frequencies removed: {n_freq - len(f_n)} '
+                     f'N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})')
 
     return const, slope, f_n, a_n, ph_n
 
 
-@nb.njit(cache=True)
-def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=True):
+# @nb.njit(cache=True)
+def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Attempt the replacement of groups of frequencies by a single one
 
     Parameters
@@ -2768,8 +2698,8 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -2851,7 +2781,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 ph_i = scargle_phase(time, resid, f_n[harm_i])
             else:
                 edges = [min(f_n[set_i]) - freq_res, max(f_n[set_i]) + freq_res]
-                out = extract_single_narrow(time, resid, f0=edges[0], fn=edges[1], verbose=verbose)
+                out = extract_single(time, resid, f0=edges[0], fn=edges[1], logger=logger)
                 f_i, a_i, ph_i = np.array([out[0]]), np.array([out[1]]), np.array([out[2]])
 
             # make a model including the new freq
@@ -2886,16 +2816,16 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     a_n = np.append(np.delete(a_n, i_to_remove), a_new)
     ph_n = np.append(np.delete(ph_n, i_to_remove), ph_new)
 
-    if verbose:
+    if logger is not None:
         str_bic = ut.float_to_str(bic_prev, dec=2)
         str_delta = ut.float_to_str(bic_init - bic_prev, dec=2)
-        print(f'Frequency sets replaced by a single frequency: {len(remove_sets)} ({len(i_to_remove)} frequencies). ')
-        print(f'N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})')
+        logger.extra(f'Frequency sets replaced by a single frequency: {len(remove_sets)} '
+                     f'({len(i_to_remove)} frequencies). N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})')
 
     return const, slope, f_n, a_n, ph_n
 
 
-def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=True):
+def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Attempt to reduce the number of frequencies taking into account any harmonics if present.
     
     Parameters
@@ -2919,8 +2849,8 @@ def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, 
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
     
     Returns
     -------
@@ -2944,17 +2874,17 @@ def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, 
     It is attempted to replace these by a single frequency.
     """
     # first check if any frequency can be left out (after the fit, this may be possible)
-    out_a = remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=verbose)
+    out_a = remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=logger)
     const, slope, f_n, a_n, ph_n = out_a
 
     # Now go on to trying to replace sets of frequencies that are close together
-    out_b = replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=verbose)
+    out_b = replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=logger)
     const, slope, f_n, a_n, ph_n = out_b
 
     return const, slope, f_n, a_n, ph_n
 
 
-def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=False):
+def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Selects the credible frequencies from the given set
     
     Parameters
@@ -2983,8 +2913,8 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -3040,8 +2970,9 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
         passed_harmonic[harmonics] = True
     else:
         harmonics = np.array([], dtype=int)
-    if verbose:
-        print(f'Number of frequencies passed criteria: {np.sum(passed_both)} of {len(f_n)}. '
-              f'Candidate harmonics: {np.sum(passed_harmonic)}, of which {np.sum(passed_both[harmonics])} passed.')
+    if logger is not None:
+        logger.extra(f'Number of frequencies passed criteria: {np.sum(passed_both)} of {len(f_n)}. '
+                     f'Candidate harmonics: {np.sum(passed_harmonic)}, '
+                     f'of which {np.sum(passed_both[harmonics])} passed.')
         
     return passed_sigma, passed_snr, passed_both, passed_harmonic

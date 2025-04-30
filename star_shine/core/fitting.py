@@ -197,7 +197,7 @@ def jacobian_sinusoids(params, time, flux, i_chunks):
     return jac
 
 
-def fit_multi_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, verbose=False):
+def fit_multi_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Perform the multi-sinusoid, non-linear least-squares fit.
 
     Parameters
@@ -219,8 +219,8 @@ def fit_multi_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, verbo
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -270,18 +270,18 @@ def fit_multi_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, verbo
     res_ampls = result.x[2 * n_sect + n_sin:2 * n_sect + 2 * n_sin]
     res_phases = result.x[2 * n_sect + 2 * n_sin:2 * n_sect + 3 * n_sin]
 
-    if verbose:
+    if logger is not None:
         model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
         model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
         resid = flux - model_linear - model_sinusoid
         bic = tsf.calc_bic(resid, 2 * n_sect + 3 * n_sin)
-        print(f'Fit convergence: {result.success} - BIC: {bic:1.2f}. '
-              f'N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
+        logger.extra(f'Fit convergence: {result.success} - BIC: {bic:1.2f}. '
+                     f'N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
 
     return res_const, res_slope, res_freqs, res_ampls, res_phases
 
 
-def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, verbose=False):
+def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Perform the multi-sinusoid, non-linear least-squares fit per frequency group
 
     Parameters
@@ -303,8 +303,8 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -341,8 +341,8 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
 
     # update the parameters for each group
     for k, group in enumerate(f_groups):
-        if verbose:
-            print(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)}', end='\r')
+        if logger is not None:
+            logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)}')
 
         # subtract all other sines from the data, they are fixed now
         resid = flux - tsf.sum_sines(time, np.delete(res_freqs, group), np.delete(res_ampls, group),
@@ -350,19 +350,19 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
 
         # fit only the frequencies in this group (constant and slope are also fitted still)
         output = fit_multi_sinusoid(time, resid, res_const, res_slope, res_freqs[group],
-                                    res_ampls[group], res_phases[group], i_chunks, verbose=False)
+                                    res_ampls[group], res_phases[group], i_chunks, logger=None)
 
         res_const, res_slope, out_freqs, out_ampls, out_phases = output
         res_freqs[group] = out_freqs
         res_ampls[group] = out_ampls
         res_phases[group] = out_phases
 
-        if verbose:
+        if logger is not None:
             model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
             model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
             resid = flux - model_linear - model_sinusoid
             bic = tsf.calc_bic(resid, 2 * n_sect + 3 * n_sin)
-            print(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')
+            logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')
 
     return res_const, res_slope, res_freqs, res_ampls, res_phases
 
@@ -530,7 +530,7 @@ def jacobian_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
     return jac
 
 
-def fit_multi_sinusoid_harmonics(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, verbose=False):
+def fit_multi_sinusoid_harmonics(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Perform the multi-sinusoid, non-linear least-squares fit with harmonic frequencies.
 
     Parameters
@@ -554,8 +554,8 @@ def fit_multi_sinusoid_harmonics(time, flux, p_orb, const, slope, f_n, a_n, ph_n
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -616,19 +616,19 @@ def fit_multi_sinusoid_harmonics(time, flux, p_orb, const, slope, f_n, a_n, ph_n
     res_phases[non_harm] = result.x[1 + 2 * n_sect + 2 * n_sin:1 + 2 * n_sect + 3 * n_sin]
     res_phases[harmonics] = result.x[1 + 2 * n_sect + 3 * n_sin + n_harm:1 + 2 * n_sect + 3 * n_sin + 2 * n_harm]
 
-    if verbose:
+    if logger is not None:
         model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
         model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
         resid = flux - model_linear - model_sinusoid
         bic = tsf.calc_bic(resid, 1 + 2 * n_sect + 3 * n_sin + 2 * n_harm)
-        print(f'Fit convergence: {result.success} - BIC: {bic:1.2f}. '
-              f'N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
+        logger.extra(f'Fit convergence: {result.success} - BIC: {bic:1.2f}. '
+                     f'N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
 
     return res_p_orb, res_const, res_slope, res_freqs, res_ampls, res_phases
 
 
 def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks,
-                                           verbose=False):
+                                           logger=None):
     """Perform the multi-sinusoid, non-linear least-squares fit with harmonic frequencies
     per frequency group
 
@@ -653,8 +653,8 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    verbose: bool
-        If set to True, this function will print some information
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
@@ -699,8 +699,8 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     res_freqs, res_ampls, res_phases = np.copy(f_n), np.copy(a_n), np.copy(ph_n)
 
     # fit the harmonics (first group)
-    if verbose:
-        print(f'Fit of harmonics', end='\r')
+    if logger is not None:
+        logger.extra(f'Fit of harmonics')
 
     # remove harmonic frequencies
     resid = flux - tsf.sum_sines(time, np.delete(res_freqs, harmonics), np.delete(res_ampls, harmonics),
@@ -721,17 +721,17 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     res_ampls[harmonics] = result.x[1 + 2 * n_sect:1 + 2 * n_sect + n_harm]
     res_phases[harmonics] = result.x[1 + 2 * n_sect + n_harm:1 + 2 * n_sect + 2 * n_harm]
 
-    if verbose:
+    if logger is not None:
         model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
         model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
         resid = flux - model_linear - model_sinusoid
         bic = tsf.calc_bic(resid, 1 + 2 * n_sect + 3 * n_sin + 2 * n_harm)
-        print(f'Fit of harmonics - BIC: {bic:1.2f}. N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
+        logger.extra(f'Fit of harmonics - BIC: {bic:1.2f}. N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
 
     # update the parameters for each group
     for k, group in enumerate(f_groups):
-        if verbose:
-            print(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)}', end='\r')
+        if logger is not None:
+            logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)}')
 
         # subtract all other sines from the data, they are fixed now
         resid = flux - tsf.sum_sines(time, np.delete(res_freqs, group), np.delete(res_ampls, group),
@@ -739,17 +739,17 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
 
         # fit only the frequencies in this group (constant and slope are also fitted still)
         output = fit_multi_sinusoid(time, resid, res_const, res_slope, res_freqs[group],
-                                    res_ampls[group], res_phases[group], i_chunks, verbose=False)
+                                    res_ampls[group], res_phases[group], i_chunks, logger=None)
         res_const, res_slope, out_freqs, out_ampls, out_phases = output
         res_freqs[group] = out_freqs
         res_ampls[group] = out_ampls
         res_phases[group] = out_phases
 
-        if verbose:
+        if logger is not None:
             model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
             model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
             resid_new = flux - (model_linear + model_sinusoid)
             bic = tsf.calc_bic(resid_new, 1 + 2 * n_sect + 3 * n_sin + 2 * n_harm)
-            print(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')
+            logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')
 
     return res_p_orb, res_const, res_slope, res_freqs, res_ampls, res_phases
