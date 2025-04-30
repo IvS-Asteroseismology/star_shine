@@ -120,6 +120,10 @@ class MainWindow(QMainWindow):
         file_menu = menu_bar.addMenu("File")
         self._setup_file_menu(file_menu)
 
+        # Add "View" menu and set it up
+        view_menu = menu_bar.addMenu("View")
+        self._setup_view_menu(view_menu)
+
         # Add "Info" menu
         info_menu = menu_bar.addMenu("Info")
         about_action = QAction("About", self)
@@ -168,6 +172,18 @@ class MainWindow(QMainWindow):
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
+
+    def _setup_view_menu(self, view_menu):
+        """Set up the view menu."""
+        # Add a horizontal separator
+        view_menu.addSeparator()
+
+        # Add "Load Data" button to "File" menu
+        self.show_residual_action = QAction("Show residual", self)
+        self.show_residual_action.setCheckable(True)
+        self.show_residual_action.setChecked(False)
+        self.show_residual_action.triggered.connect(self.update_plots)
+        view_menu.addAction(self.show_residual_action)
 
     def _create_left_column(self):
         """Create and return the left column widget.
@@ -321,18 +337,30 @@ class MainWindow(QMainWindow):
         self.upper_plot_area.clear_plot()
         self.lower_plot_area.clear_plot()
 
-        # update the plots with data
+        # get the data attributes
         time, flux = self.data_instance.time, self.data_instance.flux
         freqs, ampls = self.data_instance.periodogram()
-        self.upper_plot_area.scatter(time, flux)
-        self.lower_plot_area.plot(freqs, ampls)
+
+        # update the plots with data
+        if self.result_instance.target_id == '' or not self.show_residual_action.isChecked():
+            self.upper_plot_area.scatter(time, flux)
+            self.lower_plot_area.plot(freqs, ampls)
 
         # include result attributes if present
-        if self.result_instance.target_id != '':
+        if self.result_instance.target_id != '' and not self.show_residual_action.isChecked():
             model = self.pipeline_instance.model_linear()
             model += self.pipeline_instance.model_sinusoid()
             freqs, ampls = self.pipeline_instance.periodogram(residual=True)
             self.upper_plot_area.plot(time, model)
+            self.lower_plot_area.plot(freqs, ampls)
+
+        # only show residual if toggle checked
+        if self.result_instance.target_id != '' and self.show_residual_action.isChecked():
+            model = self.pipeline_instance.model_linear()
+            model += self.pipeline_instance.model_sinusoid()
+            residual = flux - model
+            freqs, ampls = self.pipeline_instance.periodogram(residual=True)
+            self.upper_plot_area.scatter(time, residual)
             self.lower_plot_area.plot(freqs, ampls)
 
         return None
