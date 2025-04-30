@@ -212,6 +212,61 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
 
 
 @nb.njit(cache=True)
+def nearest_local_max(x, y, x_approx):
+    """Find the index of the local maximum in `x` near `x_approx`.
+
+    The array `x` must be sorted in ascending order. This function identifies
+    local maxima in the `y` array and returns the index of the `x` value
+    corresponding to the nearest local maximum to `x_approx`.
+
+    Parameters
+    ----------
+    x: ndarray[Any, dtype[float]]
+        1D array of x-values, which must be sorted in ascending order.
+    y: ndarray[Any, dtype[float]]
+        1D array of y-values corresponding to the x-values.
+    x_approx: ndarray[Any, dtype[float]]
+        The x-value around which to find the nearest local maximum.
+
+    Returns
+    -------
+    ndarray[Any, dtype[int]]
+        Index of the `x` value corresponding to the nearest local maximum to `x_approx`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = np.array([1, 2, 3, 4, 5, 6])
+    >>> y = np.array([1, 3, 2, 5, 4, 6])
+    >>> x_approx = np.array([2.4, 4.6])
+    >>> nearest_local_max(x, y, x_approx)
+    array([1, 3])
+    """
+    # differenced y
+    dy = y[1:] - y[:-1]
+
+    # find the maxima in y
+    sign_dy = np.sign(dy)
+    sign_dy = np.concatenate((np.array([1]), sign_dy, np.array([-1])))  # add 1 and -1 on the ends for maximum finding
+    extrema = sign_dy[1:] - sign_dy[:-1]  # places where the array dy changes sign
+    maxima = np.arange(len(extrema))[extrema < 0]  # places where y has a maximum
+
+    # position of x_approx in x (index is point to the right of x_approx)
+    pos_x = np.searchsorted(x, x_approx)  # pos_x can be 0 and len(x) but this is ok for sign_dy
+
+    # do we need to move left or right to get to the maximum
+    left_right = sign_dy[pos_x]  # negative: left, positive: right
+
+    # get the maximum for each x_approx (index is maximum to the right of pos_x)
+    pos_max = np.searchsorted(maxima, pos_x)
+    # take the maximum on the left for negative slopes
+    pos_max[left_right == -1] -= 1
+    x_max = maxima[pos_max]
+
+    return x_max
+
+
+@nb.njit(cache=True)
 def correct_for_crowdsap(flux, crowdsap, i_chunks):
     """Correct the flux for flux contribution of a third source
     
