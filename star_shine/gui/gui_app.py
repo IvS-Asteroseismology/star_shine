@@ -16,7 +16,7 @@ from PySide6.QtCore import Signal
 
 from star_shine.core import utility as ut
 from star_shine.api import Data, Result, Pipeline
-from star_shine.gui import gui_log, gui_plot, gui_analysis
+from star_shine.gui import gui_log, gui_plot, gui_analysis, gui_config
 from star_shine.config import helpers as hlp
 
 
@@ -79,6 +79,8 @@ class MainWindow(QMainWindow):
         self.save_dir = config.save_dir
         self.save_subdir = ''
 
+        return None
+
     def _setup_central_widget(self):
         """Set up the central widget and its layout."""
         # Create a central widget
@@ -92,6 +94,8 @@ class MainWindow(QMainWindow):
         # create a splitter
         self.splitter = QSplitter()
         self.central_widget.layout().addWidget(self.splitter)
+
+        return None
 
     def _add_widgets_to_layout(self):
         """Add widgets to the main window layout."""
@@ -110,6 +114,8 @@ class MainWindow(QMainWindow):
         # Set initial sizes for each column
         h_size = self.width()
         self.splitter.setSizes([h_size*3//9, h_size*2//9, h_size*4//9])
+
+        return None
 
     def _setup_menu_bar(self):
         """Set up the menu bar with file and info menus."""
@@ -130,6 +136,8 @@ class MainWindow(QMainWindow):
         about_action.triggered.connect(self.show_about_dialog)
         info_menu.addAction(about_action)
 
+        return None
+
     def _setup_file_menu(self, file_menu):
         """Set up the file menu."""
         # Add "Load Data" button to "File" menu
@@ -137,8 +145,8 @@ class MainWindow(QMainWindow):
         load_data_action.triggered.connect(self.load_data_external)
         file_menu.addAction(load_data_action)
 
-        # Add "Save Location" button to "File" menu
-        set_save_location_action = QAction("Save Location", self)
+        # Add "Set Save Location" button to "File" menu
+        set_save_location_action = QAction("Set Save Location", self)
         set_save_location_action.triggered.connect(self.set_save_location)
         file_menu.addAction(set_save_location_action)
 
@@ -168,10 +176,20 @@ class MainWindow(QMainWindow):
         # Add a horizontal separator
         file_menu.addSeparator()
 
+        # Add "Settings" action to open the settings dialog
+        settings_action = QAction("Settings", self)
+        settings_action.triggered.connect(self.show_settings_dialog)
+        file_menu.addAction(settings_action)
+
+        # Add a horizontal separator
+        file_menu.addSeparator()
+
         # Add "Exit" button to "File" menu
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
+
+        return None
 
     def _setup_view_menu(self, view_menu):
         """Set up the view menu."""
@@ -184,6 +202,8 @@ class MainWindow(QMainWindow):
         self.show_residual_action.setChecked(False)
         self.show_residual_action.triggered.connect(self.update_plots)
         view_menu.addAction(self.show_residual_action)
+
+        return None
 
     def _create_left_column(self):
         """Create and return the left column widget.
@@ -502,6 +522,20 @@ class MainWindow(QMainWindow):
 
         return None
 
+    def show_settings_dialog(self):
+        """Show a 'settings' dialog with configuration for the application."""
+        dialog = gui_config.SettingsDialog(config=config, parent=self)
+
+        if dialog.exec():
+            # Update any dependent components with new configuration values
+            screen = QApplication.primaryScreen()
+            screen_size = screen.availableSize()
+            h_size = int(screen_size.width() * config.h_size_frac)  # some fraction of the screen width
+            v_size = int(screen_size.height() * config.v_size_frac)  # some fraction of the screen height
+            self.setGeometry(100, 50, h_size, v_size)
+
+        return None
+
     def show_about_dialog(self):
         """Show an 'about' dialog with information about the application."""
         version = hlp.get_version()
@@ -511,6 +545,8 @@ class MainWindow(QMainWindow):
                    "Repository: https://github.com/LucIJspeert/star_shine\n"
                    "Code written by: Luc IJspeert")
         QMessageBox.about(self, "About", message)
+
+        return None
 
 
 def launch_gui():

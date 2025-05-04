@@ -13,6 +13,7 @@ from star_shine.api.data import Data
 from star_shine.api.result import Result
 
 from star_shine.core import timeseries as tsf
+from star_shine.core import periodogram as pdg
 from star_shine.core import fitting as fit
 from star_shine.core import analysis as anf
 from star_shine.core import mcmc as mcf
@@ -124,9 +125,11 @@ class Pipeline:
             flux -= self.model_linear()
             flux -= self.model_sinusoid()
 
-        f, a = tsf.astropy_scargle(self.data.time, flux, f0=0, fn=0, df=0, norm='amplitude')
+        f, a = pdg.scargle(self.data.time, flux, f0=0, fn=0, df=0, norm='amplitude')
 
         return f, a
+
+    # def extract_approx(self, f, a, ph):
 
     def iterative_prewhitening(self):
         """Iterative prewhitening of the input flux time series in the form of sine waves and a piece-wise linear curve.

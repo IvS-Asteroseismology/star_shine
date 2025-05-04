@@ -373,7 +373,7 @@ class Data:
             Contains the frequencies numpy.ndarray[Any, dtype[float]]
             and the spectrum numpy.ndarray[Any, dtype[float]]
         """
-        f, a = tsf.astropy_scargle(self.time, self.flux, f0=0, fn=0, df=0, norm='amplitude')
+        f, a = tsf.scargle(self.time, self.flux, f0=0, fn=0, df=0, norm='amplitude')
 
         return f, a
 

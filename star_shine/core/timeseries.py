@@ -8,85 +8,13 @@ Code written by: Luc IJspeert
 """
 
 import numpy as np
-import scipy as sp
 import numba as nb
-import astropy.timeseries as apy
 
+from star_shine.core import periodogram as pdg
+from star_shine.core import goodness_of_fit as gof
 from star_shine.core import fitting as fit
 from star_shine.core import analysis as anf
 from star_shine.core import utility as ut
-from star_shine.config.helpers import get_config
-
-
-# load configuration
-config = get_config()
-
-
-@nb.njit(cache=True)
-def fold_time_series_phase(time, p_orb, zero=None):
-    """Fold the given time series over the orbital period to transform to phase space.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    p_orb: float
-        The orbital period with which the time series is folded
-    zero: float, None
-        Reference zero point in time when the phase equals zero
-
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[float]]
-        Phase array for all timestamps. Phases are between -0.5 and 0.5
-    """
-    mean_t = np.mean(time)
-    if zero is None:
-        zero = -mean_t
-    phases = ((time - mean_t - zero) / p_orb + 0.5) % 1 - 0.5
-
-    return phases
-
-
-@nb.njit(cache=True)
-def fold_time_series(time, p_orb, t_zero, t_ext_1=0, t_ext_2=0):
-    """Fold the given time series over the orbital period
-    
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    p_orb: float
-        The orbital period with which the time series is folded
-    t_zero: float, None
-        Reference zero point in time (with respect to the time series mean time)
-        when the phase equals zero
-    t_ext_1: float
-        Negative time interval to extend the folded time series to the left.
-    t_ext_2: float
-        Positive time interval to extend the folded time series to the right.
-    
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        t_extended: numpy.ndarray[Any, dtype[float]]
-            Folded time series array for all timestamps (and possible extensions).
-        ext_left: numpy.ndarray[bool]
-            Mask of points to extend time series to the left (for if t_ext_1!=0)
-        ext_right: numpy.ndarray[bool]
-            Mask of points to extend time series to the right (for if t_ext_2!=0)
-    """
-    # reference time is the mean of the time array
-    mean_t = np.mean(time)
-    t_folded = (time - mean_t - t_zero) % p_orb
-
-    # extend to both sides
-    ext_left = (t_folded > p_orb + t_ext_1)
-    ext_right = (t_folded < t_ext_2)
-    t_extended = np.concatenate((t_folded[ext_left] - p_orb, t_folded, t_folded[ext_right] + p_orb))
-
-    return t_extended, ext_left, ext_right
 
 
 @nb.njit(cache=True)
@@ -139,899 +67,6 @@ def mark_gaps(time, min_gap=1.):
     gaps = np.column_stack((t_left, t_right))
 
     return gaps
-
-
-@nb.njit(cache=True)
-def phase_dispersion(phases, flux, n_bins):
-    """Phase dispersion, as in PDM, without overlapping bins.
-    
-    Parameters
-    ----------
-    phases: numpy.ndarray[Any, dtype[float]]
-        The phase-folded timestamps of the time series, between -0.5 and 0.5.
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    n_bins: int
-        The number of bins over the orbital phase
-    
-    Returns
-    -------
-    float
-        Phase dispersion, or summed variance over the bins divided by
-        the variance of the flux
-    
-    Notes
-    -----
-    Intentionally does not make use of scipy to enable JIT-ting, which makes this considerably faster.
-    """
-    def var_no_avg(a):
-        return np.sum(np.abs(a - np.mean(a))**2)  # if mean instead of sum, this is variance
-    
-    edges = np.linspace(-0.5, 0.5, n_bins + 1)
-    # binned, edges, indices = sp.stats.binned_statistic(phases, flux, statistic=statistic, bins=bins)
-    binned_var = np.zeros(n_bins)
-    for i, (b1, b2) in enumerate(zip(edges[:-1], edges[1:])):
-        bin_mask = (phases >= b1) & (phases < b2)
-        if np.any(bin_mask):
-            binned_var[i] = var_no_avg(flux[bin_mask])
-        else:
-            binned_var[i] = 0
-
-    total_var = np.sum(binned_var) / len(flux)
-    overall_var = np.var(flux)
-
-    return total_var / overall_var
-
-
-@nb.njit(cache=True)
-def phase_dispersion_minimisation(time, flux, f_n, local=False):
-    """Determine the phase dispersion over a set of periods to find the minimum
-    
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    local: bool
-        If set True, only searches the given frequencies,
-        else also fractions of the frequencies are searched
-    
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        periods: numpy.ndarray[Any, dtype[float]]
-            Periods at which the phase dispersion is calculated
-        pd_all: numpy.ndarray[Any, dtype[float]]
-            Phase dispersion at the given periods
-    """
-    # number of bins for dispersion calculation
-    n_points = len(time)
-    if n_points / 10 > 1000:
-        n_bins = 1000
-    else:
-        n_bins = n_points // 10  # at least 10 data points per bin on average
-
-    # determine where to look based on the frequencies, including fractions of the frequencies
-    if local:
-        periods = 1 / f_n
-    else:
-        periods = np.zeros(7 * len(f_n))
-        for i, f in enumerate(f_n):
-            periods[7*i:7*i+7] = np.arange(1, 8) / f
-
-    # stay below the maximum
-    periods = periods[periods < np.ptp(time)]
-
-    # and above the minimum
-    periods = periods[periods > (2 * np.min(time[1:] - time[:-1]))]
-
-    # compute the dispersion measures
-    pd_all = np.zeros(len(periods))
-    for i, p in enumerate(periods):
-        fold = fold_time_series_phase(time, p, 0)
-        pd_all[i] = phase_dispersion(fold, flux, n_bins)
-
-    return periods, pd_all
-
-
-def scargle_noise_spectrum(time, resid, window_width=1.0):
-    """Calculate the Lomb-Scargle noise spectrum by a convolution with a flat window of a certain width.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    resid: numpy.ndarray[Any, dtype[float]]
-        Residual measurement values of the time series
-    window_width: float
-        The width of the window used to compute the noise spectrum,
-        in inverse unit of the time array (i.e. 1/d if time is in d).
-
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[float]]
-        The noise spectrum calculated as the mean in a frequency window
-        in the residual periodogram
-    
-    Notes
-    -----
-    The values calculated here capture the amount of noise on fitting a
-    sinusoid of a certain frequency to all data points.
-    Not to be confused with the noise on the individual data points of the
-    time series.
-    """
-    # calculate the periodogram
-    freqs, ampls = astropy_scargle(time, resid)  # use defaults to get full amplitude spectrum
-
-    # determine the number of points to extend the spectrum with for convolution
-    n_points = int(np.ceil(window_width / np.abs(freqs[1] - freqs[0])))  # .astype(int)
-    window = np.full(n_points, 1 / n_points)
-
-    # extend the array with mirrors for convolution
-    ext_ampls = np.concatenate((ampls[(n_points - 1)::-1], ampls, ampls[:-(n_points + 1):-1]))
-    ext_noise = np.convolve(ext_ampls, window, 'same')
-
-    # cut back to original interval
-    noise = ext_noise[n_points:-n_points]
-
-    # extra correction to account for convolve mode='full' instead of 'same' (needed for JIT-ting)
-    # noise = noise[n_points//2 - 1:-n_points//2]
-
-    return noise
-
-
-def scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0):
-    """Calculate the Lomb-Scargle noise spectrum by a convolution with a flat window of a certain width,
-    given an amplitude spectrum.
-
-    Parameters
-    ----------
-    freqs: numpy.ndarray[Any, dtype[float]]
-        Frequencies at which the periodogram was calculated
-    ampls: numpy.ndarray[Any, dtype[float]]
-        The periodogram spectrum in the chosen units
-    window_width: float
-        The width of the window used to compute the noise spectrum,
-        in inverse unit of the time array (i.e. 1/d if time is in d).
-
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[float]]
-        The noise spectrum calculated as the mean in a frequency window
-        in the residual periodogram
-
-    Notes
-    -----
-    The values calculated here capture the amount of noise on fitting a
-    sinusoid of a certain frequency to all data points.
-    Not to be confused with the noise on the individual data points of the
-    time series.
-    """
-    # determine the number of points to extend the spectrum with for convolution
-    n_points = int(np.ceil(window_width / np.abs(freqs[1] - freqs[0])))  # .astype(int)
-    window = np.full(n_points, 1 / n_points)
-
-    # extend the array with mirrors for convolution
-    ext_ampls = np.concatenate((ampls[(n_points - 1)::-1], ampls, ampls[:-(n_points + 1):-1]))
-    ext_noise = np.convolve(ext_ampls, window, 'same')
-
-    # cut back to original interval
-    noise = ext_noise[n_points:-n_points]
-
-    # extra correction to account for convolve mode='full' instead of 'same' (needed for JIT-ting)
-    # noise = noise[n_points//2 - 1:-n_points//2]
-
-    return noise
-
-
-def scargle_noise_at_freq(fs, time, resid, window_width=1.0):
-    """Calculate the Lomb-Scargle noise at a given set of frequencies
-
-    Parameters
-    ----------
-    fs: numpy.ndarray[Any, dtype[float]]
-        The frequencies at which to calculate the noise
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    resid: numpy.ndarray[Any, dtype[float]]
-        Residual measurement values of the time series
-    window_width: float
-        The width of the window used to compute the noise spectrum,
-        in inverse unit of the time array (i.e. 1/d if time is in d).
-
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[float]]
-        The noise level calculated as the mean in a window around the
-        frequency in the residual periodogram
-    
-    Notes
-    -----
-    The values calculated here capture the amount of noise on fitting a
-    sinusoid of a certain frequency to all data points.
-    Not to be confused with the noise on the individual data points of the
-    time series.
-    """
-    freqs, ampls = astropy_scargle(time, resid)  # use defaults to get full amplitude spectrum
-    margin = window_width / 2
-
-    # mask the frequency ranges and compute the noise
-    f_masks = [(freqs > f - margin) & (freqs <= f + margin) for f in fs]
-    noise = np.array([np.mean(ampls[mask]) for mask in f_masks])
-
-    return noise
-
-
-def spectral_window(time, freqs):
-    """Computes the modulus square of the spectral window W_N(f) of a set of
-    time points at the given frequencies.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    freqs: numpy.ndarray[Any, dtype[float]]
-        Frequency points to calculate the window. Inverse unit of `time`
-        
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[float]]
-        The spectral window at the given frequencies, |W(freqs)|^2
-    
-    Notes
-    -----
-    The spectral window is the Fourier transform of the window function
-    w_N(t) = 1/N sum(Dirac(t - t_i))
-    The time points do not need to be equidistant.
-    The normalisation is such that 1.0 is returned at frequency 0.
-    """
-    n_time = len(time)
-    cos_term = np.sum(np.cos(2.0 * np.pi * freqs * time.reshape(n_time, 1)), axis=0)
-    sin_term = np.sum(np.sin(2.0 * np.pi * freqs * time.reshape(n_time, 1)), axis=0)
-    win_kernel = cos_term**2 + sin_term**2
-
-    # Normalise such that win_kernel(nu = 0.0) = 1.0
-    spec_win = win_kernel / n_time**2
-
-    return spec_win
-
-
-@nb.njit(cache=True)
-def scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
-    """Scargle periodogram with no weights.
-    
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    f0: float
-        Starting frequency of the periodogram.
-        If left zero, default is f0 = 1/(100*T)
-    fn: float
-        Last frequency of the periodogram.
-        If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
-    df: float
-        Frequency sampling space of the periodogram
-        If left zero, default is df = 1/(10*T) = oversampling factor of ten (recommended)
-    norm: str
-        Normalisation of the periodogram. Choose from:
-        'amplitude', 'density' or 'distribution'
-    
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        f1: numpy.ndarray[Any, dtype[float]]
-            Frequencies at which the periodogram was calculated
-        s1: numpy.ndarray[Any, dtype[float]]
-            The periodogram spectrum in the chosen units
-    
-    Notes
-    -----
-    Translated from Fortran (and just as fast when JIT-ted with Numba!)
-        Computation of Scargles periodogram without explicit tau
-        calculation, with iteration (Method Cuypers)
-    
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-    
-    Useful extra information: VanderPlas 2018,
-    https://ui.adsabs.harvard.edu/abs/2018ApJS..236...16V/abstract
-    """
-    # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
-    mean_t = np.mean(time)
-    mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
-
-    # setup
-    n = len(flux_ms)
-    t_tot = np.ptp(time_ms)
-    f0 = max(f0, 0.01 / t_tot)  # don't go lower than T/100
-    if df == 0:
-        df = 0.1 / t_tot  # default frequency sampling is about 1/10 of frequency resolution
-    if fn == 0:
-        fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
-    nf = int((fn - f0) / df + 0.001) + 1
-
-    # pre-assign some memory
-    ss = np.zeros(nf)
-    sc = np.zeros(nf)
-    ss2 = np.zeros(nf)
-    sc2 = np.zeros(nf)
-
-    # here is the actual calculation:
-    two_pi = 2 * np.pi
-    for i in range(n):
-        t_f0 = (time_ms[i] * two_pi * f0) % two_pi
-        sin_f0 = np.sin(t_f0)
-        cos_f0 = np.cos(t_f0)
-        mc_1_a = 2 * sin_f0 * cos_f0
-        mc_1_b = cos_f0 * cos_f0 - sin_f0 * sin_f0
-
-        t_df = (time_ms[i] * two_pi * df) % two_pi
-        sin_df = np.sin(t_df)
-        cos_df = np.cos(t_df)
-        mc_2_a = 2 * sin_df * cos_df
-        mc_2_b = cos_df * cos_df - sin_df * sin_df
-        
-        sin_f0_s = sin_f0 * flux_ms[i]
-        cos_f0_s = cos_f0 * flux_ms[i]
-        for j in range(nf):
-            ss[j] = ss[j] + sin_f0_s
-            sc[j] = sc[j] + cos_f0_s
-            temp_cos_f0_s = cos_f0_s
-            cos_f0_s = temp_cos_f0_s * cos_df - sin_f0_s * sin_df
-            sin_f0_s = sin_f0_s * cos_df + temp_cos_f0_s * sin_df
-            ss2[j] = ss2[j] + mc_1_a
-            sc2[j] = sc2[j] + mc_1_b
-            temp_mc_1_b = mc_1_b
-            mc_1_b = temp_mc_1_b * mc_2_b - mc_1_a * mc_2_a
-            mc_1_a = mc_1_a * mc_2_b + temp_mc_1_b * mc_2_a
-    
-    f1 = f0 + np.arange(nf) * df
-    s1 = ((sc**2 * (n - sc2) + ss**2 * (n + sc2) - 2 * ss * sc * ss2) / (n**2 - sc2**2 - ss2**2))
-
-    # conversion to amplitude spectrum (or power density or statistical distribution)
-    if not np.isfinite(s1[0]):
-        s1[0] = 0  # sometimes there can be a nan value
-
-    # convert to the wanted normalisation
-    if norm == 'distribution':  # statistical distribution
-        s1 /= np.var(flux_ms)
-    elif norm == 'amplitude':  # amplitude spectrum
-        s1 = np.sqrt(4 / n) * np.sqrt(s1)
-    elif norm == 'density':  # power density
-        s1 = (4 / n) * s1 * t_tot
-    else:  # unnormalised (PSD?)
-        s1 = s1
-
-    return f1, s1
-
-
-@nb.njit(cache=True)
-def scargle_simple_psd(time, flux):
-    """Scargle periodogram with no weights and PSD normalisation.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        f1: numpy.ndarray[Any, dtype[float]]
-            Frequencies at which the periodogram was calculated
-        s1: numpy.ndarray[Any, dtype[float]]
-            The periodogram spectrum in the chosen units
-
-    Notes
-    -----
-    Translated from Fortran (and just as fast when JIT-ted with Numba!)
-        Computation of Scargles periodogram without explicit tau
-        calculation, with iteration (Method Cuypers)
-
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-
-    Useful extra information: VanderPlas 2018,
-    https://ui.adsabs.harvard.edu/abs/2018ApJS..236...16V/abstract
-    """
-    # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
-    mean_t = np.mean(time)
-    mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
-
-    # setup
-    n = len(flux_ms)
-    t_tot = np.ptp(time_ms)
-    f0 = 0
-    df = 0.1 / t_tot
-    fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
-    nf = int((fn - f0) / df + 0.001) + 1
-
-    # pre-assign some memory
-    ss = np.zeros(nf)
-    sc = np.zeros(nf)
-    ss2 = np.zeros(nf)
-    sc2 = np.zeros(nf)
-
-    # here is the actual calculation:
-    two_pi = 2 * np.pi
-    for i in range(n):
-        t_f0 = (time_ms[i] * two_pi * f0) % two_pi
-        sin_f0 = np.sin(t_f0)
-        cos_f0 = np.cos(t_f0)
-        mc_1_a = 2 * sin_f0 * cos_f0
-        mc_1_b = cos_f0 * cos_f0 - sin_f0 * sin_f0
-
-        t_df = (time_ms[i] * two_pi * df) % two_pi
-        sin_df = np.sin(t_df)
-        cos_df = np.cos(t_df)
-        mc_2_a = 2 * sin_df * cos_df
-        mc_2_b = cos_df * cos_df - sin_df * sin_df
-
-        sin_f0_s = sin_f0 * flux_ms[i]
-        cos_f0_s = cos_f0 * flux_ms[i]
-        for j in range(nf):
-            ss[j] = ss[j] + sin_f0_s
-            sc[j] = sc[j] + cos_f0_s
-            temp_cos_f0_s = cos_f0_s
-            cos_f0_s = temp_cos_f0_s * cos_df - sin_f0_s * sin_df
-            sin_f0_s = sin_f0_s * cos_df + temp_cos_f0_s * sin_df
-            ss2[j] = ss2[j] + mc_1_a
-            sc2[j] = sc2[j] + mc_1_b
-            temp_mc_1_b = mc_1_b
-            mc_1_b = temp_mc_1_b * mc_2_b - mc_1_a * mc_2_a
-            mc_1_a = mc_1_a * mc_2_b + temp_mc_1_b * mc_2_a
-
-    f1 = f0 + np.arange(nf) * df
-    s1 = ((sc**2 * (n - sc2) + ss**2 * (n + sc2) - 2 * ss * sc * ss2) / (n**2 - sc2**2 - ss2**2))
-
-    # conversion to amplitude spectrum (or power density or statistical distribution)
-    if not np.isfinite(s1[0]):
-        s1[0] = 0  # sometimes there can be a nan value
-
-    return f1, s1
-
-
-@nb.njit(cache=True)
-def scargle_ampl_single(time, flux, f):
-    """Amplitude at one frequency from the Scargle periodogram
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    f: float
-        A single frequency
-    
-    Returns
-    -------
-    float
-        Amplitude at the given frequency
-    
-    See Also
-    --------
-    scargle_ampl, scargle_phase, scargle_phase_single
-    
-    Notes
-    -----
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-    """
-    # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
-    mean_t = np.mean(time)
-    mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
-
-    # multiples of pi
-    two_pi = 2 * np.pi
-    four_pi = 4 * np.pi
-
-    # define tau
-    cos_tau = 0
-    sin_tau = 0
-    for j in range(len(time_ms)):
-        cos_tau += np.cos(four_pi * f * time_ms[j])
-        sin_tau += np.sin(four_pi * f * time_ms[j])
-    tau = 1 / (four_pi * f) * np.arctan2(sin_tau, cos_tau)  # tau(f)
-
-    # define the general cos and sin functions
-    s_cos = 0
-    cos_2 = 0
-    s_sin = 0
-    sin_2 = 0
-    for j in range(len(time_ms)):
-        cos = np.cos(two_pi * f * (time_ms[j] - tau))
-        sin = np.sin(two_pi * f * (time_ms[j] - tau))
-        s_cos += flux_ms[j] * cos
-        cos_2 += cos**2
-        s_sin += flux_ms[j] * sin
-        sin_2 += sin**2
-
-    # final calculations
-    a_cos_2 = s_cos**2 / cos_2
-    b_sin_2 = s_sin**2 / sin_2
-
-    # amplitude
-    ampl = (a_cos_2 + b_sin_2) / 2
-    ampl = np.sqrt(4 / len(time_ms)) * np.sqrt(ampl)  # conversion to amplitude
-
-    return ampl
-
-
-@nb.njit(cache=True)
-def scargle_ampl(time, flux, fs):
-    """Amplitude at one or a set of frequencies from the Scargle periodogram
-    
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    fs: numpy.ndarray[Any, dtype[float]]
-        A set of frequencies
-    
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[float]]
-        Amplitude at the given frequencies
-    
-    See Also
-    --------
-    scargle_phase
-    
-    Notes
-    -----
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-    """
-    # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
-    mean_t = np.mean(time)
-    mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
-
-    # multiples of pi
-    two_pi = 2 * np.pi
-    four_pi = 4 * np.pi
-    fs = np.atleast_1d(fs)
-    ampl = np.zeros(len(fs))
-    for i in range(len(fs)):
-        # define tau
-        cos_tau = 0
-        sin_tau = 0
-        for j in range(len(time_ms)):
-            cos_tau += np.cos(four_pi * fs[i] * time_ms[j])
-            sin_tau += np.sin(four_pi * fs[i] * time_ms[j])
-        tau = 1 / (four_pi * fs[i]) * np.arctan2(sin_tau, cos_tau)  # tau(f)
-
-        # define the general cos and sin functions
-        s_cos = 0
-        cos_2 = 0
-        s_sin = 0
-        sin_2 = 0
-        for j in range(len(time_ms)):
-            cos = np.cos(two_pi * fs[i] * (time_ms[j] - tau))
-            sin = np.sin(two_pi * fs[i] * (time_ms[j] - tau))
-            s_cos += flux_ms[j] * cos
-            cos_2 += cos**2
-            s_sin += flux_ms[j] * sin
-            sin_2 += sin**2
-
-        # final calculations
-        a_cos_2 = s_cos**2 / cos_2
-        b_sin_2 = s_sin**2 / sin_2
-
-        # amplitude
-        ampl[i] = (a_cos_2 + b_sin_2) / 2
-        ampl[i] = np.sqrt(4 / len(time_ms)) * np.sqrt(ampl[i])  # conversion to amplitude
-
-    return ampl
-
-
-@nb.njit(cache=True)
-def scargle_phase_single(time, flux, f):
-    """Phase at one frequency from the Scargle periodogram
-    
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    f: float
-        A single frequency
-    
-    Returns
-    -------
-    float
-        Phase at the given frequency
-    
-    See Also
-    --------
-    scargle_phase, scargle_ampl_single
-    
-    Notes
-    -----
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-    """
-    # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
-    mean_t = np.mean(time)
-    mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
-
-    # multiples of pi
-    two_pi = 2 * np.pi
-    four_pi = 4 * np.pi
-
-    # define tau
-    cos_tau = 0
-    sin_tau = 0
-    for j in range(len(time_ms)):
-        cos_tau += np.cos(four_pi * f * time_ms[j])
-        sin_tau += np.sin(four_pi * f * time_ms[j])
-    tau = 1 / (four_pi * f) * np.arctan2(sin_tau, cos_tau)  # tau(f)
-
-    # define the general cos and sin functions
-    s_cos = 0
-    cos_2 = 0
-    s_sin = 0
-    sin_2 = 0
-    for j in range(len(time_ms)):
-        cos = np.cos(two_pi * f * (time_ms[j] - tau))
-        sin = np.sin(two_pi * f * (time_ms[j] - tau))
-        s_cos += flux_ms[j] * cos
-        cos_2 += cos**2
-        s_sin += flux_ms[j] * sin
-        sin_2 += sin**2
-
-    # final calculations
-    a_cos = s_cos / cos_2**(1/2)
-    b_sin = s_sin / sin_2**(1/2)
-
-    # sine phase (radians)
-    phi = np.pi/2 - np.arctan2(b_sin, a_cos) - two_pi * f * tau
-
-    return phi
-
-
-@nb.njit(cache=True)
-def scargle_phase(time, flux, fs):
-    """Phase at one or a set of frequencies from the Scargle periodogram
-    
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    fs: numpy.ndarray[Any, dtype[float]]
-        A set of frequencies
-    
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[float]]
-        Phase at the given frequencies
-    
-    Notes
-    -----
-    Uses a slightly modified version of the function in Hocke 1997
-    ("Phase estimation with the Lomb-Scargle periodogram method")
-    https://www.researchgate.net/publication/283359043_Phase_estimation_with_the_Lomb-Scargle_periodogram_method
-    (only difference is an extra pi/2 for changing cos phase to sin phase)
-
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-    """
-    # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
-    mean_t = np.mean(time)
-    mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
-
-    # multiples of pi
-    two_pi = 2 * np.pi
-    four_pi = 4 * np.pi
-    fs = np.atleast_1d(fs)
-    phi = np.zeros(len(fs))
-    for i in range(len(fs)):
-        # define tau
-        cos_tau = 0
-        sin_tau = 0
-        for j in range(len(time_ms)):
-            cos_tau += np.cos(four_pi * fs[i] * time_ms[j])
-            sin_tau += np.sin(four_pi * fs[i] * time_ms[j])
-        tau = 1 / (four_pi * fs[i]) * np.arctan2(sin_tau, cos_tau)  # tau(f)
-
-        # define the general cos and sin functions
-        s_cos = 0
-        cos_2 = 0
-        s_sin = 0
-        sin_2 = 0
-        for j in range(len(time_ms)):
-            cos = np.cos(two_pi * fs[i] * (time_ms[j] - tau))
-            sin = np.sin(two_pi * fs[i] * (time_ms[j] - tau))
-            s_cos += flux_ms[j] * cos
-            cos_2 += cos**2
-            s_sin += flux_ms[j] * sin
-            sin_2 += sin**2
-
-        # final calculations
-        a_cos = s_cos / cos_2**(1/2)
-        b_sin = s_sin / sin_2**(1/2)
-
-        # sine phase (radians)
-        phi[i] = np.pi / 2 - np.arctan2(b_sin, a_cos) - two_pi * fs[i] * tau
-
-    return phi
-
-
-def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
-    """Wrapper for the astropy Scargle periodogram.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    f0: float
-        Starting frequency of the periodogram.
-        If left zero, default is f0 = 1/(100*T)
-    fn: float
-        Last frequency of the periodogram.
-        If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
-    df: float
-        Frequency sampling space of the periodogram
-        If left zero, default is df = 1/(10*T) = oversampling factor of ten (recommended)
-    norm: str
-        Normalisation of the periodogram. Choose from:
-        'amplitude', 'density' or 'distribution'
-
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        f1: numpy.ndarray[Any, dtype[float]]
-            Frequencies at which the periodogram was calculated
-        s1: numpy.ndarray[Any, dtype[float]]
-            The periodogram spectrum in the chosen units
-
-    Notes
-    -----
-    Approximation using fft, much faster (in mode='fast') than the other scargle.
-    Beware of computing narrower frequency windows, as there is inconsistency
-    when doing this.
-    
-    Useful extra information: VanderPlas 2018,
-    https://ui.adsabs.harvard.edu/abs/2018ApJS..236...16V/abstract
-    
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-    
-    Note that the astropy implementation uses functions under the hood
-    that use the blas package for multithreading by default.
-    """
-    # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
-    mean_t = np.mean(time)
-    mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
-
-    # setup
-    n = len(flux)
-    t_tot = np.ptp(time_ms)
-    f0 = max(f0, 0.01 / t_tot)  # don't go lower than T/100
-    if df == 0:
-        df = 0.1 / t_tot  # default frequency sampling is about 1/10 of frequency resolution
-    if fn == 0:
-        fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
-    nf = int((fn - f0) / df + 0.001) + 1
-    f1 = f0 + np.arange(nf) * df
-
-    # use the astropy fast algorithm and normalise afterward
-    ls = apy.LombScargle(time_ms, flux_ms, fit_mean=False, center_data=False)
-    s1 = ls.power(f1, normalization='psd', method='fast', assume_regular_frequency=True)
-
-    # replace negative by zero (just in case - have seen it happen)
-    s1[s1 < 0] = 0
-
-    # convert to the wanted normalisation
-    if norm == 'distribution':  # statistical distribution
-        s1 /= np.var(flux_ms)
-    elif norm == 'amplitude':  # amplitude spectrum
-        s1 = np.sqrt(4 / n) * np.sqrt(s1)
-    elif norm == 'density':  # power density
-        s1 = (4 / n) * s1 * t_tot
-    else:  # unnormalised (PSD?)
-        s1 = s1
-
-    return f1, s1
-
-
-def astropy_scargle_simple_psd(time, flux):
-    """Wrapper for the astropy Scargle periodogram and PSD normalisation.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        f1: numpy.ndarray[Any, dtype[float]]
-            Frequencies at which the periodogram was calculated
-        s1: numpy.ndarray[Any, dtype[float]]
-            The periodogram spectrum in the chosen units
-
-    Notes
-    -----
-    Approximation using fft, much faster than the other scargle in mode='fast'.
-    Beware of computing narrower frequency windows, as there is inconsistency
-    when doing this.
-
-    Useful extra information: VanderPlas 2018,
-    https://ui.adsabs.harvard.edu/abs/2018ApJS..236...16V/abstract
-
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-
-    Note that the astropy implementation uses functions under the hood
-    that use the blas package for multithreading by default.
-    """
-    # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
-    mean_t = np.mean(time)
-    mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
-
-    # setup
-    t_tot = np.ptp(time_ms)
-    f0 = 0
-    df = 0.1 / t_tot
-    fn = 1 / (2 * np.min(time_ms[1:] - time_ms[:-1]))
-    nf = int((fn - f0) / df + 0.001) + 1
-    f1 = np.arange(nf) * df
-
-    # use the astropy fast algorithm and normalise afterward
-    ls = apy.LombScargle(time_ms, flux_ms, fit_mean=False, center_data=False)
-    s1 = ls.power(f1, normalization='psd', method='fast', assume_regular_frequency=True)
-
-    # replace negative or nan by zero
-    s1[0] = 0
-
-    return f1, s1
 
 
 def refine_orbital_period(p_orb, time, f_n):
@@ -1109,8 +144,8 @@ def find_orbital_period(time, flux, f_n):
     f_nyquist = 1 / (2 * np.min(np.diff(time)))  # nyquist frequency
 
     # first to get a global minimum do combined PDM and LS, at select frequencies
-    periods, phase_disp = phase_dispersion_minimisation(time, flux, f_n, local=False)
-    ampls = scargle_ampl(time, flux, 1 / periods)
+    periods, phase_disp = pdg.phase_dispersion_minimisation(time, flux, f_n, local=False)
+    ampls, _ = pdg.scargle_ampl_phase(time, flux, 1 / periods)
     psi_measure = ampls / phase_disp
 
     # also check the number of harmonics at each period and include into best f
@@ -1204,282 +239,6 @@ def find_orbital_period(time, flux, f_n):
         p_orb = 1 / f_refine_2[mask_peak][i_min_dist]
 
     return p_orb
-
-
-@nb.njit(cache=True)
-def calc_iid_normal_likelihood(residuals):
-    """Natural logarithm of the independent and identically distributed likelihood function.
-
-    Under the assumption that the errors are independent and identically distributed
-    according to a normal distribution, the likelihood becomes:
-    ln(L(θ)) = -n/2 (ln(2 pi σ^2) + 1)
-    and σ^2 is estimated as σ^2 = sum((residuals)^2)/n
-
-    Parameters
-    ----------
-    residuals: numpy.ndarray[Any, dtype[float]]
-        Residual is flux - model
-    
-    Returns
-    -------
-    float
-        Natural logarithm of the likelihood
-    """
-    n = len(residuals)
-    # like = -n / 2 * (np.log(2 * np.pi * np.sum(residuals**2) / n) + 1)
-    # originally un-JIT-ted function, but for loop is quicker with numba
-    sum_r_2 = 0
-    for i, r in enumerate(residuals):
-        sum_r_2 += r**2
-    like = -n / 2 * (np.log(2 * np.pi * sum_r_2 / n) + 1)
-
-    return like
-
-
-def calc_approx_did_likelihood(time, residuals):
-    """Approximation for the likelihood using periodograms.
-
-    This function approximates the dependent likelihood for correlated data.
-    ln(L(θ)) =  -n ln(2 pi) - sum(ln(PSD(residuals)))
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    residuals: numpy.ndarray[Any, dtype[float]]
-        Residual is flux - model
-
-    Returns
-    -------
-    float
-        Log-likelihood approximation
-    """
-    n = len(time)
-
-    # Compute the Lomb-Scargle periodogram of the data
-    freqs, psd = astropy_scargle_simple_psd(time, residuals)  # automatically mean subtracted
-
-    # Compute the Whittle likelihood
-    like = -n * np.log(2 * np.pi) - np.sum(np.log(psd))
-
-    return like
-
-
-def calc_whittle_likelihood(time, flux, model):
-    """Whittle likelihood approximation using periodograms.
-
-    This function approximates the dependent likelihood for correlated data.
-    It assumes the data is identically distributed according to a normal
-    distribution.
-    ln(L(θ)) =  -n ln(2 pi) - sum(ln(PSD_model) + (PSD_data / PSD_model))
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    model: numpy.ndarray[Any, dtype[float]]
-        Model values of the time series
-
-    Returns
-    -------
-    float
-        Log-likelihood approximation
-    """
-    n = len(time)
-
-    # Compute the Lomb-Scargle periodogram of the data
-    freqs, psd_d = astropy_scargle_simple_psd(time, flux)  # automatically mean subtracted
-
-    # Compute the Lomb-Scargle periodogram of the model
-    freqs_m, psd_m = astropy_scargle_simple_psd(time, model)  # automatically mean subtracted
-
-    # Avoid division by zero in likelihood calculation
-    psd_m = np.maximum(psd_m, 1e-15)  # Ensure numerical stability
-
-    # Compute the Whittle likelihood
-    like = -n * np.log(2 * np.pi) - np.sum(np.log(psd_m) + (psd_d / psd_m))
-
-    return like
-
-
-def calc_did_normal_likelihood(time, residuals):
-    """Natural logarithm of the dependent and identically distributed likelihood function.
-
-    Correlation in the data is taken into account. The data is still assumed to be
-    identically distributed according to a normal distribution.
-
-    ln(L(θ)) = -n ln(2 pi) / 2 - ln(det(∑)) / 2 - residuals @ ∑^-1 @ residuals^T / 2
-    ∑ is the covariance matrix
-
-    The covariance matrix is calculated using the power spectral density, following
-    the Wiener–Khinchin theorem.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    residuals: numpy.ndarray[Any, dtype[float]]
-        Residual is flux - model
-
-    Returns
-    -------
-    float
-        Natural logarithm of the likelihood
-    """
-    n = len(residuals)
-
-    # calculate the PSD, fast
-    freqs, psd = astropy_scargle_simple_psd(time, residuals)
-
-    # calculate the autocorrelation function
-    psd_ext = np.append(psd, psd[-1:0:-1])  # double the PSD domain for ifft
-    acf = np.fft.ifft(psd_ext)
-
-    # unbias the variance measure and put the array the right way around
-    acf = np.real(np.append(acf[len(freqs):], acf[:len(freqs)])) * n / (n - 1)
-
-    # calculate the acf lags
-    lags = np.fft.fftfreq(len(psd_ext), d=(freqs[1] - freqs[0]))
-    lags = np.append(lags[len(psd):], lags[:len(psd)])  # put them the right way around
-
-    # make the lags matrix, but re-use the same matrix
-    matrix = time - time[:, np.newaxis]  # lags_matrix, same as np.outer
-
-    # interpolate - I need the lags at specific times
-    matrix = np.interp(matrix, lags, acf)  # cov_matrix, already mean-subtracted in PSD
-
-    # Compute the Cholesky decomposition of cov_matrix (by definition positive definite)
-    matrix = sp.linalg.cho_factor(matrix, lower=False, overwrite_a=True, check_finite=False)  # cho_decomp
-
-    # Solve M @ x = v^T using the Cholesky factorization (x = M^-1 v^T)
-    x = sp.linalg.cho_solve(matrix, residuals[:, np.newaxis], check_finite=False)
-
-    # log of the exponent - analogous to the matrix multiplication
-    ln_exp = (residuals @ x)[0]  # v @ x = v @ M^-1 @ v^T
-
-    # log of the determinant (avoids too small eigenvalues that would result in 0)
-    ln_det = 2 * np.sum(np.log(np.diag(matrix[0])))
-
-    # likelihood for multivariate normal distribution
-    like = -n * np.log(2 * np.pi) / 2 - ln_det / 2 - ln_exp / 2
-
-    return like
-
-
-def calc_ddd_normal_likelihood(time, residuals, flux_err):
-    """Natural logarithm of the dependent and differently distributed likelihood function.
-
-    Only assumes that the data is distributed according to a normal distribution.
-    Correlation in the data is taken into account. The measurement errors take
-    precedence over the measured variance in the data. This means the distributions
-    need not be identical, either.
-
-    ln(L(θ)) = -n ln(2 pi) / 2 - ln(det(∑)) / 2 - residuals @ ∑^-1 @ residuals^T / 2
-    ∑ is the covariance matrix
-
-    The covariance matrix is calculated using the power spectral density, following
-    the Wiener–Khinchin theorem.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    residuals: numpy.ndarray[Any, dtype[float]]
-        Residual is flux - model
-    flux_err: numpy.ndarray[Any, dtype[float]]
-        Errors in the measurement values
-
-    Returns
-    -------
-    float
-        Natural logarithm of the likelihood
-    """
-    n = len(residuals)
-
-    # calculate the PSD, fast
-    freqs, psd = astropy_scargle_simple_psd(time, residuals)
-
-    # calculate the autocorrelation function
-    psd_ext = np.append(psd, psd[-1:0:-1])  # double the PSD domain for ifft
-    acf = np.fft.ifft(psd_ext)
-
-    # unbias the variance measure and put the array the right way around
-    acf = np.real(np.append(acf[len(freqs):], acf[:len(freqs)])) * n / (n - 1)
-
-    # calculate the acf lags
-    lags = np.fft.fftfreq(len(psd_ext), d=(freqs[1] - freqs[0]))
-    lags = np.append(lags[len(psd):], lags[:len(psd)])  # put them the right way around
-
-    # make the lags matrix, but re-use the same matrix
-    matrix = time - time[:, np.newaxis]  # lags_matrix, same as np.outer
-
-    # interpolate - I need the lags at specific times
-    matrix = np.interp(matrix, lags, acf)  # cov_matrix, already mean-subtracted in PSD
-
-    # substitute individual data errors if given
-    var = matrix[0, 0]  # diag elements are the same by construction
-    corr_matrix = matrix / var  # divide out the variance to get correlation matrix
-    err_matrix = flux_err * flux_err[:, np.newaxis]  # make matrix of measurement errors (same as np.outer)
-    matrix = err_matrix * corr_matrix  # multiply to get back to covariance
-
-    # Compute the Cholesky decomposition of cov_matrix (by definition positive definite)
-    matrix = sp.linalg.cho_factor(matrix, lower=False, overwrite_a=True, check_finite=False)  # cho_decomp
-
-    # Solve M @ x = v^T using the Cholesky factorization (x = M^-1 v^T)
-    x = sp.linalg.cho_solve(matrix, residuals[:, np.newaxis], check_finite=False)
-
-    # log of the exponent - analogous to the matrix multiplication
-    ln_exp = (residuals @ x)[0]  # v @ x = v @ M^-1 @ v^T
-
-    # log of the determinant (avoids too small eigenvalues that would result in 0)
-    ln_det = 2 * np.sum(np.log(np.diag(matrix[0])))
-
-    # likelihood for multivariate normal distribution
-    like = -n * np.log(2 * np.pi) / 2 - ln_det / 2 - ln_exp / 2
-
-    return like
-
-
-@nb.njit(cache=True)
-def calc_bic(residuals, n_param):
-    """Bayesian Information Criterion.
-    
-    Parameters
-    ----------
-    residuals: numpy.ndarray[Any, dtype[float]]
-        Residual is flux - model
-    n_param: int
-        Number of free parameters in the model
-    
-    Returns
-    -------
-    float
-        Bayesian Information Criterion
-    
-    Notes
-    -----
-    BIC = −2 ln(L(θ)) + k ln(n)
-    where L is the likelihood as function of the parameters θ, n the number of data points
-    and k the number of free parameters.
-    
-    Under the assumption that the errors are independent and identically distributed
-    according to a normal distribution, the likelihood becomes:
-    ln(L(θ)) = -n/2 (ln(2 pi σ^2) + 1)
-    and σ^2 is the error variance estimated as σ^2 = sum((residuals)^2)/n
-    (residuals being data - model).
-    
-    Combining this gives:
-    BIC = n ln(2 pi σ^2) + n + k ln(n)
-    """
-    n = len(residuals)
-    # bic = n * np.log(2 * np.pi * np.sum(residuals**2) / n) + n + n_param * np.log(n)
-    # originally JIT-ted function, but with for loop is slightly quicker
-    sum_r_2 = ut.std_unb(residuals, n)
-    bic = n * np.log(2 * np.pi * sum_r_2 / n) + n + n_param * np.log(n)
-
-    return bic
 
 
 @nb.njit(cache=True)
@@ -1894,13 +653,13 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
         Timestamps of the time series
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    f0: float
+    f0: float, optional
         Lowest allowed frequency for extraction.
         If left zero, default is f0 = 1/(100*T)
-    fn: float
+    fn: float, optional
         Highest allowed frequency for extraction.
         If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
-    select: str
+    select: str, optional
         Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'
     logger: logging.Logger, optional
         Instance of the logging library.
@@ -1925,25 +684,15 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
     The extracted frequency is based on the highest amplitude or signal-to-noise
     in the periodogram (over the interval where it is calculated). The highest
     peak is oversampled by a factor 100 to get a precise measurement.
-    
-    If and only if the full periodogram is calculated using the defaults
-    for f0=0 and fn=0, the fast implementation of astropy scargle is used.
-    It is accurate to a very high degree when used like this and gives
-    a significant speed increase. It cannot be used on smaller intervals.
     """
     df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
-    f_nyquist_min = 1/(2*np.median(np.diff(time)))  # minimum Nyquist frequency
 
-    # full LS periodogram
-    if (f0 == 0) & ((fn == 0) | (fn >= f_nyquist_min)):
-        # inconsistency with astropy_scargle for small freq intervals, so only do the full pd
-        freqs, ampls = astropy_scargle(time, flux, f0=f0, fn=fn, df=df)
-    else:
-        freqs, ampls = scargle(time, flux, f0=f0, fn=fn, df=df)
+    # full LS periodogram (accurate version)
+    freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
 
     # selection step based on flux to noise (refine step keeps using ampl)
     if select == 'sn':
-        noise_spectrum = scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0)
+        noise_spectrum = pdg.scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0)
         ampls = ampls / noise_spectrum
 
     # select highest value
@@ -1957,7 +706,7 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
     # now refine once by increasing the frequency resolution x100
     f_left = max(freqs[p1] - df, df / 10)  # may not get too low
     f_right = freqs[p1] + df
-    f_refine, a_refine = scargle(time, flux, f0=f_left, fn=f_right, df=df/100)
+    f_refine, a_refine = pdg.scargle(time, flux, f0=f_left, fn=f_right, df=df/100)
     p2 = np.argmax(a_refine)
 
     # check if we pick the boundary frequency
@@ -1968,10 +717,56 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
     a_final = a_refine[p2]
 
     # finally, compute the phase (and make sure it stays within + and - pi)
-    ph_final = scargle_phase_single(time, flux, f_final)
-    ph_final = (ph_final + np.pi) % (2 * np.pi) - np.pi
+    _, _ph_final = pdg.scargle_ampl_phase(time, flux, np.array([f_final]))
+    ph_final = _ph_final[0]
 
     return f_final, a_final, ph_final
+
+
+def extract_approx(time, flux, f_approx, f0=0, fn=0):
+    """Extract a frequency from a time series at an approximate location.
+
+    Follows the periodogram upwards to the nearest peak.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    f_approx: numpy.ndarray[Any, dtype[float]]
+        Approximate location(s) of the frequency of maximum amplitude.
+    f0: float, optional
+        Lowest allowed frequency for extraction.
+        If left zero, default is f0 = 1/(100*T)
+    fn: float, optional
+        Highest allowed frequency for extraction.
+        If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        f_final: float
+            Frequency of the extracted sinusoid
+        a_final: float
+            Amplitude of the extracted sinusoid
+        ph_final: float
+            Phase of the extracted sinusoid
+    """
+    df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
+
+    # full LS periodogram
+    freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
+
+    # get the index of the frequency of the maximum amplitude
+    i_f_max = ut.nearest_local_max(freqs, ampls, f_approx)
+
+    f_left = freqs[max(i_f_max - 1, 0)]
+    f_right = freqs[min(i_f_max + 1, len(freqs) - 1)]
+    freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df / 10)
+
+    # return f_final, a_final, ph_final
 
 
 def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
@@ -2041,7 +836,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     resid = cur_resid - linear_curve(time, const, slope, i_chunks)
     f_n_temp, a_n_temp, ph_n_temp = np.copy(f_n), np.copy(a_n), np.copy(ph_n)
     n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_f - n_harm)
-    bic_prev = calc_bic(resid, n_param)
+    bic_prev = gof.calc_bic(resid, n_param)
     bic_init = bic_prev
 
     # stop the loop when the BIC increases
@@ -2057,8 +852,8 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             # if f is a harmonic, don't shift the frequency
             if j in harmonics:
                 f_j = f_n_temp[j]
-                a_j = scargle_ampl_single(time, resid, f_j)
-                ph_j = scargle_phase_single(time, resid, f_j)
+                _a_j, _ph_j = pdg.scargle_ampl_phase(time, resid, np.array([f_j]))
+                a_j, ph_j = _a_j[0], _ph_j[0]
             else:
                 f0 = f_n_temp[j] - freq_res
                 fn = f_n_temp[j] + freq_res
@@ -2072,7 +867,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
 
         # calculate BIC before moving to the next iteration
-        bic = calc_bic(resid, n_param)
+        bic = gof.calc_bic(resid, n_param)
         d_bic = bic_prev - bic
         if np.round(d_bic, 2) > 0:
             # adjust the shifted frequencies
@@ -2213,7 +1008,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
     const, slope = linear_pars(time, cur_resid, i_chunks)
     resid = cur_resid - linear_curve(time, const, slope, i_chunks)
     n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq_init - n_harm)
-    bic_prev = calc_bic(resid, n_param)  # initialise current BIC to the mean (and slope) subtracted flux
+    bic_prev = gof.calc_bic(resid, n_param)  # initialise current BIC to the mean (and slope) subtracted flux
     bic_init = bic_prev
 
     # log a message
@@ -2268,12 +1063,12 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
 
         # calculate BIC
         n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq_cur + 1 - n_harm)
-        bic = calc_bic(resid, n_param)
+        bic = gof.calc_bic(resid, n_param)
         d_bic = bic_prev - bic
         condition = np.round(d_bic, 2) > bic_thr
         # calculate SNR in a 1 c/d window around the extracted frequency
         if stop_crit == 'snr':
-            noise = scargle_noise_at_freq(np.array([f_i]), time, resid, window_width=1.0)
+            noise = pdg.scargle_noise_at_freq(np.array([f_i]), time, resid, window_width=1.0)
             snr = a_i / noise
             condition = snr > snr_thr
 
@@ -2379,7 +1174,7 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
     const, slope = linear_pars(time, cur_resid, i_chunks)
     resid = cur_resid - linear_curve(time, const, slope, i_chunks)
     n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq - n_harm)
-    bic_init = calc_bic(resid, n_param)
+    bic_init = gof.calc_bic(resid, n_param)
     bic_prev = bic_init
     if logger is not None:
         logger.extra(f'N_f= {n_freq}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
@@ -2388,9 +1183,8 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
     n_h_acc = []
     for h_c in h_candidate:
         f_c = h_c / p_orb
-        a_c = scargle_ampl_single(time, resid, f_c)
-        ph_c = scargle_phase_single(time, resid, f_c)
-        ph_c = np.mod(ph_c + np.pi, 2 * np.pi) - np.pi  # make sure the phase stays within + and - pi
+        _a_c, _ph_c = pdg.scargle_ampl_phase(time, resid, np.array([f_c]))
+        a_c, ph_c = _a_c[0], _ph_c[0]
 
         # redetermine the constant and slope
         model_sinusoid_n = sum_sines(time, np.array([f_c]), np.array([a_c]), np.array([ph_c]))
@@ -2401,7 +1195,7 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
         # determine new BIC and whether it improved
         n_harm_cur = n_harm + len(n_h_acc) + 1
         n_param = 2 * n_sectors + 1 * (n_harm_cur > 0) + 2 * n_harm_cur + 3 * (n_freq - n_harm)
-        bic = calc_bic(resid, n_param)
+        bic = gof.calc_bic(resid, n_param)
         d_bic = bic_prev - bic
         if np.round(d_bic, 2) > bic_thr:
             # h_c is accepted, add it to the final list and continue
@@ -2488,7 +1282,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
     resid = cur_resid - linear_curve(time, const, slope, i_chunks)
     n_param = 2 * n_sectors + 1 + 2 * n_harm_init + 3 * (n_freq - n_harm_init)
-    bic_init = calc_bic(resid, n_param)
+    bic_init = gof.calc_bic(resid, n_param)
 
     # go through the harmonics by harmonic number and re-extract them (removing all duplicate n's in the process)
     for n in np.unique(harmonic_n):
@@ -2501,9 +1295,8 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
 
         # calculate the new harmonic
         f_i = n / p_orb  # fixed f
-        a_i = scargle_ampl_single(time, resid, f_i)
-        ph_i = scargle_phase_single(time, resid, f_i)
-        ph_i = np.mod(ph_i + np.pi, 2 * np.pi) - np.pi  # make sure the phase stays within + and - pi
+        _a_i, _ph_i = pdg.scargle_ampl_phase(time, resid, np.array([f_i]))
+        a_i, ph_i = _a_i[0], _ph_i[0]
 
         # make a model of the new sinusoid and add it to the full sinusoid residual
         model_sinusoid_n = sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
@@ -2559,7 +1352,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     if logger is not None:
         resid = cur_resid - linear_curve(time, const, slope, i_chunks)
         n_param = 2 * n_sectors + 1 + 2 * n_harm + 3 * (n_freq - n_harm)
-        bic = calc_bic(resid, n_param)
+        bic = gof.calc_bic(resid, n_param)
         logger.extra(f'Candidate harmonics replaced: {n_harm_init} ({n_harm} left). '
                      f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {bic_init - bic:1.2f})')
 
@@ -2627,7 +1420,7 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
     resid = cur_resid - linear_curve(time, const, slope, i_chunks)
     n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq - n_harm)
-    bic_prev = calc_bic(resid, n_param)
+    bic_prev = gof.calc_bic(resid, n_param)
     bic_init = bic_prev
     n_prev = -1
 
@@ -2648,7 +1441,7 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
             n_harm_i = n_harm - len([h for h in remove_single if h in harmonics]) - 1 * (i in harmonics)
             n_freq_i = n_freq - len(remove_single) - 1 - n_harm_i
             n_param = 2 * n_sectors + 1 * (n_harm_i > 0) + 2 * n_harm_i + 3 * n_freq_i
-            bic = calc_bic(resid, n_param)
+            bic = gof.calc_bic(resid, n_param)
 
             # if improvement, add to list of removed freqs
             if np.round(bic_prev - bic, 2) > 0:
@@ -2756,7 +1549,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     best_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
     resid = best_resid - linear_curve(time, const, slope, i_chunks)
     n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * (n_freq - n_harm)
-    bic_prev = calc_bic(resid, n_param)
+    bic_prev = gof.calc_bic(resid, n_param)
     bic_init = bic_prev
     n_prev = -1
 
@@ -2777,8 +1570,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
             if i in harm_sets:
                 harm_i = np.array([h for h in set_i if h in harmonics])
                 f_i = f_n[harm_i]  # fixed f
-                a_i = scargle_ampl(time, resid, f_n[harm_i])
-                ph_i = scargle_phase(time, resid, f_n[harm_i])
+                a_i, ph_i = pdg.scargle_ampl_phase(time, resid, f_n[harm_i])
             else:
                 edges = [min(f_n[set_i]) - freq_res, max(f_n[set_i]) + freq_res]
                 out = extract_single(time, resid, f0=edges[0], fn=edges[1], logger=logger)
@@ -2793,7 +1585,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
             # number of parameters and bic
             n_freq_i = n_freq - sum([len(f_sets[j]) for j in remove_sets]) - len(set_i) + len(f_new) + len(f_i) - n_harm
             n_param = 2 * n_sectors + 1 * (n_harm > 0) + 2 * n_harm + 3 * n_freq_i
-            bic = calc_bic(resid, n_param)
+            bic = gof.calc_bic(resid, n_param)
             if np.round(bic_prev - bic, 2) > 0:
                 # do not look at sets with the same freqs as the just removed set anymore
                 overlap = [j for j, subset in enumerate(f_sets) if np.any(np.array([k in set_i for k in subset]))]
@@ -2949,7 +1741,7 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     remove_sigma = anf.remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3, sigma_f=3)
     
     # apply the signal-to-noise threshold
-    noise_at_f = scargle_noise_at_freq(f_n, time, residuals, window_width=1.0)
+    noise_at_f = pdg.scargle_noise_at_freq(f_n, time, residuals, window_width=1.0)
     remove_snr = anf.remove_insignificant_snr(time, a_n, noise_at_f)
     
     # frequencies that pass sigma criteria

@@ -21,6 +21,7 @@ import scipy as sp
 import scipy.optimize
 
 from star_shine.core import timeseries as tsf
+from star_shine.core import goodness_of_fit as gof
 from star_shine.core import analysis as anf
 from star_shine.core import utility as ut
 
@@ -115,7 +116,7 @@ def objective_sinusoids(params, time, flux, i_chunks):
 
     # calculate the likelihood (minus this for minimisation)
     resid = flux - model_linear - model_sinusoid
-    ln_likelihood = tsf.calc_iid_normal_likelihood(resid)
+    ln_likelihood = gof.calc_iid_normal_likelihood(resid)
 
     return -ln_likelihood
 
@@ -274,7 +275,7 @@ def fit_multi_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, logge
         model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
         model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
         resid = flux - model_linear - model_sinusoid
-        bic = tsf.calc_bic(resid, 2 * n_sect + 3 * n_sin)
+        bic = gof.calc_bic(resid, 2 * n_sect + 3 * n_sin)
         logger.extra(f'Fit convergence: {result.success} - BIC: {bic:1.2f}. '
                      f'N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
 
@@ -361,7 +362,7 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
             model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
             model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
             resid = flux - model_linear - model_sinusoid
-            bic = tsf.calc_bic(resid, 2 * n_sect + 3 * n_sin)
+            bic = gof.calc_bic(resid, 2 * n_sect + 3 * n_sin)
             logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')
 
     return res_const, res_slope, res_freqs, res_ampls, res_phases
@@ -426,7 +427,7 @@ def objective_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
 
     # calculate the likelihood (minus this for minimisation)
     resid = flux - model_linear - model_sinusoid
-    ln_likelihood = tsf.calc_iid_normal_likelihood(resid)
+    ln_likelihood = gof.calc_iid_normal_likelihood(resid)
 
     return -ln_likelihood
 
@@ -620,7 +621,7 @@ def fit_multi_sinusoid_harmonics(time, flux, p_orb, const, slope, f_n, a_n, ph_n
         model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
         model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
         resid = flux - model_linear - model_sinusoid
-        bic = tsf.calc_bic(resid, 1 + 2 * n_sect + 3 * n_sin + 2 * n_harm)
+        bic = gof.calc_bic(resid, 1 + 2 * n_sect + 3 * n_sin + 2 * n_harm)
         logger.extra(f'Fit convergence: {result.success} - BIC: {bic:1.2f}. '
                      f'N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
 
@@ -725,7 +726,7 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
         model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
         model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
         resid = flux - model_linear - model_sinusoid
-        bic = tsf.calc_bic(resid, 1 + 2 * n_sect + 3 * n_sin + 2 * n_harm)
+        bic = gof.calc_bic(resid, 1 + 2 * n_sect + 3 * n_sin + 2 * n_harm)
         logger.extra(f'Fit of harmonics - BIC: {bic:1.2f}. N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
 
     # update the parameters for each group
@@ -749,7 +750,7 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
             model_linear = tsf.linear_curve(time, res_const, res_slope, i_chunks)
             model_sinusoid = tsf.sum_sines(time, res_freqs, res_ampls, res_phases)
             resid_new = flux - (model_linear + model_sinusoid)
-            bic = tsf.calc_bic(resid_new, 1 + 2 * n_sect + 3 * n_sin + 2 * n_harm)
+            bic = gof.calc_bic(resid_new, 1 + 2 * n_sect + 3 * n_sin + 2 * n_harm)
             logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')
 
     return res_p_orb, res_const, res_slope, res_freqs, res_ampls, res_phases
