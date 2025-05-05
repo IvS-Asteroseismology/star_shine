@@ -717,8 +717,7 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
     a_final = a_refine[p2]
 
     # finally, compute the phase (and make sure it stays within + and - pi)
-    _, _ph_final = pdg.scargle_ampl_phase(time, flux, np.array([f_final]))
-    ph_final = _ph_final[0]
+    _, ph_final = pdg.scargle_ampl_phase_single(time, flux, f_final)
 
     return f_final, a_final, ph_final
 
@@ -852,8 +851,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             # if f is a harmonic, don't shift the frequency
             if j in harmonics:
                 f_j = f_n_temp[j]
-                _a_j, _ph_j = pdg.scargle_ampl_phase(time, resid, np.array([f_j]))
-                a_j, ph_j = _a_j[0], _ph_j[0]
+                a_j, ph_j = pdg.scargle_ampl_phase_single(time, resid, f_j)
             else:
                 f0 = f_n_temp[j] - freq_res
                 fn = f_n_temp[j] + freq_res
@@ -1183,8 +1181,7 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
     n_h_acc = []
     for h_c in h_candidate:
         f_c = h_c / p_orb
-        _a_c, _ph_c = pdg.scargle_ampl_phase(time, resid, np.array([f_c]))
-        a_c, ph_c = _a_c[0], _ph_c[0]
+        a_c, ph_c = pdg.scargle_ampl_phase_single(time, resid, f_c)
 
         # redetermine the constant and slope
         model_sinusoid_n = sum_sines(time, np.array([f_c]), np.array([a_c]), np.array([ph_c]))
@@ -1295,8 +1292,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
 
         # calculate the new harmonic
         f_i = n / p_orb  # fixed f
-        _a_i, _ph_i = pdg.scargle_ampl_phase(time, resid, np.array([f_i]))
-        a_i, ph_i = _a_i[0], _ph_i[0]
+        a_i, ph_i = pdg.scargle_ampl_phase_single(time, resid, f_i)
 
         # make a model of the new sinusoid and add it to the full sinusoid residual
         model_sinusoid_n = sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
