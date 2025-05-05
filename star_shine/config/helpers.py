@@ -73,6 +73,20 @@ def get_config_path():
     return config_path
 
 
+def get_images_path():
+    """Get the path to the data/images folder
+
+    Returns
+    -------
+    str
+        Path to the data/images folder
+    """
+    # Use importlib.resources to find the path
+    images_path = str(importlib.resources.files('star_shine.data').joinpath('images'))
+
+    return images_path
+
+
 def get_mpl_stylesheet_path():
     """Get the path to the matplotlib stylesheet
 

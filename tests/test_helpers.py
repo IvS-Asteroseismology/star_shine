@@ -6,7 +6,8 @@ import tomllib
 import importlib.metadata
 import importlib.resources
 
-from star_shine.config.helpers import get_version, get_config, get_config_path, get_mpl_stylesheet_path, get_custom_logger
+from star_shine.config.helpers import (get_version, get_config, get_config_path, get_mpl_stylesheet_path,
+                                       get_custom_logger, get_images_path)
 
 
 class TestHelpers(unittest.TestCase):
@@ -91,6 +92,15 @@ class TestHelpers(unittest.TestCase):
         # check returned path
         self.assertEqual(path, 'path/to/config.yaml')
         mock_get_config_path.assert_called_once()
+
+    @patch('importlib.resources.files', return_value=MagicMock(joinpath=MagicMock(return_value='path/to/images')))
+    def test_get_images_path(self, mock_images_path):
+        """Test get_images_path function."""
+        path = get_images_path()
+
+        # check returned path
+        self.assertEqual(path, 'path/to/images')
+        mock_images_path.assert_called_once_with('star_shine.data')
 
     @patch('importlib.resources.files',
            return_value=MagicMock(joinpath=MagicMock(return_value='path/to/mpl_stylesheet.dat')))
