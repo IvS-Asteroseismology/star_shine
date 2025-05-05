@@ -341,7 +341,7 @@ def spectral_window(time, freqs):
 
 @nb.njit(cache=False)
 def _scargle_core(time, flux, nt, f0, df, nf):
-    """Scargle periodogram with no weights.
+    """Core algorithm of the Scargle periodogram with no weights.
 
     Parameters
     ----------
@@ -592,6 +592,95 @@ def scargle_parallel(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
         s1 = s1
 
     return f1, s1
+
+
+@nb.njit(cache=False)
+def scargle_ampl_phase_single(time, flux, f):
+    """Amplitude and phase at one or a set of frequencies from the Scargle periodogram.
+
+    Fast for limited numbers of frequencies, not a replacement for the full periodogram.
+    Has a slight overhead
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series.
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series.
+    f: float
+        A frequency to calculate amplitude and phase at.
+
+    Returns
+    -------
+    tuple
+        Two numbers consisting of:
+        float
+            Amplitude at the given frequency.
+        float
+            Phase at the given frequency.
+
+    See Also
+    --------
+    scargle_phase
+
+    Notes
+    -----
+    The time array is mean subtracted to reduce correlation between
+    frequencies and phases. The flux array is mean subtracted to avoid
+    a large peak at frequency equal to zero.
+
+    For the phase calculation:
+    Uses a slightly modified version of the function in Hocke 1997
+    ("Phase estimation with the Lomb-Scargle periodogram method")
+    https://www.researchgate.net/publication/283359043_Phase_estimation_with_the_Lomb-Scargle_periodogram_method
+    (only difference is an extra pi/2 for changing cos phase to sin phase)
+    """
+    # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
+    mean_t = np.mean(time)
+    mean_s = np.mean(flux)
+    time_ms = time - mean_t
+    flux_ms = flux - mean_s
+
+    # setup
+    nt = len(time_ms)
+    pi = np.pi
+    two_pi = 2 * pi
+    four_pi = 4 * pi
+
+    # define tau
+    cos_tau = 0
+    sin_tau = 0
+    for j in range(nt):
+        cos_tau += np.cos(four_pi * f * time_ms[j])
+        sin_tau += np.sin(four_pi * f * time_ms[j])
+    tau = 1 / (four_pi * f) * np.arctan2(sin_tau, cos_tau)  # tau(f)
+
+    # define the general cos and sin functions
+    s_cos = 0
+    cos_2 = 0
+    s_sin = 0
+    sin_2 = 0
+    for j in range(nt):
+        cos = np.cos(two_pi * f * (time_ms[j] - tau))
+        sin = np.sin(two_pi * f * (time_ms[j] - tau))
+        s_cos += flux_ms[j] * cos
+        cos_2 += cos ** 2
+        s_sin += flux_ms[j] * sin
+        sin_2 += sin ** 2
+
+    # final calculations
+    a_cos = s_cos / cos_2 ** (1 / 2)
+    b_sin = s_sin / sin_2 ** (1 / 2)
+
+    # amplitude
+    ampl = (a_cos ** 2 + b_sin ** 2) / 2
+    ampl = np.sqrt(4 / nt) * np.sqrt(ampl)  # conversion to amplitude
+
+    # sine phase (radians)
+    phi = pi / 2 - np.arctan2(b_sin, a_cos) - two_pi * f * tau
+    phi = (phi + pi) % two_pi - pi  # make sure the phase stays within + and - pi
+
+    return ampl, phi
 
 
 @nb.njit(cache=False, parallel=True)
