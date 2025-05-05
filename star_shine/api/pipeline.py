@@ -12,12 +12,9 @@ import numpy as np
 from star_shine.api.data import Data
 from star_shine.api.result import Result
 
-from star_shine.core import timeseries as tsf
-from star_shine.core import periodogram as pdg
-from star_shine.core import fitting as fit
-from star_shine.core import analysis as anf
-from star_shine.core import mcmc as mcf
-from star_shine.core import utility as ut
+from star_shine.core import timeseries as tsf, periodogram as pdg
+from star_shine.core import fitting as fit, goodness_of_fit as gof
+from star_shine.core import analysis as anf, mcmc as mcf, utility as ut
 from star_shine.config.helpers import get_config, get_custom_logger
 
 
@@ -112,6 +109,11 @@ class Pipeline:
     def periodogram(self, residual=True):
         """Compute the Lomb-Scargle periodogram of the time series
 
+        Parameters
+        ----------
+        residual: bool
+            Subtract the time series model from the data.
+
         Returns
         -------
         tuple
@@ -129,7 +131,39 @@ class Pipeline:
 
         return f, a
 
-    # def extract_approx(self, f, a, ph):
+    def extract_approx(self, f_approx):
+        """Extract a sinusoid from the time series at an approximate frequency.
+
+        Parameters
+        ----------
+        f_approx: float
+            Approximate location of the frequency of maximum amplitude.
+        """
+        f, a, ph = tsf.extract_approx(self.data.time, self.data.flux, f_approx)
+
+        # append the sinusoid to the result
+        f_n, a_n, ph_n = self.result.f_n, self.result.a_n, self.result.ph_n
+        f_n, a_n, ph_n = np.append(f_n, f), np.append(a_n, a), np.append(ph_n, ph)
+        self.result.setter(f_n=f_n, a_n=a_n, ph_n=ph_n)
+
+        # calculate the stats
+        resid = self.data.flux - self.model_linear() - self.model_sinusoid()
+        n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
+        bic = gof.calc_bic(resid, n_param)
+        noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
+        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
+
+        # calculate formal uncertainties
+        out_e = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
+        self.result.setter(c_err=out_e[0], sl_err=out_e[1], f_n_err=out_e[2], a_n_err=out_e[3], ph_n_err=out_e[4])
+
+        # set the result description
+        self.result.setter(description='Manual extraction.')
+
+        # print some useful info
+        self.logger.info(f"Appended f: {f:1.2f}, N_f: {len(self.result.f_n)}, N_dof: {n_param}, BIC: {bic:1.2f}.")
+
+        return None
 
     def iterative_prewhitening(self):
         """Iterative prewhitening of the input flux time series in the form of sine waves and a piece-wise linear curve.
