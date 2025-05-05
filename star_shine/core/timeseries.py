@@ -644,8 +644,7 @@ def linear_regression_uncertainty_ephem(time, p_orb, sigma_t=1):
 
 
 def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
-    """Extract a single frequency from a time series using oversampling
-    of the periodogram.
+    """Extract a single frequency from a time series using oversampling of the periodogram.
     
     Parameters
     ----------
@@ -688,7 +687,7 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
     df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
 
     # full LS periodogram (accurate version)
-    freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
+    freqs, ampls = pdg.scargle_parallel(time, flux, f0=f0, fn=fn, df=df)
 
     # selection step based on flux to noise (refine step keeps using ampl)
     if select == 'sn':
@@ -722,7 +721,7 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
     return f_final, a_final, ph_final
 
 
-def extract_approx(time, flux, f_approx, f0=0, fn=0):
+def extract_approx(time, flux, f_approx):
     """Extract a frequency from a time series at an approximate location.
 
     Follows the periodogram upwards to the nearest peak.
@@ -735,12 +734,6 @@ def extract_approx(time, flux, f_approx, f0=0, fn=0):
         Measurement values of the time series
     f_approx: numpy.ndarray[Any, dtype[float]]
         Approximate location(s) of the frequency of maximum amplitude.
-    f0: float, optional
-        Lowest allowed frequency for extraction.
-        If left zero, default is f0 = 1/(100*T)
-    fn: float, optional
-        Highest allowed frequency for extraction.
-        If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
 
     Returns
     -------
@@ -755,17 +748,27 @@ def extract_approx(time, flux, f_approx, f0=0, fn=0):
     """
     df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
 
-    # full LS periodogram
+    # LS periodogram around the approximate location
+    f0 = max(f_approx - 50 * df, df / 10)
+    fn = f_approx + 50 * df
     freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
 
     # get the index of the frequency of the maximum amplitude
     i_f_max = ut.nearest_local_max(freqs, ampls, f_approx)
 
-    f_left = freqs[max(i_f_max - 1, 0)]
-    f_right = freqs[min(i_f_max + 1, len(freqs) - 1)]
-    freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df / 10)
+    # refine frequency around the maximum
+    f_left = max(freqs[i_f_max] - df, df / 10)
+    f_right = f_approx + df
+    f_refine, a_refine = pdg.scargle(time, flux, f0=f_left, fn=f_right, df=df / 100)
+    i_f_max = np.argmax(a_refine)
 
-    # return f_final, a_final, ph_final
+    # get the final properties
+    f_final = f_refine[i_f_max]
+    a_final = a_refine[i_f_max]
+    # finally, compute the phase
+    _, ph_final = pdg.scargle_ampl_phase_single(time, flux, f_final)
+
+    return f_final, a_final, ph_final
 
 
 def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
