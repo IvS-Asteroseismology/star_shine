@@ -373,7 +373,7 @@ class Data:
             Contains the frequencies numpy.ndarray[Any, dtype[float]]
             and the spectrum numpy.ndarray[Any, dtype[float]]
         """
-        f, a = pdg.scargle(self.time, self.flux, f0=-1, fn=-1, df=-1, norm='amplitude')
+        f, a = pdg.scargle_parallel(self.time, self.flux, f0=-1, fn=-1, df=-1, norm='amplitude')
 
         return f, a
 
