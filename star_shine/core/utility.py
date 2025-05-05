@@ -212,12 +212,12 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
 
 
 @nb.njit(cache=True)
-def nearest_local_max(x, y, x_approx):
-    """Find the index of the local maximum in `x` near `x_approx`.
+def uphill_local_max(x, y, x_approx):
+    """Find the index of the local maximum in `x` uphill from `x_approx`.
 
     The array `x` must be sorted in ascending order. This function identifies
     local maxima in the `y` array and returns the index of the `x` value
-    corresponding to the nearest local maximum to `x_approx`.
+    corresponding to the local maximum uphill from `x_approx`.
 
     Parameters
     ----------
@@ -239,7 +239,7 @@ def nearest_local_max(x, y, x_approx):
     >>> x = np.array([1, 2, 3, 4, 5, 6])
     >>> y = np.array([1, 3, 2, 5, 4, 6])
     >>> x_approx = np.array([2.4, 4.6])
-    >>> nearest_local_max(x, y, x_approx)
+    >>> uphill_local_max(x, y, x_approx)
     array([1, 3])
     """
     # differenced y

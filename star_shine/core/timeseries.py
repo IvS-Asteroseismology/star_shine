@@ -754,7 +754,7 @@ def extract_approx(time, flux, f_approx):
     freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
 
     # get the index of the frequency of the maximum amplitude
-    i_f_max = ut.nearest_local_max(freqs, ampls, f_approx)
+    i_f_max = ut.uphill_local_max(freqs, ampls, f_approx)
 
     # refine frequency around the maximum
     f_left = max(freqs[i_f_max] - df, df / 10)
