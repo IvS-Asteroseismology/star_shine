@@ -8,7 +8,7 @@ Code written by: Luc IJspeert
 import os
 import numpy as np
 
-from star_shine.core import timeseries as tsf
+from star_shine.core import periodogram as pdg
 from star_shine.core import visualisation as vis
 from star_shine.core import utility as ut
 from star_shine.core import io
@@ -373,7 +373,7 @@ class Data:
             Contains the frequencies numpy.ndarray[Any, dtype[float]]
             and the spectrum numpy.ndarray[Any, dtype[float]]
         """
-        f, a = tsf.scargle(self.time, self.flux, f0=0, fn=0, df=0, norm='amplitude')
+        f, a = pdg.scargle(self.time, self.flux, f0=-1, fn=-1, df=-1, norm='amplitude')
 
         return f, a
 
