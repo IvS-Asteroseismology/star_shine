@@ -165,13 +165,18 @@ class Pipeline:
 
         return None
 
-    def iterative_prewhitening(self):
+    def iterative_prewhitening(self, n_extract=0):
         """Iterative prewhitening of the input flux time series in the form of sine waves and a piece-wise linear curve.
 
         After extraction, a final check is done to see whether some frequencies are better removed or groups of
         frequencies are better replaced by one frequency.
 
         Continues from last results if frequency list is not empty.
+
+        Parameters
+        ----------
+        n_extract: int, optional
+            Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.
 
         Returns
         -------
