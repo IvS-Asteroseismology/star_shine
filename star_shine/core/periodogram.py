@@ -417,6 +417,9 @@ def _scargle_core(time, flux, nt, f0, df, nf):
 def scargle(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     """Scargle periodogram with no weights.
 
+    The time array is mean subtracted to reduce correlation between frequencies and phases.
+    The flux array is mean subtracted to avoid a large peak at frequency equal to zero.
+
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
@@ -450,10 +453,6 @@ def scargle(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     Translated from Fortran (and just as fast when JIT-ted with Numba!)
         Computation of Scargles periodogram without explicit tau
         calculation, with iteration (Method Cuypers)
-
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
 
     Useful extra information: VanderPlas 2018,
     https://ui.adsabs.harvard.edu/abs/2018ApJS..236...16V/abstract
@@ -502,6 +501,9 @@ def scargle_parallel(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
 
     Non-parallel overhead amounts to less than 10%.
 
+    The time array is mean subtracted to reduce correlation between frequencies and phases.
+    The flux array is mean subtracted to avoid a large peak at frequency equal to zero.
+
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
@@ -535,10 +537,6 @@ def scargle_parallel(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     Translated from Fortran (and just as fast when JIT-ted with Numba!)
         Computation of Scargles periodogram without explicit tau
         calculation, with iteration (Method Cuypers)
-
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
 
     Useful extra information: VanderPlas 2018,
     https://ui.adsabs.harvard.edu/abs/2018ApJS..236...16V/abstract
@@ -598,8 +596,8 @@ def scargle_parallel(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
 def scargle_ampl_phase_single(time, flux, f):
     """Amplitude and phase at one or a set of frequencies from the Scargle periodogram.
 
-    Fast for limited numbers of frequencies, not a replacement for the full periodogram.
-    Has a slight overhead
+    The time array is mean subtracted to reduce correlation between frequencies and phases.
+    The flux array is mean subtracted to avoid a large peak at frequency equal to zero.
 
     Parameters
     ----------
@@ -625,10 +623,6 @@ def scargle_ampl_phase_single(time, flux, f):
 
     Notes
     -----
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-
     For the phase calculation:
     Uses a slightly modified version of the function in Hocke 1997
     ("Phase estimation with the Lomb-Scargle periodogram method")
@@ -688,7 +682,11 @@ def scargle_ampl_phase(time, flux, fs):
     """Amplitude at one or a set of frequencies from the Scargle periodogram.
 
     Fast for limited numbers of frequencies, not a replacement for the full periodogram.
-    Has a slight overhead
+    Has an overhead compared to scargle_ampl_phase_single, so do not use for single fs value.
+    For 2 frequencies it is just as fast, and 3+ it is more efficient.
+
+    The time array is mean subtracted to reduce correlation between frequencies and phases.
+    The flux array is mean subtracted to avoid a large peak at frequency equal to zero.
 
     Parameters
     ----------
@@ -714,10 +712,6 @@ def scargle_ampl_phase(time, flux, fs):
 
     Notes
     -----
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-
     For the phase calculation:
     Uses a slightly modified version of the function in Hocke 1997
     ("Phase estimation with the Lomb-Scargle periodogram method")
@@ -779,6 +773,9 @@ def scargle_ampl_phase(time, flux, fs):
 def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
     """Wrapper for the astropy Scargle periodogram.
 
+    The time array is mean subtracted to reduce correlation between frequencies and phases.
+    The flux array is mean subtracted to avoid a large peak at frequency equal to zero.
+
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
@@ -809,19 +806,14 @@ def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
 
     Notes
     -----
-    Approximation using fft, much faster (in mode='fast') than the other scargle.
-    Beware of computing narrower frequency windows, as there is inconsistency
-    when doing this. It is also generally less accurate.
+    Approximation using fft, much faster (in mode='fast') than the single threaded scargle (about x10).
+    Note that the astropy implementation uses functions under the hood that use the blas package for
+    multithreading by default. Compared to the parallel scargle it is similar in speed.
+    Beware of computing narrower frequency windows, as there is inconsistency when doing this.
+    It is also generally less accurate.
 
     Useful extra information: VanderPlas 2018,
     https://ui.adsabs.harvard.edu/abs/2018ApJS..236...16V/abstract
-
-    The time array is mean subtracted to reduce correlation between
-    frequencies and phases. The flux array is mean subtracted to avoid
-    a large peak at frequency equal to zero.
-
-    Note that the astropy implementation uses functions under the hood
-    that use the blas package for multithreading by default.
     """
     # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
     mean_t = np.mean(time)
