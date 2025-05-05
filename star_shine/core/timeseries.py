@@ -643,9 +643,12 @@ def linear_regression_uncertainty_ephem(time, p_orb, sigma_t=1):
     return p_err, t_err, p_t_corr
 
 
-def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
-    """Extract a single frequency from a time series using oversampling of the periodogram.
-    
+def extract_single(time, flux, f0=-1, fn=-1, select='a'):
+    """Extract a single sinusoid from a time series.
+
+    The extracted frequency is based on the highest amplitude or signal-to-noise in the periodogram.
+    The highest peak is oversampled by a factor 100 to get a precise measurement.
+
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
@@ -654,10 +657,10 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
         Measurement values of the time series
     f0: float, optional
         Lowest allowed frequency for extraction.
-        If left zero, default is f0 = 1/(100*T)
+        If left -1, default is f0 = 1/(100*T)
     fn: float, optional
         Highest allowed frequency for extraction.
-        If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
+        If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
     select: str, optional
         Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'
     logger: logging.Logger, optional
@@ -677,16 +680,10 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
     See Also
     --------
     scargle, scargle_phase_single
-    
-    Notes
-    -----
-    The extracted frequency is based on the highest amplitude or signal-to-noise
-    in the periodogram (over the interval where it is calculated). The highest
-    peak is oversampled by a factor 100 to get a precise measurement.
     """
     df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
 
-    # full LS periodogram (accurate version)
+    # full LS periodogram
     freqs, ampls = pdg.scargle_parallel(time, flux, f0=f0, fn=fn, df=df)
 
     # selection step based on flux to noise (refine step keeps using ampl)
@@ -694,26 +691,86 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
         noise_spectrum = pdg.scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0)
         ampls = ampls / noise_spectrum
 
-    # select highest value
-    p1 = np.argmax(ampls)
+    # select highest amplitude
+    i_f_max = np.argmax(ampls)
 
-    # check if we pick the boundary frequency
-    if p1 in [0, len(freqs) - 1]:
-        if logger is not None:
-            logger.warning(f'Edge of frequency range {freqs[p1]} at position {p1} during extraction phase 1.')
-
-    # now refine once by increasing the frequency resolution x100
-    f_left = max(freqs[p1] - df, df / 10)  # may not get too low
-    f_right = freqs[p1] + df
+    # refine frequency by increasing the frequency resolution x100
+    f_left = max(freqs[i_f_max] - df, df / 10)  # may not get too low
+    f_right = freqs[i_f_max] + df
     f_refine, a_refine = pdg.scargle(time, flux, f0=f_left, fn=f_right, df=df/100)
-    p2 = np.argmax(a_refine)
 
-    # check if we pick the boundary frequency
-    if p2 in [0, len(f_refine) - 1]:
-        if logger is not None:
-            logger.warning(f'Edge of frequency range {f_refine[p2]} at position {p2} during extraction phase 2.')
-    f_final = f_refine[p2]
-    a_final = a_refine[p2]
+    # select refined highest amplitude
+    i_f_max = np.argmax(a_refine)
+    f_final = f_refine[i_f_max]
+    a_final = a_refine[i_f_max]
+
+    # finally, compute the phase (and make sure it stays within + and - pi)
+    _, ph_final = pdg.scargle_ampl_phase_single(time, flux, f_final)
+
+    return f_final, a_final, ph_final
+
+
+def extract_local(time, flux, f0, fn, select='a'):
+    """Extract a single sinusoid from a time series at a predefined frequency interval.
+
+    The extracted frequency is based on the highest amplitude or signal-to-noise in the periodogram.
+    The highest peak is oversampled by a factor 100 to get a precise measurement.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    f0: float
+        Lowest allowed frequency for extraction.
+    fn: float
+        Highest allowed frequency for extraction.
+    select: str, optional
+        Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        f_final: float
+            Frequency of the extracted sinusoid
+        a_final: float
+            Amplitude of the extracted sinusoid
+        ph_final: float
+            Phase of the extracted sinusoid
+
+    See Also
+    --------
+    scargle, scargle_phase_single
+    """
+    df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
+
+    # full LS periodogram (accurate version)
+    freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
+
+    # cut off the ends of the frequency range if they are rising
+    f_min_edges = ut.uphill_local_max(freqs, -ampls, freqs[[0, -1]])
+    mask = (freqs < f_min_edges[0]) & (freqs > f_min_edges[1])
+    freqs, ampls = freqs[mask], ampls[mask]
+
+    # selection step based on flux to noise (refine step keeps using ampl)
+    if select == 'sn':
+        noise_spectrum = pdg.scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0)
+        ampls = ampls / noise_spectrum
+
+    # select highest amplitude
+    i_f_max = np.argmax(ampls)
+
+    # refine frequency by increasing the frequency resolution x100
+    f_left = max(freqs[i_f_max] - df, df / 10)  # may not get too low
+    f_right = freqs[i_f_max] + df
+    f_refine, a_refine = pdg.scargle(time, flux, f0=f_left, fn=f_right, df=df / 100)
+
+    # select refined highest amplitude
+    i_f_max = np.argmax(a_refine)
+    f_final = f_refine[i_f_max]
+    a_final = a_refine[i_f_max]
 
     # finally, compute the phase (and make sure it stays within + and - pi)
     _, ph_final = pdg.scargle_ampl_phase_single(time, flux, f_final)
@@ -722,9 +779,9 @@ def extract_single(time, flux, f0=0, fn=0, select='a', logger=None):
 
 
 def extract_approx(time, flux, f_approx):
-    """Extract a frequency from a time series at an approximate location.
+    """Extract a single sinusoid from a time series at an approximate location.
 
-    Follows the periodogram upwards to the nearest peak.
+    Follows the periodogram upwards to the nearest peak. The periodogram is oversampled for a more precise result.
 
     Parameters
     ----------
@@ -732,8 +789,8 @@ def extract_approx(time, flux, f_approx):
         Timestamps of the time series
     flux: numpy.ndarray[Any, dtype[float]]
         Measurement values of the time series
-    f_approx: numpy.ndarray[Any, dtype[float]]
-        Approximate location(s) of the frequency of maximum amplitude.
+    f_approx: float
+        Approximate location of the frequency of maximum amplitude.
 
     Returns
     -------
@@ -756,15 +813,16 @@ def extract_approx(time, flux, f_approx):
     # get the index of the frequency of the maximum amplitude
     i_f_max = ut.uphill_local_max(freqs, ampls, f_approx)
 
-    # refine frequency around the maximum
+    # refine frequency by increasing the frequency resolution x100
     f_left = max(freqs[i_f_max] - df, df / 10)
     f_right = f_approx + df
     f_refine, a_refine = pdg.scargle(time, flux, f0=f_left, fn=f_right, df=df / 100)
-    i_f_max = np.argmax(a_refine)
 
-    # get the final properties
+    # select refined highest amplitude
+    i_f_max = np.argmax(a_refine)
     f_final = f_refine[i_f_max]
     a_final = a_refine[i_f_max]
+
     # finally, compute the phase
     _, ph_final = pdg.scargle_ampl_phase_single(time, flux, f_final)
 
@@ -856,9 +914,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
                 f_j = f_n_temp[j]
                 a_j, ph_j = pdg.scargle_ampl_phase_single(time, resid, f_j)
             else:
-                f0 = f_n_temp[j] - freq_res
-                fn = f_n_temp[j] + freq_res
-                f_j, a_j, ph_j = extract_single(time, resid, f0=f0, fn=fn, select='a', logger=logger)
+                f_j, a_j, ph_j = extract_approx(time, resid, f_n_temp[j])
 
             f_n_temp[j], a_n_temp[j], ph_n_temp[j] = f_j, a_j, ph_j
             cur_resid -= sum_sines(time, np.array([f_j]), np.array([a_j]), np.array([ph_j]))
@@ -891,7 +947,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
 
 
 def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=None, bic_thr=2, snr_thr=0,
-                      stop_crit='bic', select='hybrid', n_extract=0, f0=0, fn=0, fit_each_step=False, logger=None):
+                      stop_crit='bic', select='hybrid', n_extract=0, f0=-1, fn=-1, fit_each_step=False, logger=None):
     """Extract all the frequencies from a periodic flux.
 
     Parameters
@@ -924,10 +980,10 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.
     f0: float
         Lowest allowed frequency for extraction.
-        If left zero, default is f0 = 1/(100*T)
+        If left -1, default is f0 = 1/(100*T)
     fn: float
         Highest allowed frequency for extraction.
-        If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
+        If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
     fit_each_step: bool
         If set to True, a non-linear least-squares fit of all extracted sinusoids in groups is performed at each
         iteration. While this increases the quality of the extracted signals, it drastically slows down the code.
@@ -1028,7 +1084,7 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         n_freq_cur = len(f_n)
 
         # attempt to extract the next frequency
-        f_i, a_i, ph_i = extract_single(time, resid, f0=f0, fn=fn, select=select, logger=logger)
+        f_i, a_i, ph_i = extract_single(time, resid, f0=f0, fn=fn, select=select)
 
         # now improve frequencies - make a temporary array including the current one
         f_n_temp, a_n_temp, ph_n_temp = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
@@ -1329,8 +1385,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
 
         # extract the updated frequency
         fl, fr = f_n[i] - freq_res, f_n[i] + freq_res
-        f_n[i], a_n[i], ph_n[i] = extract_single(time, resid, f0=fl, fn=fr, select='a', logger=logger)
-        ph_n[i] = np.mod(ph_n[i] + np.pi, 2 * np.pi) - np.pi  # make sure the phase stays within + and - pi
+        f_n[i], a_n[i], ph_n[i] = extract_approx(time, resid, f_n[i])
         if (f_n[i] <= fl) | (f_n[i] >= fr):
             remove_non_harm = np.append(remove_non_harm, [i])
 
@@ -1572,7 +1627,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 a_i, ph_i = pdg.scargle_ampl_phase(time, resid, f_n[harm_i])
             else:
                 edges = [min(f_n[set_i]) - freq_res, max(f_n[set_i]) + freq_res]
-                out = extract_single(time, resid, f0=edges[0], fn=edges[1], logger=logger)
+                out = extract_local(time, resid, f0=edges[0], fn=edges[1])
                 f_i, a_i, ph_i = np.array([out[0]]), np.array([out[1]]), np.array([out[2]])
 
             # make a model including the new freq

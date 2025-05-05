@@ -125,7 +125,7 @@ class Pipeline:
             flux -= self.model_linear()
             flux -= self.model_sinusoid()
 
-        f, a = pdg.scargle(self.data.time, flux, f0=0, fn=0, df=0, norm='amplitude')
+        f, a = pdg.scargle(self.data.time, flux, f0=-1, fn=-1, df=-1, norm='amplitude')
 
         return f, a
 

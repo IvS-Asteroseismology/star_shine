@@ -11,7 +11,7 @@ import numba as nb
 import astropy.timeseries as apy
 
 
-@nb.njit(cache=False)
+@nb.njit(cache=True)
 def fold_time_series_phase(time, p_orb, zero=None):
     """Fold the given time series over the orbital period to transform to phase space.
 
@@ -37,7 +37,7 @@ def fold_time_series_phase(time, p_orb, zero=None):
     return phases
 
 
-@nb.njit(cache=False)
+@nb.njit(cache=True)
 def fold_time_series(time, p_orb, t_zero, t_ext_1=0, t_ext_2=0):
     """Fold the given time series over the orbital period
 
@@ -78,7 +78,7 @@ def fold_time_series(time, p_orb, t_zero, t_ext_1=0, t_ext_2=0):
     return t_extended, ext_left, ext_right
 
 
-@nb.njit(cache=False)
+@nb.njit(cache=True)
 def phase_dispersion(phases, flux, n_bins):
     """Phase dispersion, as in PDM, without overlapping bins.
 
@@ -121,7 +121,7 @@ def phase_dispersion(phases, flux, n_bins):
     return total_var / overall_var
 
 
-@nb.njit(cache=False, parallel=True)
+@nb.njit(cache=True, parallel=True)
 def phase_dispersion_minimisation(time, flux, f_n, local=False):
     """Determine the phase dispersion over a set of periods to find the minimum
 
@@ -340,7 +340,7 @@ def spectral_window(time, freqs):
     return spec_win
 
 
-@nb.njit(cache=False)
+@nb.njit(cache=True)
 def _scargle_core(time, flux, nt, f0, df, nf):
     """Core algorithm of the Scargle periodogram with no weights.
 
@@ -414,7 +414,7 @@ def _scargle_core(time, flux, nt, f0, df, nf):
     return s1
 
 
-@nb.njit(cache=False)
+@nb.njit(cache=True)
 def scargle(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     """Scargle periodogram with no weights.
 
@@ -496,7 +496,7 @@ def scargle(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     return f1, s1
 
 
-@nb.njit(parallel=True)
+@nb.njit(cache=True, parallel=True)
 def scargle_parallel(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     """Parallel Scargle periodogram with no weights.
 
@@ -593,7 +593,7 @@ def scargle_parallel(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     return f1, s1
 
 
-@nb.njit(cache=False)
+@nb.njit(cache=True)
 def scargle_ampl_phase_single(time, flux, f):
     """Amplitude and phase at one or a set of frequencies from the Scargle periodogram.
 
@@ -678,7 +678,7 @@ def scargle_ampl_phase_single(time, flux, f):
     return ampl, phi
 
 
-@nb.njit(cache=False, parallel=True)
+@nb.njit(cache=True, parallel=True)
 def scargle_ampl_phase(time, flux, fs):
     """Amplitude at one or a set of frequencies from the Scargle periodogram.
 
