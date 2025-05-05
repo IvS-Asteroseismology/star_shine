@@ -11,6 +11,10 @@ import numba as nb
 import astropy.timeseries as apy
 
 
+# get the number of available cpu threads
+n_proc = nb.get_num_threads()
+
+
 @nb.njit(cache=True)
 def fold_time_series_phase(time, p_orb, zero=None):
     """Fold the given time series over the orbital period to transform to phase space.
@@ -542,9 +546,6 @@ def scargle_parallel(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     Useful extra information: VanderPlas 2018,
     https://ui.adsabs.harvard.edu/abs/2018ApJS..236...16V/abstract
     """
-    # get the number of available cpu threads
-    n_proc = nb.get_num_threads()
-
     # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
     mean_t = np.mean(time)
     mean_s = np.mean(flux)
