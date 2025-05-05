@@ -121,7 +121,7 @@ def phase_dispersion(phases, flux, n_bins):
     return total_var / overall_var
 
 
-@nb.njit(cache=False)
+@nb.njit(cache=False, parallel=True)
 def phase_dispersion_minimisation(time, flux, f_n, local=False):
     """Determine the phase dispersion over a set of periods to find the minimum
 
@@ -168,9 +168,10 @@ def phase_dispersion_minimisation(time, flux, f_n, local=False):
     periods = periods[periods > (2 * np.min(time[1:] - time[:-1]))]
 
     # compute the dispersion measures
-    pd_all = np.zeros(len(periods))
-    for i, p in enumerate(periods):
-        fold = fold_time_series_phase(time, p, 0)
+    n_periods = len(periods)
+    pd_all = np.zeros(n_periods)
+    for i in nb.prange(n_periods):
+        fold = fold_time_series_phase(time, periods[i], 0)
         pd_all[i] = phase_dispersion(fold, flux, n_bins)
 
     return periods, pd_all
@@ -202,8 +203,8 @@ def scargle_noise_spectrum(time, resid, window_width=1.0):
     Not to be confused with the noise on the individual data points of the
     time series.
     """
-    # calculate the periodogram
-    freqs, ampls = scargle(time, resid)  # use defaults to get full amplitude spectrum
+    # use defaults to get full amplitude spectrum
+    freqs, ampls = scargle_parallel(time, resid)
 
     # determine the number of points to extend the spectrum with for convolution
     n_points = int(np.ceil(window_width / np.abs(freqs[1] - freqs[0])))  # .astype(int)
@@ -294,8 +295,8 @@ def scargle_noise_at_freq(fs, time, resid, window_width=1.0):
     Not to be confused with the noise on the individual data points of the
     time series.
     """
-    # astropy_scargle probably accurate enough for noise calculation
-    freqs, ampls = scargle(time, resid)  # use defaults to get full amplitude spectrum
+    # use defaults to get full amplitude spectrum
+    freqs, ampls = scargle_parallel(time, resid)
     margin = window_width / 2
 
     # mask the frequency ranges and compute the noise
