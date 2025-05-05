@@ -7,6 +7,7 @@ Code written by: Luc IJspeert
 """
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtCore import Signal
 
 import matplotlib as mpl
 import matplotlib.figure
@@ -20,6 +21,9 @@ class PlotWidget(QWidget):
     Attributes
     ----------
     """
+    # Define a signal that emits the plot ID and clicked coordinates
+    click_signal = Signal(float, float)
+
     def __init__(self, title='Plot', xlabel='x', ylabel='y'):
         """A widget for displaying plots using Matplotlib in a Qt application.
 
@@ -56,10 +60,11 @@ class PlotWidget(QWidget):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
 
+        # Connect the mouse click event to a custom method
+        self.canvas.mpl_connect('button_press_event', self.on_click)
+
         # Initialize color cycle
         self.color_cycler = iter(mpl.rcParams['axes.prop_cycle'].by_key()['color'])
-
-        return None
 
     def _set_labels(self):
         """Set the axes labels and title."""
@@ -78,6 +83,17 @@ class PlotWidget(QWidget):
 
         # Reset color cycler
         self.color_cycler = iter(mpl.rcParams['axes.prop_cycle'].by_key()['color'])
+
+        return None
+
+    def on_click(self, event):
+        """Click event"""
+        # Left mouse button click
+        if event.button == 1:
+            x, y = event.xdata, event.ydata
+            # Ensure valid coordinates
+            if x is not None and y is not None:
+                self.click_signal.emit(x, y)
 
         return None
 

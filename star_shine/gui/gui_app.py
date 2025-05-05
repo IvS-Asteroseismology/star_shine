@@ -30,9 +30,6 @@ class MainWindow(QMainWindow):
     Contains a graphical user interface for loading data, performing analysis,
     displaying results, and visualizing plots.
     """
-    # setup signal receiving
-    log_signal = Signal(str)
-    result_signal = Signal(object)
 
     def __init__(self):
         super().__init__()
@@ -61,12 +58,9 @@ class MainWindow(QMainWindow):
         # Add widgets to the layout
         self._add_widgets_to_layout()
 
-        # Connect signals to slots
-        self.log_signal.connect(self.append_text)
-        self.result_signal.connect(self.receive_results)
-
-        # custom gui-specific logger
-        self.logger = gui_log.get_custom_gui_logger(self.log_signal, 'gui_logger', '')
+        # custom gui-specific logger (will be reloaded and connected when data is loaded)
+        self.logger = gui_log.get_custom_gui_logger('gui_logger', '')
+        self.logger.log_signal.connect(self.append_text)
 
         # add the api classes for functionality
         self.data_instance = Data()
@@ -78,8 +72,6 @@ class MainWindow(QMainWindow):
         self.data_dir = config.data_dir
         self.save_dir = config.save_dir
         self.save_subdir = ''
-
-        return None
 
     def _setup_central_widget(self):
         """Set up the central widget and its layout."""
@@ -294,6 +286,9 @@ class MainWindow(QMainWindow):
         self.lower_plot_area = gui_plot.PlotWidget(title='Periodogram', xlabel='frequency', ylabel='amplitude')
         r_col_layout.addWidget(self.lower_plot_area)
 
+        # connect the click event
+        self.lower_plot_area.click_signal.connect(self.handle_plot_click)
+
         return r_col_widget
 
     def append_text(self, text):
@@ -385,6 +380,24 @@ class MainWindow(QMainWindow):
 
         return None
 
+    def new_dataset(self):
+        """Set up pipeline and logger for the new data that was loaded"""
+        # for saving, make a folder if not there yet
+        self.save_subdir = f"{self.data_instance.target_id}_analysis"
+
+        full_dir = os.path.join(self.save_dir, self.save_subdir)
+        if not os.path.isdir(full_dir):
+            os.mkdir(full_dir)  # create the subdir
+
+        # custom gui-specific logger
+        self.logger = gui_log.get_custom_gui_logger(self.data_instance.target_id, full_dir)
+        self.logger.log_signal.connect(self.append_text)
+
+        # Make ready the pipeline class
+        self.pipeline_instance = Pipeline(data=self.data_instance, save_dir=self.save_dir, logger=self.logger)
+
+        return None
+
     def set_save_location(self):
         """Open a dialog to select the save location."""
         # Open a directory selection dialog
@@ -411,6 +424,8 @@ class MainWindow(QMainWindow):
                                             logger=self.logger)
         self.save_subdir = f"{self.data_instance.target_id}_analysis"
 
+        # set up some things
+        self.new_dataset()
         # clear and update the plots
         self.update_plots()
 
@@ -430,6 +445,8 @@ class MainWindow(QMainWindow):
         self.data_instance = Data.load(file_name=file_path, data_dir='', logger=self.logger)
         self.save_subdir = f"{self.data_instance.target_id}_analysis"
 
+        # set up some things
+        self.new_dataset()
         # clear and update the plots
         self.update_plots()
 
@@ -517,8 +534,16 @@ class MainWindow(QMainWindow):
         self.pipeline_instance = Pipeline(data=self.data_instance, save_dir=self.save_dir, logger=logger)
 
         # set up and start a new thread for the analysis
-        self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline_instance, self.result_signal)
+        self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline_instance)
+        self.pipeline_thread.result_signal.connect(self.receive_results)
         self.pipeline_thread.start()
+
+        return None
+
+    def handle_plot_click(self, x, y):
+        """Handle click events on the plots."""
+        # You can add more logic here to handle the click event
+        self.append_text(f"Plot clicked at coordinates: ({x}, {y})")
 
         return None
 

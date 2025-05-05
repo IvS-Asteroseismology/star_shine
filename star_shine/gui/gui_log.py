@@ -7,22 +7,35 @@ Code written by: Luc IJspeert
 """
 import logging
 
+from PySide6.QtCore import QObject, Signal
+
 from star_shine.config import helpers as hlp
 
 
-class QTextEditLogger(logging.Handler):
-    """A custom logging handler that writes log messages to a QTextEdit widget."""
+class QLogEmitter(QObject):
+    """A signal emitter helper class."""
+    # Define a signal that emits the log message
+    log_signal = Signal(str)
 
-    def __init__(self, log_signal):
+    def __init__(self):
+        super().__init__()
+
+
+class QSignalHandler(logging.Handler):
+    """A custom logging handler that writes log messages to a QTextEdit widget."""
+    # Define a signal that emits the log message
+    log_signal = Signal(str)
+
+    def __init__(self, emitter):
         """Initialise custom logging handler.
 
         Parameters
         ----------
-        log_signal: Signal
-            The Signal that is on the receiving end.
+        emitter: QLogEmitter
+            Object that handles the signal emitting.
         """
         super().__init__()
-        self.log_signal = log_signal
+        self.emitter = emitter  # instance of LogEmitter
 
     def emit(self, record):
         """Emit a log message to the QTextEdit widget.
@@ -33,16 +46,14 @@ class QTextEditLogger(logging.Handler):
             The log record to be formatted and emitted.
         """
         msg = self.format(record)
-        self.log_signal.emit(msg)
+        self.emitter.log_signal.emit(msg)
 
 
-def get_custom_gui_logger(log_signal, target_id, save_dir):
+def get_custom_gui_logger(target_id, save_dir):
     """Create a custom logger for logging to file and to the gui.
 
     Parameters
     ----------
-    log_signal: Signal
-        The Signal that is on the receiving end.
     target_id: str
         Identifier to use for the log file.
     save_dir: str
@@ -57,10 +68,14 @@ def get_custom_gui_logger(log_signal, target_id, save_dir):
     logger = hlp.get_custom_logger(target_id, save_dir=save_dir, verbose=False)
 
     # add a different stream handler
-    qtext_edit_handler = QTextEditLogger(log_signal)
-    qtext_edit_handler.setLevel(logging.EXTRA)  # print everything with level 15 or above
+    qlog_emitter = QLogEmitter()
+    qsignal_handler = QSignalHandler(qlog_emitter)
+    qsignal_handler.setLevel(logging.EXTRA)  # print everything with level 15 or above
     s_format = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    qtext_edit_handler.setFormatter(s_format)
-    logger.addHandler(qtext_edit_handler)
+    qsignal_handler.setFormatter(s_format)
+    logger.addHandler(qsignal_handler)
+
+    # expose the log_signal to be connected
+    logger.log_signal = qsignal_handler.emitter.log_signal
 
     return logger
