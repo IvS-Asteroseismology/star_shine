@@ -663,8 +663,6 @@ def extract_single(time, flux, f0=-1, fn=-1, select='a'):
         If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
     select: str, optional
         Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'
-    logger: logging.Logger, optional
-        Instance of the logging library.
     
     Returns
     -------
