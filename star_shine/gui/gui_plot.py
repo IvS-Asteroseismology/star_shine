@@ -5,14 +5,91 @@ This Python module contains plotting functions for the graphical user interface.
 
 Code written by: Luc IJspeert
 """
+import os
+import matplotlib as mpl
+import matplotlib.figure
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QAction
 
-import matplotlib as mpl
-import matplotlib.figure
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as PlotToolbar
+from star_shine.config.helpers import get_images_path
+
+
+class PlotToolbar(NavigationToolbar2QT):
+    """New plot toolbar"""
+
+    click_icon_file = os.path.join(get_images_path(), 'click')
+
+    # list of toolitems to add to the toolbar, format is:
+    # (
+    #   text, # the text of the button (often not visible to users)
+    #   tooltip_text, # the tooltip shown on hover (where possible)
+    #   image_file, # name of the image for the button (without the extension)
+    #   name_of_method, # name of the method in NavigationToolbar2 to call
+    # )
+    NavigationToolbar2QT.toolitems = [
+        ('Home', 'Reset original view', 'home', 'home'),
+        ('Back', 'Back to previous view', 'back', 'back'),
+        ('Forward', 'Forward to next view', 'forward', 'forward'),
+        (None, None, None, None),
+        ('Pan', 'Left button pans, Right button zooms\nx/y fixes axis, CTRL fixes aspect', 'move', 'pan'),
+        ('Zoom', 'Zoom to rectangle\nx/y fixes axis', 'zoom_to_rect', 'zoom'),
+        ('Click', 'Click on the plot to interact', click_icon_file, 'click'),
+        (None, None, None, None),
+        ('Subplots', 'Configure subplots', 'subplots', 'configure_subplots'),
+        ('Customize', 'Edit axis, curve and image parameters', 'qt4_editor_options', 'edit_parameters'),
+        (None, None, None, None),
+        ('Save', 'Save the figure', 'filesave', 'save_figure')
+    ]
+
+    def __init__(self, canvas, parent):
+        super().__init__(canvas, parent)
+        self._setup_click_button()
+
+    def _setup_click_button(self):
+        """Set up the click mode button."""
+        for action in self.actions():
+            if action.text() == "Click":
+                action.setCheckable(True)
+                self.click_action = action
+                break
+
+        return None
+
+    def click(self, *args):
+        """Toggle click mode."""
+        if args and args[0]:
+            self.click_action.setChecked(True)
+            return None
+        elif args and not args[0]:
+            self.click_action.setChecked(False)
+            return None
+
+        # handle state of built-in methods
+        if not args and self.mode == 'pan/zoom':
+            NavigationToolbar2QT.pan(self, False)
+        elif not args and self.mode == 'zoom rect':
+            NavigationToolbar2QT.zoom(self, False)
+
+        return None
+
+    def pan(self, *args):
+        """Toggle pan mode."""
+        # handle state of click button
+        if self.click_action.isChecked():
+            self.click(False)
+
+        super().pan(*args)
+
+    def zoom(self, *args):
+        """Toggle zoom mode."""
+        # handle state of click button
+        if self.click_action.isChecked():
+            self.click(False)
+
+        super().zoom(*args)
 
 
 class PlotWidget(QWidget):
@@ -89,7 +166,7 @@ class PlotWidget(QWidget):
     def on_click(self, event):
         """Click event"""
         # Left mouse button click
-        if event.button == 1:
+        if self.toolbar.click_action.isChecked() and event.button == 1:
             x, y = event.xdata, event.ydata
             # Ensure valid coordinates
             if x is not None and y is not None:

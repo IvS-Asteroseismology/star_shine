@@ -29,3 +29,27 @@ class PipelineThread(QThread):
 
         except Exception as e:
             self.pipeline_instance.logger.error(f"Error during analysis: {e}")
+
+    def iterative_prewhitening(self, n_extract=0):
+        """Run iterative_prewhitening in a separate thread."""
+        # Perform analysis using your Pipeline class
+        try:
+            result = self.pipeline_instance.iterative_prewhitening(n_extract=n_extract)
+
+            # Emit the signal with the result instance
+            self.result_signal.emit(result)
+
+        except Exception as e:
+            self.pipeline_instance.logger.error(f"Error during analysis: {e}")
+
+    def extract_approx(self, f_approx):
+        """Run extract_approx in a separate thread."""
+        # Perform analysis using your Pipeline class
+        try:
+            result = self.pipeline_instance.extract_approx(f_approx)
+
+            # Emit the signal with the result instance
+            self.result_signal.emit(result)
+
+        except Exception as e:
+            self.pipeline_instance.logger.error(f"Error during analysis: {e}")

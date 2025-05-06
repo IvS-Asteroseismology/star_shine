@@ -287,7 +287,7 @@ class MainWindow(QMainWindow):
         r_col_layout.addWidget(self.lower_plot_area)
 
         # connect the click event
-        self.lower_plot_area.click_signal.connect(self.handle_plot_click)
+        self.lower_plot_area.click_signal.connect(self.click_periodogram)
 
         return r_col_widget
 
@@ -395,6 +395,10 @@ class MainWindow(QMainWindow):
 
         # Make ready the pipeline class
         self.pipeline_instance = Pipeline(data=self.data_instance, save_dir=self.save_dir, logger=self.logger)
+
+        # set up a pipeline thread
+        self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline_instance)
+        self.pipeline_thread.result_signal.connect(self.receive_results)
 
         return None
 
@@ -522,28 +526,21 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Input Error", "Please provide data files.")
             return None
 
-        # for saving, make a folder if not there yet
-        full_dir = os.path.join(self.save_dir, self.save_subdir)
-        if not os.path.isdir(full_dir):
-            os.mkdir(full_dir)  # create the subdir
-
-        # redirect logging to text output
-        logger = gui_log.get_custom_gui_logger(self.log_signal, self.data_instance.target_id, full_dir)
-
-        # Perform analysis using your Pipeline class
-        self.pipeline_instance = Pipeline(data=self.data_instance, save_dir=self.save_dir, logger=logger)
-
         # set up and start a new thread for the analysis
-        self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline_instance)
-        self.pipeline_thread.result_signal.connect(self.receive_results)
         self.pipeline_thread.start()
 
         return None
 
-    def handle_plot_click(self, x, y):
-        """Handle click events on the plots."""
+    def click_periodogram(self, x, y):
+        """Handle click events on the periodogram plot."""
         # You can add more logic here to handle the click event
-        self.append_text(f"Plot clicked at coordinates: ({x}, {y})")
+        if len(self.data_instance.file_list) == 0:
+            self.append_text(f"Plot clicked at coordinates: ({x}, {y})")
+            self.append_text(f"{self.lower_plot_area.toolbar.mode}")
+            return None
+        # elif self.lower_plot_area.toolbar.zoom():
+
+        self.pipeline_thread.extract_approx(x)
 
         return None
 
