@@ -813,7 +813,7 @@ def extract_approx(time, flux, f_approx):
 
     # refine frequency by increasing the frequency resolution x100
     f_left = max(freqs[i_f_max] - df, df / 10)
-    f_right = f_approx + df
+    f_right = freqs[i_f_max] + df
     f_refine, a_refine = pdg.scargle(time, flux, f0=f_left, fn=f_right, df=df / 100)
 
     # select refined highest amplitude
