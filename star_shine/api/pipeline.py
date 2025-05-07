@@ -231,7 +231,7 @@ class Pipeline:
         # main function done, calculate the rest of the stats
         resid = self.data.flux - self.model_linear() - self.model_sinusoid()
         n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
-        bic = tsf.calc_bic(resid, n_param)
+        bic = gof.calc_bic(resid, n_param)
         noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
         self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
 
@@ -301,7 +301,7 @@ class Pipeline:
         # main function done, calculate the rest of the stats
         resid = self.data.flux - self.model_linear() - self.model_sinusoid()
         n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
-        bic = tsf.calc_bic(resid, n_param)
+        bic = gof.calc_bic(resid, n_param)
         noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
         self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
 
@@ -375,7 +375,7 @@ class Pipeline:
         resid = self.data.flux - self.model_linear() - self.model_sinusoid()
         harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
         n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
-        bic = tsf.calc_bic(resid, n_param)
+        bic = gof.calc_bic(resid, n_param)
         noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
         self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
 
@@ -465,7 +465,7 @@ class Pipeline:
         resid = self.data.flux - self.model_linear() - self.model_sinusoid()
         harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
         n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
-        bic = tsf.calc_bic(resid, n_param)
+        bic = gof.calc_bic(resid, n_param)
         noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
         self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
 
@@ -553,7 +553,9 @@ class Pipeline:
             file_name = os.path.join(self.save_dir, self.save_subdir, f"{self.data.target_id}_result_{step + 1}.hdf5")
 
             # Load existing result from this step if not overwriting (returns empty Result if no file)
+            print(file_name)
             self.result = Result.load_conditional(file_name, logger=self.logger)
+            print(self.result.target_id)
 
             # if existing result was loaded, go to the next step
             if self.result.target_id != '':

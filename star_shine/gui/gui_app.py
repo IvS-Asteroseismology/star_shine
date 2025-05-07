@@ -347,38 +347,52 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def update_plots(self):
+    def update_plots(self, new_plot=False):
         """Update the plotting area with the current data."""
-        # clear the plots
-        self.upper_plot_area.clear_plot()
-        self.lower_plot_area.clear_plot()
+        # collect plot data in a dict
+        upper_plot_data = {}
+        lower_plot_data = {}
 
-        # get the data attributes
-        time, flux = self.pipeline.data.time, self.pipeline.data.flux
+        # upper plot area - time series
+        upper_plot_data['scatter_xs'] = [self.pipeline.data.time]
+        upper_plot_data['scatter_ys'] = [self.pipeline.data.flux]
+        # lower plot area - periodogram
         freqs, ampls = self.pipeline.data.periodogram()
-
-        # update the plots with data
-        if self.pipeline.result.target_id == '' or not self.show_residual_action.isChecked():
-            self.upper_plot_area.scatter(time, flux)
-            self.lower_plot_area.plot(freqs, ampls)
+        lower_plot_data['plot_xs'] = [freqs]
+        lower_plot_data['plot_ys'] = [ampls]
 
         # include result attributes if present
-        print(self.pipeline.result.target_id, self.show_residual_action.isChecked())
         if self.pipeline.result.target_id != '' and not self.show_residual_action.isChecked():
-            model = self.pipeline.model_linear()
-            model += self.pipeline.model_sinusoid()
+            # upper plot area - time series
+            upper_plot_data['plot_xs'] = [self.pipeline.data.time]
+            upper_plot_data['plot_ys'] = [self.pipeline.model()]
+            # lower plot area - periodogram
             freqs, ampls = self.pipeline.periodogram(residual=True)
-            self.upper_plot_area.plot(time, model)
-            self.lower_plot_area.plot(freqs, ampls)
+            lower_plot_data['plot_xs'].append(freqs)
+            lower_plot_data['plot_ys'].append(ampls)
 
         # only show residual if toggle checked
         if self.pipeline.result.target_id != '' and self.show_residual_action.isChecked():
-            model = self.pipeline.model_linear()
-            model += self.pipeline.model_sinusoid()
-            residual = flux - model
+            # upper plot area - time series
+            residual = self.pipeline.data.flux - self.pipeline.model()
+            upper_plot_data['scatter_xs'] = [self.pipeline.data.time]
+            upper_plot_data['scatter_ys'] = [residual]
+            # lower plot area - periodogram
             freqs, ampls = self.pipeline.periodogram(residual=True)
-            self.upper_plot_area.scatter(time, residual)
-            self.lower_plot_area.plot(freqs, ampls)
+            lower_plot_data['plot_xs'] = [freqs]
+            lower_plot_data['plot_ys'] = [ampls]
+
+        # set the plot data
+        self.upper_plot_area.set_plot_data(**upper_plot_data)
+        self.lower_plot_area.set_plot_data(**lower_plot_data)
+
+        # start with a fresh plot
+        if new_plot:
+            self.upper_plot_area.new_plot()
+            self.lower_plot_area.new_plot()
+        else:
+            self.upper_plot_area.update_plot()
+            self.lower_plot_area.update_plot()
 
         return None
 
@@ -403,7 +417,7 @@ class MainWindow(QMainWindow):
         self.pipeline_thread.result_signal.connect(self.handle_result_signal)
 
         # clear and update the plots
-        self.update_plots()
+        self.update_plots(new_plot=True)
 
         return None
 
@@ -482,7 +496,7 @@ class MainWindow(QMainWindow):
         self.pipeline.result = Result.load(file_name=file_path, logger=self.logger)
 
         # clear and update the plots
-        self.update_plots()
+        self.update_plots(new_plot=False)
 
         return None
 
@@ -506,7 +520,7 @@ class MainWindow(QMainWindow):
         self.update_table(display_err=True)
 
         # Update the plot area with the results
-        self.update_plots()
+        self.update_plots(new_plot=False)
 
         return None
 
@@ -514,7 +528,7 @@ class MainWindow(QMainWindow):
         """Perform analysis on the loaded data and display results."""
         # check whether data is loaded
         if len(self.pipeline.data.file_list) == 0:
-            QMessageBox.warning(self, "Input Error", "Please provide data files.")
+            self.logger.error("Input Error: please provide data files.")
             return None
 
         # set up and start a new thread for the analysis

@@ -8,6 +8,7 @@ Code written by: Luc IJspeert
 import os
 import matplotlib as mpl
 import matplotlib.figure
+import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout
@@ -121,16 +122,17 @@ class PlotWidget(QWidget):
         # set up the figure and canvas with an axis
         self.figure = mpl.figure.Figure()
         self.canvas = FigureCanvas(self.figure)
-        self.figure.patch.set_facecolor('grey')
-        self.figure.patch.set_alpha(0.0)
+        # self.figure.patch.set_facecolor('grey')
+        # self.figure.patch.set_alpha(0.0)
 
         # Add toolbar for interactivity
         self.toolbar = PlotToolbar(self.canvas, self)
 
+        # make an axis and set the labels
         self.ax = self.figure.add_subplot(111)
         self._set_labels()
 
-        # make the layout and add the canvas widget
+        # make the layout and add the toolbar and canvas widgets
         layout = QVBoxLayout()
         layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas)
@@ -139,8 +141,17 @@ class PlotWidget(QWidget):
         # Connect the mouse click event to a custom method
         self.canvas.mpl_connect('button_press_event', self.on_click)
 
-        # Initialize color cycle
-        self.color_cycler = iter(mpl.rcParams['axes.prop_cycle'].by_key()['color'])
+        # plot types and properties supported
+        self.plot_type_list = ['plot', 'scatter', 'vlines']
+        self.plot_property_list = ['_xs', '_ys', '_labels', '_colors']
+        self.property_fill_values = {'_xs': [], '_ys': [], '_labels': '', '_colors': None}
+
+        # make references for the plot data and plot elements
+        for plot_type in self.plot_type_list:
+            setattr(self, plot_type + '_art', [])
+            for plot_property in self.plot_property_list:
+                key = plot_type + plot_property
+                setattr(self, key, [])
 
     def _set_labels(self):
         """Set the axes labels and title."""
@@ -157,9 +168,6 @@ class PlotWidget(QWidget):
         # re-apply some elements
         self._set_labels()
 
-        # Reset color cycler
-        self.color_cycler = iter(mpl.rcParams['axes.prop_cycle'].by_key()['color'])
-
         return None
 
     def on_click(self, event):
@@ -173,52 +181,144 @@ class PlotWidget(QWidget):
 
         return None
 
-    def plot(self, x, y, **kwargs):
-        """Plot a line graph on the widget.
+    def set_plot_data(self, **kwargs):
+        """Set the plot data, wiping existing data.
 
-        Parameters
-        ----------
-        x: array-like
-            Data for the x-axis.
-        y: array-like
-            Data for the y-axis.
-        **kwargs: dict, optional
-            Additional keyword arguments to pass to matplotlib's plot function.
+        Keywords:
+        line_xs, line_ys, line_labels, line_colors,
+        scatter_xs, scatter_ys, scatter_labels, scatter_colors,
+        vlines_xs, vlines_ys, vlines_labels, vlines_colors
+
+        All arguments must be supplied as lists. Data is only set if `<type>_xs` and `<type>_ys`
+        for the plot type is given. Lists per plot type are assumed of equal length.
         """
-        # get colour from the cycler
-        color = next(self.color_cycler)
+        # see if there is data in kwargs for any of the plot types
+        for plot_type in self.plot_type_list:
+            # go through the supplied and existing plot properties to check lengths
+            n_existing = 0
+            n_supplied = 0
+            for plot_property in self.plot_property_list:
+                key = plot_type + plot_property
+                n_existing = max(n_existing, len(getattr(self, key)))  #  take the max length
+                if key in kwargs.keys():
+                    n_supplied = max(n_supplied, len(kwargs[key]))  #  take the max length
 
-        # plot the thing
-        self.ax.plot(x, y, c=color, **kwargs)
+            # positive if more data supplied than existing plots
+            n_diff = n_supplied - n_existing
 
-        # fix layout and draw
-        self.figure.tight_layout()
+            # go through the plot properties to set them accordingly
+            for plot_property in self.plot_property_list:
+                key = plot_type + plot_property
+                if key in kwargs.keys() and (len(kwargs[key]) == n_supplied):
+                    # set the plot property to the supplied value(s)
+                    setattr(self, key, kwargs[key])
+                elif key in kwargs.keys():
+                    # set the plot property to the supplied value(s) and extend them with fill values
+                    setattr(self, key, kwargs[key])
+                    n_diff_i = n_supplied - len(kwargs[key])
+                    getattr(self, key).extend([self.property_fill_values[plot_property] for _ in range(n_diff_i)])
+                elif n_existing == 0:
+                    # set the plot property to its fill value(s)
+                    setattr(self, key, [self.property_fill_values[plot_property] for _ in range(n_supplied)])
+                elif n_existing < n_supplied:
+                    # extend the plot property with its fill value(s)
+                    getattr(self, key).extend([self.property_fill_values[plot_property] for _ in range(n_diff)])
+                else:  # n_existing >= n_supplied
+                    # remove excess plot properties
+                    setattr(self, key, getattr(self, key)[:n_supplied])
+
+        return None
+
+    @staticmethod
+    def _update_plot_element(plot_type, plot_element, **kwargs):
+        """Update an existing plot element."""
+        # update the data
+        if plot_type == 'plot':
+            plot_element.set_xdata(kwargs['x'])
+            plot_element.set_ydata(kwargs['y'])
+        elif plot_type == 'scatter':
+            plot_element.set_offsets(np.column_stack((kwargs['x'], kwargs['y'])))
+        else:  # plot_type == 'vlines'
+            plot_element.set_segments([[[xi, 0], [xi, yi]] for xi, yi in zip(kwargs['x'], kwargs['y'])])
+
+        # update colour
+        if 'color' in kwargs and kwargs['color'] is not None:
+            if plot_type == 'plot':
+                plot_element.set_color(kwargs['color'])
+            elif plot_type == 'scatter':
+                plot_element.set_facecolors(kwargs['color'])
+            else:  # plot_type == 'vlines'
+                plot_element.set_colors(kwargs['color'])
+
+        # update label
+        if 'label' in kwargs and kwargs['label'] != '':
+            plot_element.set_label(kwargs['label'])
+
+        return
+
+    def _create_plot_element(self, plot_type, **kwargs):
+        """Create a new plot element."""
+        # make sure mpl gets the right keywords
+        mpl_kwargs = {}
+        if 'color' in kwargs and kwargs['color'] is not None:
+            if plot_type == 'plot':
+                mpl_kwargs['color'] = kwargs['color']
+            elif plot_type == 'scatter':
+                mpl_kwargs['c'] = kwargs['color']
+            else:  # plot_type == 'vlines'
+                mpl_kwargs['colors'] = kwargs['color']
+
+        if 'label' in kwargs and kwargs['label'] != '':
+            mpl_kwargs['label'] = kwargs['label']
+
+        if plot_type == 'plot':
+            art = self.ax.plot(kwargs['x'], kwargs['y'], **mpl_kwargs)[0]  # returns list
+        elif plot_type == 'scatter':
+            art = self.ax.scatter(kwargs['x'], kwargs['y'], marker='.', **mpl_kwargs)
+        else:  # plot_type == 'vlines'
+            ymin = np.zeros_like(kwargs['x'])
+            art = self.ax.vlines(kwargs['x'], ymin=ymin, ymax=kwargs['y'], **mpl_kwargs)
+
+        return art
+
+    def update_plot(self):
+        """Update the plot in the widget."""
+        # update the plot (with altered or appended data)
+        for plot_type in self.plot_type_list:
+            plot_elements = getattr(self, plot_type + '_art')
+            xs = getattr(self, plot_type + '_xs')
+            ys = getattr(self, plot_type + '_ys')
+            colors = getattr(self, plot_type + '_colors')
+            labels = getattr(self, plot_type + '_labels')
+
+            # for each plot element: if the element exists, update it, else create it
+            for i in range(len(xs)):
+                kwargs = {'x': xs[i], 'y': ys[i], 'color': colors[i], 'label': labels[i]}
+
+                if i < len(plot_elements):
+                    # update the plot element
+                    self._update_plot_element(plot_type, plot_elements[i], **kwargs)
+                else:
+                    # create new plot element
+                    art = self._create_plot_element(plot_type, **kwargs)
+                    plot_elements.append(art)
+
+        # Redraw the canvas to reflect changes
+        # self.ax.legend()
+        self.figure.tight_layout()  # needs to happen before draw
         self.canvas.draw()
 
         return None
 
-    def scatter(self, x, y, marker='.', **kwargs):
-        """Plot a scatter graph on the widget.
+    def new_plot(self):
+        """Plot the data in the widget."""
+        # Start by clearing the canvas
+        self.clear_plot()
+        self.plot_art = []  # reset all plot elements
+        self.scatter_art = []  # reset all scatter elements
+        self.vlines_art = []  # reset all vlines elements
 
-        Parameters
-        ----------
-        x: array-like
-            Data for the x-axis.
-        y: array-like
-            Data for the y-axis.
-        marker: str
-            Matplotlib marker keyword.
-        **kwargs: dict, optional
-            Additional keyword arguments to pass to matplotlib's scatter function.
-        """
-        # get colour from the cycler
-        color = next(self.color_cycler)
-
-        # plot the thing
-        self.ax.scatter(x, y, c=color, marker=marker, **kwargs)
-
-        # fix layout and draw
-        self.figure.tight_layout()
-        self.canvas.draw()
+        # Plot the line plot(s)
+        self.update_plot()
 
         return None
