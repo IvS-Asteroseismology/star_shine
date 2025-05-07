@@ -66,8 +66,7 @@ class MainWindow(QMainWindow):
         self.logger.log_signal.connect(self.append_text)
 
         # add the api classes for functionality
-        self.data_instance = Data()
-        self.pipeline_instance = None
+        self.pipeline = None
         self.pipeline_thread = None
 
         # some things that are needed
@@ -321,12 +320,12 @@ class MainWindow(QMainWindow):
         None
         """
         # get the result parameters
-        col1 = self.pipeline_instance.result.f_n
-        col2 = self.pipeline_instance.result.a_n
-        col3 = self.pipeline_instance.result.ph_n
-        col1_err = self.pipeline_instance.result.f_n_err
-        col2_err = self.pipeline_instance.result.a_n_err
-        col3_err = self.pipeline_instance.result.ph_n_err
+        col1 = self.pipeline.result.f_n
+        col2 = self.pipeline.result.a_n
+        col3 = self.pipeline.result.ph_n
+        col1_err = self.pipeline.result.f_n_err
+        col2_err = self.pipeline.result.a_n_err
+        col3_err = self.pipeline.result.ph_n_err
 
         # display sinusoid parameters in the table
         self.table_model.setRowCount(len(col1))
@@ -355,52 +354,56 @@ class MainWindow(QMainWindow):
         self.lower_plot_area.clear_plot()
 
         # get the data attributes
-        time, flux = self.data_instance.time, self.data_instance.flux
-        freqs, ampls = self.data_instance.periodogram()
+        time, flux = self.pipeline.data.time, self.pipeline.data.flux
+        freqs, ampls = self.pipeline.data.periodogram()
 
         # update the plots with data
-        if self.pipeline_instance.result.target_id == '' or not self.show_residual_action.isChecked():
+        if self.pipeline.result.target_id == '' or not self.show_residual_action.isChecked():
             self.upper_plot_area.scatter(time, flux)
             self.lower_plot_area.plot(freqs, ampls)
 
         # include result attributes if present
-        if self.pipeline_instance.result.target_id != '' and not self.show_residual_action.isChecked():
-            model = self.pipeline_instance.model_linear()
-            model += self.pipeline_instance.model_sinusoid()
-            freqs, ampls = self.pipeline_instance.periodogram(residual=True)
+        print(self.pipeline.result.target_id, self.show_residual_action.isChecked())
+        if self.pipeline.result.target_id != '' and not self.show_residual_action.isChecked():
+            model = self.pipeline.model_linear()
+            model += self.pipeline.model_sinusoid()
+            freqs, ampls = self.pipeline.periodogram(residual=True)
             self.upper_plot_area.plot(time, model)
             self.lower_plot_area.plot(freqs, ampls)
 
         # only show residual if toggle checked
-        if self.pipeline_instance.result.target_id != '' and self.show_residual_action.isChecked():
-            model = self.pipeline_instance.model_linear()
-            model += self.pipeline_instance.model_sinusoid()
+        if self.pipeline.result.target_id != '' and self.show_residual_action.isChecked():
+            model = self.pipeline.model_linear()
+            model += self.pipeline.model_sinusoid()
             residual = flux - model
-            freqs, ampls = self.pipeline_instance.periodogram(residual=True)
+            freqs, ampls = self.pipeline.periodogram(residual=True)
             self.upper_plot_area.scatter(time, residual)
             self.lower_plot_area.plot(freqs, ampls)
 
         return None
 
-    def new_dataset(self):
+    def new_dataset(self, data):
         """Set up pipeline and logger for the new data that was loaded"""
         # for saving, make a folder if not there yet
-        self.save_subdir = f"{self.data_instance.target_id}_analysis"
+        self.save_subdir = f"{data.target_id}_analysis"
 
         full_dir = os.path.join(self.save_dir, self.save_subdir)
         if not os.path.isdir(full_dir):
             os.mkdir(full_dir)  # create the subdir
 
         # custom gui-specific logger
-        self.logger = gui_log.get_custom_gui_logger(self.data_instance.target_id, full_dir)
+        self.logger = gui_log.get_custom_gui_logger(data.target_id, full_dir)
         self.logger.log_signal.connect(self.append_text)
 
         # Make ready the pipeline class
-        self.pipeline_instance = Pipeline(data=self.data_instance, save_dir=self.save_dir, logger=self.logger)
-
+        self.pipeline = Pipeline(data=data, save_dir=self.save_dir, logger=self.logger)
+        print(self.pipeline.data.target_id)
         # set up a pipeline thread
-        self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline_instance)
+        self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline)
         self.pipeline_thread.result_signal.connect(self.handle_result_signal)
+
+        # clear and update the plots
+        self.update_plots()
 
         return None
 
@@ -426,14 +429,10 @@ class MainWindow(QMainWindow):
             return None
 
         # load data into instance
-        self.data_instance = Data.load_data(file_list=file_paths, data_dir='', target_id='', data_id='',
-                                            logger=self.logger)
-        self.save_subdir = f"{self.data_instance.target_id}_analysis"
+        data = Data.load_data(file_list=file_paths, data_dir='', target_id='', data_id='', logger=self.logger)
 
         # set up some things
-        self.new_dataset()
-        # clear and update the plots
-        self.update_plots()
+        self.new_dataset(data)
 
         return None
 
@@ -448,19 +447,16 @@ class MainWindow(QMainWindow):
             return None
 
         # load data into instance
-        self.data_instance = Data.load(file_name=file_path, data_dir='', logger=self.logger)
-        self.save_subdir = f"{self.data_instance.target_id}_analysis"
+        data = Data.load(file_name=file_path, data_dir='', logger=self.logger)
 
         # set up some things
-        self.new_dataset()
-        # clear and update the plots
-        self.update_plots()
+        self.new_dataset(data)
 
         return None
 
     def save_data(self):
         """Save data to a file using a dialog window."""
-        suggested_path = os.path.join(self.save_dir, self.data_instance.target_id + '_data.hdf5')
+        suggested_path = os.path.join(self.save_dir, self.pipeline.data.target_id + '_data.hdf5')
         file_path, _ = QFileDialog.getSaveFileName(self, caption="Save Data", dir=suggested_path,
                                                    filter="HDF5 Files (*.hdf5);;All Files (*)")
 
@@ -468,7 +464,7 @@ class MainWindow(QMainWindow):
         if not file_path:
             return None
 
-        self.data_instance.save(file_path)
+        self.pipeline.data.save(file_path)
 
         return None
 
@@ -483,7 +479,7 @@ class MainWindow(QMainWindow):
             return None
 
         # load result into instance
-        self.pipeline_instance.result = Result.load(file_name=file_path, logger=self.logger)
+        self.pipeline.result = Result.load(file_name=file_path, logger=self.logger)
 
         # clear and update the plots
         self.update_plots()
@@ -492,7 +488,7 @@ class MainWindow(QMainWindow):
 
     def save_result(self):
         """Save result to a file using a dialog window."""
-        suggested_path = os.path.join(self.save_dir, self.data_instance.target_id + '_result.hdf5')
+        suggested_path = os.path.join(self.save_dir, self.pipeline.data.target_id + '_result.hdf5')
         file_path, _ = QFileDialog.getSaveFileName(self, caption="Save Data", dir=suggested_path,
                                                    filter="HDF5 Files (*.hdf5);;All Files (*)")
 
@@ -500,7 +496,7 @@ class MainWindow(QMainWindow):
         if not file_path:
             return None
 
-        self.pipeline_instance.result.save(file_path)
+        self.pipeline.result.save(file_path)
 
         return None
 
@@ -517,7 +513,7 @@ class MainWindow(QMainWindow):
     def perform_analysis(self):
         """Perform analysis on the loaded data and display results."""
         # check whether data is loaded
-        if len(self.data_instance.file_list) == 0:
+        if len(self.pipeline.data.file_list) == 0:
             QMessageBox.warning(self, "Input Error", "Please provide data files.")
             return None
 
@@ -529,7 +525,7 @@ class MainWindow(QMainWindow):
     def click_periodogram(self, x, y):
         """Handle click events on the periodogram plot."""
         # You can add more logic here to handle the click event
-        if len(self.data_instance.file_list) == 0:
+        if len(self.pipeline.data.file_list) == 0:
             self.append_text(f"Plot clicked at coordinates: ({x}, {y})")
             self.append_text(f"{self.lower_plot_area.toolbar.mode}")
             return None
