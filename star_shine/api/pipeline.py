@@ -235,7 +235,7 @@ class Pipeline:
         self.logger.extra(f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
                           f"Time taken: {t_b - t_a:1.1f}")
 
-        return self.result
+        return None
 
     def optimise_sinusoid(self):
         """Optimise the parameters of the sinusoid and linear model
@@ -306,7 +306,7 @@ class Pipeline:
         self.logger.extra(f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
                           f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s")
 
-        return self.result
+        return None
 
     def couple_harmonics(self):
         """Find the orbital period and couple harmonic frequencies to the orbital period
@@ -392,7 +392,7 @@ class Pipeline:
             self.logger.warning(f"Not enough harmonics found: {len(harmonics)}; "
                                 f"period (days): {self.result.p_orb}; time-base (days): {self.data.t_tot}")
 
-        return self.result
+        return None
 
     def optimise_sinusoid_h(self):
         """Optimise the parameters of the sinusoid and linear model with coupled harmonics
@@ -475,7 +475,7 @@ class Pipeline:
                           f"{self.result.n_param} free parameters, BIC: {self.result.bic:1.2f}. "
                           f"Time taken: {t_b - t_a:1.1f}s")
 
-        return self.result
+        return None
 
     def run(self):
         """Run the analysis pipeline on the given data.
@@ -565,4 +565,4 @@ class Pipeline:
         t_b = systime.time()
         self.logger.info(f"End of analysis. Total time elapsed: {t_b - t_a:1.1f}s.")  # info to save to log
 
-        return self.result
+        return None

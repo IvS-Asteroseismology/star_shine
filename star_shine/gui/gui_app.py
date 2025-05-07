@@ -11,8 +11,7 @@ import sys
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QSplitter, QMenuBar
 from PySide6.QtWidgets import QLabel, QTextEdit, QLineEdit, QFileDialog, QMessageBox, QPushButton
 from PySide6.QtWidgets import QTableView, QHeaderView
-from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor
-from PySide6.QtCore import Signal
+from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor, QIcon
 
 from star_shine.core import utility as ut
 from star_shine.api import Data, Result, Pipeline
@@ -44,6 +43,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Star Shine")
         self.setGeometry(100, 50, h_size, v_size)  # x, y, width, height
 
+        # App icon
+        icon_path = os.path.join(hlp.get_images_path(), 'Star_Shine_dark_simple_small_transparent.png')
+        self.setWindowIcon(QIcon(icon_path))
+
         # Set font size for the entire application
         font = QFont()
         font.setPointSize(11)
@@ -66,7 +69,6 @@ class MainWindow(QMainWindow):
         self.data_instance = Data()
         self.pipeline_instance = None
         self.pipeline_thread = None
-        self.result_instance = Result()
 
         # some things that are needed
         self.data_dir = config.data_dir
@@ -311,7 +313,7 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def update_table(self, display_errors=True):
+    def update_table(self, display_err=True):
         """Fill the table with the given data.
 
         Returns
@@ -319,20 +321,20 @@ class MainWindow(QMainWindow):
         None
         """
         # get the result parameters
-        col1 = self.result_instance.f_n
-        col2 = self.result_instance.a_n
-        col3 = self.result_instance.ph_n
-        col1_err = self.result_instance.f_n_err
-        col2_err = self.result_instance.a_n_err
-        col3_err = self.result_instance.ph_n_err
+        col1 = self.pipeline_instance.result.f_n
+        col2 = self.pipeline_instance.result.a_n
+        col3 = self.pipeline_instance.result.ph_n
+        col1_err = self.pipeline_instance.result.f_n_err
+        col2_err = self.pipeline_instance.result.a_n_err
+        col3_err = self.pipeline_instance.result.ph_n_err
 
         # display sinusoid parameters in the table
         self.table_model.setRowCount(len(col1))
         for row, row_items in enumerate(zip(col1, col2, col3, col1_err, col2_err, col3_err)):
             # convert to strings
-            c1 = ut.float_to_str_scientific(row_items[0], row_items[3], error=display_errors, brackets=False)
-            c2 = ut.float_to_str_scientific(row_items[1], row_items[4], error=display_errors, brackets=False)
-            c3 = ut.float_to_str_scientific(row_items[2], row_items[5], error=display_errors, brackets=False)
+            c1 = ut.float_to_str_scientific(row_items[0], row_items[3], error=display_err, brackets=False)
+            c2 = ut.float_to_str_scientific(row_items[1], row_items[4], error=display_err, brackets=False)
+            c3 = ut.float_to_str_scientific(row_items[2], row_items[5], error=display_err, brackets=False)
 
             # convert to table items
             c1_item = QStandardItem(c1)
@@ -357,12 +359,12 @@ class MainWindow(QMainWindow):
         freqs, ampls = self.data_instance.periodogram()
 
         # update the plots with data
-        if self.result_instance.target_id == '' or not self.show_residual_action.isChecked():
+        if self.pipeline_instance.result.target_id == '' or not self.show_residual_action.isChecked():
             self.upper_plot_area.scatter(time, flux)
             self.lower_plot_area.plot(freqs, ampls)
 
         # include result attributes if present
-        if self.result_instance.target_id != '' and not self.show_residual_action.isChecked():
+        if self.pipeline_instance.result.target_id != '' and not self.show_residual_action.isChecked():
             model = self.pipeline_instance.model_linear()
             model += self.pipeline_instance.model_sinusoid()
             freqs, ampls = self.pipeline_instance.periodogram(residual=True)
@@ -370,7 +372,7 @@ class MainWindow(QMainWindow):
             self.lower_plot_area.plot(freqs, ampls)
 
         # only show residual if toggle checked
-        if self.result_instance.target_id != '' and self.show_residual_action.isChecked():
+        if self.pipeline_instance.result.target_id != '' and self.show_residual_action.isChecked():
             model = self.pipeline_instance.model_linear()
             model += self.pipeline_instance.model_sinusoid()
             residual = flux - model
@@ -398,7 +400,7 @@ class MainWindow(QMainWindow):
 
         # set up a pipeline thread
         self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline_instance)
-        self.pipeline_thread.result_signal.connect(self.receive_results)
+        self.pipeline_thread.result_signal.connect(self.handle_result_signal)
 
         return None
 
@@ -481,7 +483,7 @@ class MainWindow(QMainWindow):
             return None
 
         # load result into instance
-        self.result_instance = Result.load(file_name=file_path, logger=self.logger)
+        self.pipeline_instance.result = Result.load(file_name=file_path, logger=self.logger)
 
         # clear and update the plots
         self.update_plots()
@@ -498,21 +500,14 @@ class MainWindow(QMainWindow):
         if not file_path:
             return None
 
-        self.result_instance.save(file_path)
+        self.pipeline_instance.result.save(file_path)
 
         return None
 
-    def receive_results(self, result):
-        """Handle the results emitted from the analysis thread."""
-        # Update the GUI with the results
-        if result is None:
-            return None
-
-        # set result instance to received result
-        self.result_instance = result
-
+    def handle_result_signal(self):
+        """Handle the emitted result signal: update the GUI with the results."""
         # display sinusoid parameters in the table
-        self.update_table(display_errors=True)
+        self.update_table(display_err=True)
 
         # Update the plot area with the results
         self.update_plots()
@@ -538,7 +533,6 @@ class MainWindow(QMainWindow):
             self.append_text(f"Plot clicked at coordinates: ({x}, {y})")
             self.append_text(f"{self.lower_plot_area.toolbar.mode}")
             return None
-        # elif self.lower_plot_area.toolbar.zoom():
 
         self.pipeline_thread.extract_approx(x)
 

@@ -12,7 +12,6 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas,
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QAction
 
 from star_shine.config.helpers import get_images_path
 
