@@ -748,9 +748,9 @@ def extract_local(time, flux, f0, fn, select='a'):
     freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
 
     # cut off the ends of the frequency range if they are rising
-    f_min_edges = ut.uphill_local_max(freqs, -ampls, freqs[[0, -1]])
-    mask = (freqs < f_min_edges[0]) & (freqs > f_min_edges[1])
-    freqs, ampls = freqs[mask], ampls[mask]
+    i_f_min_edges = ut.uphill_local_max(freqs, -ampls, freqs[[0, -1]])
+    freqs = freqs[i_f_min_edges[0]:i_f_min_edges[1] + 1]
+    ampls = ampls[i_f_min_edges[0]:i_f_min_edges[1] + 1]
 
     # selection step based on flux to noise (refine step keeps using ampl)
     if select == 'sn':
@@ -931,11 +931,11 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             accept = True
 
         if logger is not None:
-            print(f'N_f= {n_f}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) '
-                  f'- N_refine= {n_g}, f= {f_j:1.6f}, a= {a_j:1.6f}')
+            logger.extra(f'N_f= {n_f}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) '
+                         f'- N_refine= {n_g}, f= {f_j:1.6f}, a= {a_j:1.6f}')
 
     if logger is not None:
-        print(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f}) - end refinement')
+        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f}) - end refinement')
 
     # redo the constant and slope without the last iteration of changes
     resid = flux - (model_sinusoid_ncf + sum_sines(time, f_n[close_f], a_n[close_f], ph_n[close_f]))
@@ -1512,7 +1512,7 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     if logger is not None:
         str_bic = ut.float_to_str(bic_prev, dec=2)
         str_delta = ut.float_to_str(bic_init - bic_prev, dec=2)
-        logger.extra(f'Single frequencies removed: {n_freq - len(f_n)} '
+        logger.extra(f'Single frequencies removed: {n_freq - len(f_n)}, '
                      f'N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})')
 
     return const, slope, f_n, a_n, ph_n
