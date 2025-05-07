@@ -366,10 +366,14 @@ class MainWindow(QMainWindow):
             # upper plot area - time series
             upper_plot_data['plot_xs'] = [self.pipeline.data.time]
             upper_plot_data['plot_ys'] = [self.pipeline.model()]
+            upper_plot_data['plot_colors'] = ['grey']
             # lower plot area - periodogram
             freqs, ampls = self.pipeline.periodogram(residual=True)
             lower_plot_data['plot_xs'].append(freqs)
             lower_plot_data['plot_ys'].append(ampls)
+            lower_plot_data['vlines_xs'] = [self.pipeline.result.f_n]
+            lower_plot_data['vlines_ys'] = [self.pipeline.result.a_n]
+            lower_plot_data['vlines_colors'] = ['grey']
 
         # only show residual if toggle checked
         if self.pipeline.result.target_id != '' and self.show_residual_action.isChecked():
@@ -411,7 +415,7 @@ class MainWindow(QMainWindow):
 
         # Make ready the pipeline class
         self.pipeline = Pipeline(data=data, save_dir=self.save_dir, logger=self.logger)
-        print(self.pipeline.data.target_id)
+
         # set up a pipeline thread
         self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline)
         self.pipeline_thread.result_signal.connect(self.handle_result_signal)
