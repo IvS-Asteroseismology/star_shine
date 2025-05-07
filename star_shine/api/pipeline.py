@@ -83,7 +83,7 @@ class Pipeline:
         return
 
     def model_linear(self):
-        """Returns a piece-wise linear curve for the time series with the current parameters.
+        """A piece-wise linear curve for the time series with the current parameters.
 
         Returns
         -------
@@ -95,7 +95,7 @@ class Pipeline:
         return curve
 
     def model_sinusoid(self):
-        """Returns a sum of sine waves for the time series with the current parameters.
+        """A sum of sine waves for the time series with the current parameters.
 
         Returns
         -------
@@ -105,6 +105,20 @@ class Pipeline:
         curve = self.result.model_sinusoid(self.data.time)
 
         return curve
+
+    def model(self):
+        """The full model of the time series with the current parameters.
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            Model of the time series.
+        """
+        model_linear = self.model_linear()
+        model_sinusoid = self.model_sinusoid()
+        model = model_linear + model_sinusoid
+
+        return model
 
     def periodogram(self, residual=True):
         """Compute the Lomb-Scargle periodogram of the time series
@@ -124,8 +138,7 @@ class Pipeline:
 
         # subtract the model for the residuals
         if residual:
-            flux -= self.model_linear()
-            flux -= self.model_sinusoid()
+            flux -= self.model()
 
         f, a = pdg.scargle_parallel(self.data.time, flux, f0=-1, fn=-1, df=-1, norm='amplitude')
 
