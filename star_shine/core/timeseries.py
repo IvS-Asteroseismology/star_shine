@@ -241,7 +241,7 @@ def find_orbital_period(time, flux, f_n):
     return p_orb
 
 
-@nb.njit(cache=True)
+@nb.njit(cache=True, parallel=True)
 def linear_curve(time, const, slope, i_chunks, t_shift=True):
     """Returns a piece-wise linear curve for the given time points
     with slopes and y-intercepts.
@@ -271,17 +271,19 @@ def linear_curve(time, const, slope, i_chunks, t_shift=True):
     to the sector mean time as zero point.
     """
     curve = np.zeros(len(time))
-    for co, sl, s in zip(const, slope, i_chunks):
+    for i in nb.prange(len(const)):
+        s = i_chunks[i]
         if t_shift:
             t_sector_mean = np.mean(time[s[0]:s[1]])
         else:
             t_sector_mean = 0
-        curve[s[0]:s[1]] = co + sl * (time[s[0]:s[1]] - t_sector_mean)
+
+        curve[s[0]:s[1]] = const[i] + slope[i] * (time[s[0]:s[1]] - t_sector_mean)
 
     return curve
 
 
-@nb.njit(cache=True)
+@nb.njit(cache=True, parallel=True)
 def linear_pars(time, flux, i_chunks):
     """Calculate the slopes and y-intercepts of a linear trend with the MLE.
     
@@ -312,7 +314,10 @@ def linear_pars(time, flux, i_chunks):
     """
     y_inter = np.zeros(len(i_chunks))
     slope = np.zeros(len(i_chunks))
-    for i, s in enumerate(i_chunks):
+
+    for i in nb.prange(len(i_chunks)):
+        s = i_chunks[i]
+
         # mean and mean subtracted quantities
         x_m = np.mean(time[s[0]:s[1]])
         x_ms = (time[s[0]:s[1]] - x_m)
