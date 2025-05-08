@@ -116,9 +116,21 @@ class Pipeline:
         """
         model_linear = self.model_linear()
         model_sinusoid = self.model_sinusoid()
-        model = model_linear + model_sinusoid
+        full_model = model_linear + model_sinusoid
 
-        return model
+        return full_model
+
+    def residual(self):
+        """The residuals of the full model of the time series with the current parameters.
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            Residual of the time series.
+        """
+        resid = self.data.flux - self.model()
+
+        return resid
 
     def periodogram(self, residual=True):
         """Compute the Lomb-Scargle periodogram of the time series
@@ -144,6 +156,34 @@ class Pipeline:
 
         return f, a
 
+    def update_stats(self):
+        """Updates the model statistics and formal uncertainties."""
+        # model residual
+        resid = self.residual()
+
+        # calculate the number of parameters
+        n_harm = 0
+        if self.result.p_orb > 0:
+            harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
+            n_harm = len(harmonics)
+        n_param = 2 * len(self.result.const) + int(n_harm > 0) + 2 * n_harm + 3 * (len(self.result.f_n) - n_harm)
+
+        # set number of parameters, BIC and noise level
+        bic = gof.calc_bic(resid, n_param)
+        noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
+        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
+
+        # calculate formal uncertainties
+        out = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
+        self.result.setter(c_err=out[0], sl_err=out[1], f_n_err=out[2], a_n_err=out[3], ph_n_err=out[4])
+        # period uncertainty
+        if self.result.p_orb > 0:
+            p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
+                                                                  sigma_t=self.data.t_step / 2)
+            self.result.setter(p_err=p_err)
+
+        return None
+
     def extract_approx(self, f_approx):
         """Extract a sinusoid from the time series at an approximate frequency.
 
@@ -159,22 +199,15 @@ class Pipeline:
         f_n, a_n, ph_n = np.append(f_n, f), np.append(a_n, a), np.append(ph_n, ph)
         self.result.setter(f_n=f_n, a_n=a_n, ph_n=ph_n)
 
-        # calculate the stats
-        resid = self.data.flux - self.model_linear() - self.model_sinusoid()
-        n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
-        bic = gof.calc_bic(resid, n_param)
-        noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
-        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
-
-        # calculate formal uncertainties
-        out_e = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
-        self.result.setter(c_err=out_e[0], sl_err=out_e[1], f_n_err=out_e[2], a_n_err=out_e[3], ph_n_err=out_e[4])
+        # update the stats
+        self.update_stats()
 
         # set the result description
         self.result.setter(description='Manual extraction.')
 
         # print some useful info
-        self.logger.info(f"Appended f: {f:1.2f}, N_f: {len(self.result.f_n)}, N_dof: {n_param}, BIC: {bic:1.2f}.")
+        self.logger.info(f"Appended f: {f:1.2f}")
+        self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
 
         return None
 
@@ -228,25 +261,16 @@ class Pipeline:
                                      logger=self.logger)
         self.result.setter(passed_sigma=out_d[0], passed_snr=out_d[1], passed_both=out_d[2], passed_harmonic=out_d[3])
 
-        # main function done, calculate the rest of the stats
-        resid = self.data.flux - self.model_linear() - self.model_sinusoid()
-        n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
-        bic = gof.calc_bic(resid, n_param)
-        noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
-        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
-
-        # calculate formal uncertainties
-        out_e = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
-        self.result.setter(c_err=out_e[0], sl_err=out_e[1], f_n_err=out_e[2], a_n_err=out_e[3], ph_n_err=out_e[4])
+        # update the stats
+        self.update_stats()
 
         # set the result description
         self.result.setter(description='Iterative prewhitening results.')
 
         # print some useful info
         t_b = systime.time()
-        self.logger.info("Extraction of sinusoids complete.")
-        self.logger.extra(f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
-                          f"Time taken: {t_b - t_a:1.1f}")
+        self.logger.info(f"Extraction of sinusoids complete. Time taken: {t_b - t_a:1.1f}.")
+        self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
 
         return None
 
@@ -298,16 +322,8 @@ class Pipeline:
                                      self.data.i_chunks, logger=self.logger)
         self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
 
-        # main function done, calculate the rest of the stats
-        resid = self.data.flux - self.model_linear() - self.model_sinusoid()
-        n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
-        bic = gof.calc_bic(resid, n_param)
-        noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
-        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
-
-        # calculate formal uncertainties
-        out_e = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
-        self.result.setter(c_err=out_e[0], sl_err=out_e[1], f_n_err=out_e[2], a_n_err=out_e[3], ph_n_err=out_e[4])
+        # update the stats
+        self.update_stats()
 
         # set the result description
         self.result.setter(description='Multi-sinusoid NL-LS optimisation results.')
@@ -315,9 +331,8 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        self.logger.info("Optimisation of sinusoids complete.")
-        self.logger.extra(f"{len(self.result.f_n)} frequencies, {self.result.n_param} free parameters, "
-                          f"BIC: {self.result.bic:1.2f}. Time taken: {t_b - t_a:1.1f}s")
+        self.logger.info(f"Optimisation of sinusoids complete. Time taken: {t_b - t_a:1.1f}s.")
+        self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
 
         return None
 
@@ -371,31 +386,18 @@ class Pipeline:
                                      self.result.ph_n, self.data.i_chunks, logger=self.logger)
         self.result.setter(passed_sigma=out_c[0], passed_snr=out_c[1], passed_both=out_c[2], passed_harmonic=out_c[3])
 
-        # main function done, calculate the rest of the stats
-        resid = self.data.flux - self.model_linear() - self.model_sinusoid()
-        harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
-        n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
-        bic = gof.calc_bic(resid, n_param)
-        noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
-        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
-
-        # calculate formal uncertainties
-        out_d = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
-        self.result.setter(c_err=out_d[0], sl_err=out_d[1], f_n_err=out_d[2], a_n_err=out_d[3], ph_n_err=out_d[4])
-        p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
-                                                              sigma_t=self.data.t_step / 2)
-        self.result.setter(p_orb=self.result.p_orb, p_err=p_err, p_hdi=np.zeros(2))
+        # update the stats
+        self.update_stats()
 
         # set the result description
         self.result.setter(description='Harmonic frequencies coupled to the orbital period.')
 
         # print some useful info
         t_b = systime.time()
-        p_orb_formatted = ut.float_to_str_scientific(self.result.p_orb, p_err, error=True, brackets=True)
-        self.logger.info("Orbital harmonic frequencies coupled.")
-        self.logger.extra(f"p_orb: {p_orb_formatted}, "
-                          f"{len(self.result.f_n)} frequencies, {n_param} free parameters, BIC: {bic:1.2f}. "
-                          f"Time taken: {t_b - t_a:1.1f}s")
+        p_orb_formatted = ut.float_to_str_scientific(self.result.p_orb, self.result.p_err, error=True, brackets=True)
+        self.logger.info(f"Orbital harmonic frequencies coupled. P_orb: {p_orb_formatted}. "
+                         f"Time taken: {t_b - t_a:1.1f}s.")
+        self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
 
         # log if short time span or few harmonics
         if self.data.t_tot / self.result.p_orb < 1.1:
@@ -461,20 +463,8 @@ class Pipeline:
                                      self.result.ph_n, self.data.i_chunks, logger=self.logger)
         self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
 
-        # main function done, calculate the rest of the stats
-        resid = self.data.flux - self.model_linear() - self.model_sinusoid()
-        harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
-        n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
-        bic = gof.calc_bic(resid, n_param)
-        noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
-        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
-
-        # calculate formal uncertainties
-        out_e = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
-        p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
-                                                              sigma_t=self.data.t_step / 2)
-        self.result.setter(p_err=p_err, c_err=out_e[0], sl_err=out_e[1], f_n_err=out_e[2], a_n_err=out_e[3],
-                           ph_n_err=out_e[4])
+        # update the stats
+        self.update_stats()
 
         # set the result description
         self.result.setter(description='Multi-sine NL-LS optimisation results with coupled harmonics.')
@@ -483,10 +473,9 @@ class Pipeline:
         # print some useful info
         t_b = systime.time()
         p_orb_formatted = ut.float_to_str_scientific(self.result.p_orb, self.result.p_err, error=True, brackets=True)
-        self.logger.info("Optimisation with coupled harmonics complete.")
-        self.logger.extra(f"p_orb: {p_orb_formatted}, {len(self.result.f_n)} frequencies, "
-                          f"{self.result.n_param} free parameters, BIC: {self.result.bic:1.2f}. "
-                          f"Time taken: {t_b - t_a:1.1f}s")
+        self.logger.info(f"Optimisation with coupled harmonics complete. P_orb: {p_orb_formatted}."
+                         f"Time taken: {t_b - t_a:1.1f}s.")
+        self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
 
         return None
 
