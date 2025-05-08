@@ -120,7 +120,7 @@ def objective_sinusoids(params, time, flux, i_chunks):
     return -ln_likelihood
 
 
-@nb.njit(cache=True)
+@nb.njit(cache=True, parallel=True)
 def jacobian_sinusoids(params, time, flux, i_chunks):
     """The jacobian function to give to scipy.optimize.minimize for a sum of sine waves.
 
@@ -432,7 +432,7 @@ def objective_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
     return -ln_likelihood
 
 
-@nb.njit(cache=True)
+@nb.njit(cache=True, parallel=True)
 def jacobian_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
     """The jacobian function to give to scipy.optimize.minimize for a sum of sine waves
     plus a set of harmonic frequencies.
