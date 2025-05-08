@@ -267,8 +267,7 @@ def linear_curve(time, const, slope, i_chunks, t_shift=True):
     
     Notes
     -----
-    Assumes the constants and slopes are determined with respect
-    to the sector mean time as zero point.
+    Assumes the constants and slopes are determined with respect to the sector mean time as zero point.
     """
     curve = np.zeros(len(time))
     for i in nb.prange(len(const)):
@@ -309,8 +308,7 @@ def linear_pars(time, flux, i_chunks):
     Notes
     -----
     Source: https://towardsdatascience.com/linear-regression-91eeae7d6a2e
-    Determines the constants and slopes with respect to the sector mean time
-    as zero point to avoid correlations.
+    Determines the constants and slopes with respect to the sector mean time as zero point to avoid correlations.
     """
     y_inter = np.zeros(len(i_chunks))
     slope = np.zeros(len(i_chunks))
@@ -332,36 +330,6 @@ def linear_pars(time, flux, i_chunks):
         slope[i] = s_xy / s_xx
         # y_inter[i] = y_m - slope[i] * x_m  # original non-mean-centered formula
         y_inter[i] = y_m  # mean-centered value
-
-    return y_inter, slope
-
-
-@nb.njit(cache=True)
-def linear_pars_two_points(x1, y1, x2, y2):
-    """Calculate the slope(s) and y-intercept(s) of a linear curve defined by two points.
-    
-    Parameters
-    ----------
-    x1: float, numpy.ndarray[Any, dtype[float]]
-        The x-coordinate of the left point(s)
-    y1: float, numpy.ndarray[Any, dtype[float]]
-        The y-coordinate of the left point(s)
-    x2: float, numpy.ndarray[Any, dtype[float]]
-        The x-coordinate of the right point(s)
-    y2: float, numpy.ndarray[Any, dtype[float]]
-        The y-coordinate of the right point(s)
-    
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        y_inter: float, numpy.ndarray[Any, dtype[float]]
-            The y-intercept(s) of a piece-wise linear curve
-        slope: float, numpy.ndarray[Any, dtype[float]]
-            The slope(s) of a piece-wise linear curve
-    """
-    slope = (y2 - y1) / (x2 - x1)
-    y_inter = y1 - (x1 * slope)
 
     return y_inter, slope
 
@@ -405,11 +373,10 @@ def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
     return model_sines
 
 
-@nb.njit(cache=True)
+@nb.njit(cache=True, parallel=True)
 def sum_sines_deriv(time, f_n, a_n, ph_n, deriv=1, t_shift=True):
-    """The derivative of a sum of sine waves at times t,
-    given the frequencies, amplitudes and phases.
-    
+    """The time derivative of a sum of sine waves at times t.
+
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
@@ -432,8 +399,7 @@ def sum_sines_deriv(time, f_n, a_n, ph_n, deriv=1, t_shift=True):
     
     Notes
     -----
-    Assumes the phases are determined with respect
-    to the mean time as zero point by default.
+    Assumes the phases are determined with respect to the mean time as zero point by default.
     """
     if t_shift:
         mean_t = np.mean(time)
@@ -445,9 +411,11 @@ def sum_sines_deriv(time, f_n, a_n, ph_n, deriv=1, t_shift=True):
     mod_4 = deriv % 4
     ph_cos = (np.pi / 2) * mod_2  # alternate between cosine and sine
     sign = (-1)**((mod_4 - mod_2) // 2)  # (1, -1, -1, 1, 1, -1, -1... for deriv=1, 2, 3...)
-    for f, a, ph in zip(f_n, a_n, ph_n):
-        for i, t in enumerate(time):
-            model_sines[i] += sign * (2 * np.pi * f)**deriv * a * np.sin((2 * np.pi * f * (t - mean_t)) + ph + ph_cos)
+
+    for i in nb.prange(len(f_n)):
+        for j in range(len(time)):
+            model_sines[j] += (sign * (2 * np.pi * f_n[i])**deriv * a_n[i] *
+                               np.sin((2 * np.pi * f_n[i] * (time[j] - mean_t)) + ph_n[i] + ph_cos))
 
     return model_sines
 

@@ -95,8 +95,9 @@ def std_unb(x, n):
 
     # tested to be faster in numba than np.sum(x**2)
     sum_r_2 = 0
-    for r in residuals:
-        sum_r_2 += r**2
+    for i in range(len(residuals)):
+        sum_r_2 += residuals[i]**2
+
     std = np.sqrt(sum_r_2 / n)  # unbiased standard deviation of the residuals
 
     return std

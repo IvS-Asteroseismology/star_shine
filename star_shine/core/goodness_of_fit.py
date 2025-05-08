@@ -37,8 +37,9 @@ def calc_iid_normal_likelihood(residuals):
     # like = -n / 2 * (np.log(2 * np.pi * np.sum(residuals**2) / n) + 1)
     # originally un-JIT-ted function, but for loop is quicker with numba
     sum_r_2 = 0
-    for i, r in enumerate(residuals):
-        sum_r_2 += r ** 2
+    for i in range(n):
+        sum_r_2 += residuals[i] ** 2
+
     like = -n / 2 * (np.log(2 * np.pi * sum_r_2 / n) + 1)
 
     return like
@@ -65,7 +66,7 @@ def calc_approx_did_likelihood(time, residuals):
     n = len(time)
 
     # Compute the Lomb-Scargle periodogram of the data
-    freqs, psd = pdg.scargle(time, residuals, f0=0, norm='psd')  # automatically mean subtracted
+    freqs, psd = pdg.scargle_parallel(time, residuals, f0=0, norm='psd')  # automatically mean subtracted
 
     # Compute the Whittle likelihood
     like = -n * np.log(2 * np.pi) - np.sum(np.log(psd))
@@ -98,10 +99,10 @@ def calc_whittle_likelihood(time, flux, model):
     n = len(time)
 
     # Compute the Lomb-Scargle periodogram of the data
-    freqs, psd_d = pdg.scargle(time, flux, f0=0, norm='psd')  # automatically mean subtracted
+    freqs, psd_d = pdg.scargle_parallel(time, flux, f0=0, norm='psd')  # automatically mean subtracted
 
     # Compute the Lomb-Scargle periodogram of the model
-    freqs_m, psd_m = pdg.scargle(time, model, f0=0, norm='psd')  # automatically mean subtracted
+    freqs_m, psd_m = pdg.scargle_parallel(time, model, f0=0, norm='psd')  # automatically mean subtracted
 
     # Avoid division by zero in likelihood calculation
     psd_m = np.maximum(psd_m, 1e-15)  # Ensure numerical stability
@@ -139,7 +140,7 @@ def calc_did_normal_likelihood(time, residuals):
     n = len(residuals)
 
     # calculate the PSD, fast
-    freqs, psd = pdg.scargle(time, residuals, f0=0, norm='psd')
+    freqs, psd = pdg.scargle_parallel(time, residuals, f0=0, norm='psd')
 
     # calculate the autocorrelation function
     psd_ext = np.append(psd, psd[-1:0:-1])  # double the PSD domain for ifft
@@ -207,7 +208,7 @@ def calc_ddd_normal_likelihood(time, residuals, flux_err):
     n = len(residuals)
 
     # calculate the PSD, fast
-    freqs, psd = pdg.scargle(time, residuals, f0=0, norm='psd')
+    freqs, psd = pdg.scargle_parallel(time, residuals, f0=0, norm='psd')
 
     # calculate the autocorrelation function
     psd_ext = np.append(psd, psd[-1:0:-1])  # double the PSD domain for ifft
@@ -282,9 +283,11 @@ def calc_bic(residuals, n_param):
     BIC = n ln(2 pi σ^2) + n + k ln(n)
     """
     n = len(residuals)
-    # bic = n * np.log(2 * np.pi * np.sum(residuals**2) / n) + n + n_param * np.log(n)
-    # originally JIT-ted function, but with for loop is slightly quicker
-    sum_r_2 = ut.std_unb(residuals, n)
+
+    sum_r_2 = 0
+    for i in range(n):
+        sum_r_2 += residuals[i]**2
+
     bic = n * np.log(2 * np.pi * sum_r_2 / n) + n + n_param * np.log(n)
 
     return bic
