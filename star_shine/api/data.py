@@ -84,11 +84,13 @@ class Data:
         self.data_id = data_id
 
         # initialise attributes before they are assigned values
-        self.time = np.zeros((0,), dtype=np.float_)
-        self.flux = np.zeros((0,), dtype=np.float_)
-        self.flux_err = np.zeros((0,), dtype=np.float_)
-        self.i_chunks = np.zeros((0, 2), dtype=np.int_)
-        self.flux_counts_medians = np.zeros((0,), dtype=np.float_)
+        self._time = np.zeros((0,), dtype=float)
+        self._time_changed = True  # Flag to indicate if time has changed
+        self._flux = np.zeros((0,), dtype=float)
+        self._flux_changed = True   # Flag to indicate if flux has changed
+        self.flux_err = np.zeros((0,), dtype=float)
+        self.i_chunks = np.zeros((0, 2), dtype=int)
+        self.flux_counts_medians = np.zeros((0,), dtype=float)
 
         # Orbital period
         self.p_orb = 0.
@@ -96,13 +98,17 @@ class Data:
         # independent data properties
         self.t_tot = 0.
         self.t_mean = 0.
-        self.t_mean_chunk = np.zeros((0,), dtype=np.float_)
+        self.t_mean_chunk = np.zeros((0,), dtype=float)
         self.t_step = 0.
 
         # data properties relying on config
         self.snr_threshold = 0.
         self.f_nyquist = 0.
         self.f_resolution = 0.
+
+        # cache
+        self._periodogram_f = np.zeros((0,), dtype=float)
+        self._periodogram_a = np.zeros((0,), dtype=float)
 
         return
 
@@ -140,6 +146,28 @@ class Data:
                 del self.file_list[i]
 
         return None
+
+    @property
+    def time(self):
+        """Getter for the time attribute."""
+        return self._time
+
+    @time.setter
+    def time(self, value):
+        """Setter for the time attribute with flag update."""
+        self._time = value
+        self._time_changed = True
+
+    @property
+    def flux(self):
+        """Getter for the flux attribute."""
+        return self._flux
+
+    @flux.setter
+    def flux(self, value):
+        """Setter for the flux attribute with flag update."""
+        self._flux = value
+        self._flux_changed = True
 
     def setter(self, **kwargs):
         """Fill in the attributes with data.
@@ -196,7 +224,7 @@ class Data:
 
         return data_dict
 
-    def calculate_properties(self):
+    def update_properties(self):
         """Calculate the properties of the data and fill them in.
 
         Running this function again will re-evaluate the properties. This can be useful if the configuration changed.
@@ -279,7 +307,7 @@ class Data:
             logger.warning("The time array chunks include overlap.")
 
         # calculate properties of the data
-        instance.calculate_properties()
+        instance.update_properties()
 
         if logger is not None:
             logger.info(f"Loaded data from external file(s).")
@@ -356,8 +384,20 @@ class Data:
         tuple
             Contains the frequencies numpy.ndarray[Any, dtype[float]]
             and the spectrum numpy.ndarray[Any, dtype[float]]
+
+        Notes
+        -----
+        Return values are cached until time or flux is updated.
         """
-        f, a = pdg.scargle_parallel(self.time, self.flux, f0=-1, fn=-1, df=-1, norm='amplitude')
+        if self._time_changed or self._flux_changed:
+            # calculate the periodogram
+            f, a = pdg.scargle_parallel(self.time, self.flux, f0=-1, fn=-1, df=-1, norm='amplitude')
+            self._periodogram_f, self._periodogram_a = f, a
+            # Reset flags after computation
+            self._time_changed, self._flux_changed = False, False
+        else:
+            # return the cached values
+            f, a = self._periodogram_f, self._periodogram_a
 
         return f, a
 

@@ -114,9 +114,7 @@ class Pipeline:
         numpy.ndarray[Any, dtype[float]]
             Model of the time series.
         """
-        model_linear = self.model_linear()
-        model_sinusoid = self.model_sinusoid()
-        full_model = model_linear + model_sinusoid
+        full_model = self.model_linear() + self.model_sinusoid()
 
         return full_model
 
@@ -146,13 +144,11 @@ class Pipeline:
             Contains the frequencies numpy.ndarray[Any, dtype[float]]
             and the spectrum numpy.ndarray[Any, dtype[float]]
         """
-        flux = np.copy(self.data.flux)
-
-        # subtract the model for the residuals
         if residual:
-            flux -= self.model()
-
-        f, a = pdg.scargle_parallel(self.data.time, flux, f0=-1, fn=-1, df=-1, norm='amplitude')
+            resid = self.data.flux - self.model()
+            f, a = pdg.scargle_parallel(self.data.time, resid, f0=-1, fn=-1, df=-1, norm='amplitude')
+        else:
+            f, a = self.data.periodogram()
 
         return f, a
 
