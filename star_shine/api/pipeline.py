@@ -553,9 +553,8 @@ class Pipeline:
             file_name = os.path.join(self.save_dir, self.save_subdir, f"{self.data.target_id}_result_{step + 1}.hdf5")
 
             # Load existing result from this step if not overwriting (returns empty Result if no file)
-            print(file_name)
+            print(step, file_name)
             self.result = Result.load_conditional(file_name, logger=self.logger)
-            print(self.result.target_id)
 
             # if existing result was loaded, go to the next step
             if self.result.target_id != '':
@@ -565,15 +564,14 @@ class Pipeline:
             self.result = Result.load(file_name.replace(f'result_{step + 1}', f'result_{step}'),
                                       logger=self.logger)
 
-            # if empty result, set target and data id
-            if self.result.target_id == '':
-                self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
-
             # do the analysis step
             analysis_step = getattr(self, step_names[step])
             analysis_step()
 
+            # make sure the target id is set before saving
+            self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
             # save the results if conditions are met
+            print(step, file_name)
             self.result.save_conditional(file_name)
 
         # final message and timing

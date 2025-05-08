@@ -299,10 +299,6 @@ class MainWindow(QMainWindow):
         ----------
         text: str
             The text to append.
-
-        Returns
-        -------
-        None
         """
         cursor = self.text_field.textCursor()
         cursor.movePosition(QTextCursor.End)  # Move cursor to the end of the text
@@ -313,12 +309,7 @@ class MainWindow(QMainWindow):
         return None
 
     def update_table(self, display_err=True):
-        """Fill the table with the given data.
-
-        Returns
-        -------
-        None
-        """
+        """Fill the table with the given data."""
         # get the result parameters
         col1 = self.pipeline.result.f_n
         col2 = self.pipeline.result.a_n

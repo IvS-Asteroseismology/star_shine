@@ -8,7 +8,7 @@ Code written by: Luc IJspeert
 import os
 import numpy as np
 
-from star_shine.core import timeseries as tsf
+from star_shine.core import timeseries as tsf, goodness_of_fit as gof
 from star_shine.core import utility as ut
 from star_shine.core import io
 from star_shine.config.helpers import get_config
@@ -136,10 +136,6 @@ class Result:
         ----------
         kwargs:
             Accepts any of the class attributes as keyword input and sets them accordingly
-
-        Returns
-        -------
-        None
         """
         # set any attribute that exists if it is in the kwargs
         for key in kwargs.keys():
@@ -278,10 +274,6 @@ class Result:
         ----------
         file_name: str
             File name to save the results to
-
-        Returns
-        -------
-        None
         """
         # get a dictionary of the fields to be saved
         result_dict = self.get_dict()
@@ -298,10 +290,6 @@ class Result:
         ----------
         file_name: str
             File name to save the results to
-
-        Returns
-        -------
-        None
         """
         # get a dictionary of the fields to be saved
         result_dict = self.get_dict()
@@ -318,10 +306,6 @@ class Result:
         ----------
         file_name: str
             File name to load the results from
-
-        Returns
-        -------
-        None
         """
         if (not os.path.isfile(file_name)) | config.overwrite:
             self.save(file_name)
@@ -335,6 +319,14 @@ class Result:
     def model_linear(self, time, i_chunks):
         """Returns a piece-wise linear curve for the time series with the current parameters.
 
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series.
+        i_chunks: numpy.ndarray[Any, dtype[int]]
+            Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+            the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+
         Returns
         -------
         numpy.ndarray[Any, dtype[float]]
@@ -346,6 +338,11 @@ class Result:
 
     def model_sinusoid(self, time):
         """Returns a sum of sine waves for the time series with the current parameters.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series.
 
         Returns
         -------

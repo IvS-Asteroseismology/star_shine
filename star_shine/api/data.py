@@ -115,10 +115,6 @@ class Data:
         ----------
         logger: logging.Logger, optional
             Instance of the logging library.
-
-        Returns
-        -------
-        None
         """
         # check for missing files in the list
         missing = []
@@ -152,10 +148,6 @@ class Data:
         ----------
         kwargs:
             Accepts any of the class attributes as keyword input and sets them accordingly
-
-        Returns
-        -------
-        None
         """
         # set any attribute that exists if it is in the kwargs
         for key in kwargs.keys():
@@ -208,10 +200,6 @@ class Data:
         """Calculate the properties of the data and fill them in.
 
         Running this function again will re-evaluate the properties. This can be useful if the configuration changed.
-
-        Returns
-        -------
-        None
         """
         # set independent data properties
         self.t_tot = np.ptp(self.time)
@@ -351,10 +339,6 @@ class Data:
         ----------
         file_name: str
             File name to save the data to
-
-        Returns
-        -------
-        None
         """
         # make a dictionary of the fields to be saved
         data_dict = self.get_dict()
@@ -386,10 +370,6 @@ class Data:
             File path to save the plot
         show: bool, optional
             If True, display the plot
-
-        Returns
-        -------
-        None
         """
         vis.plot_lc(self.time, self.flux, self.flux_err, self.i_chunks, file_name=file_name, show=show)
 
@@ -406,10 +386,6 @@ class Data:
             File path to save the plot
         show: bool, optional
             If True, display the plot
-
-        Returns
-        -------
-        None
         """
         vis.plot_pd(self.time, self.flux, self.i_chunks, plot_per_chunk=plot_per_chunk, file_name=file_name, show=show)
 
