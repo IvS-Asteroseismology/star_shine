@@ -361,10 +361,10 @@ def linear_pars_two_points(x1, y1, x2, y2):
     return y_inter, slope
 
 
-@nb.njit(cache=True)
+@nb.njit(cache=True, parallel=True)
 def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
     """A sum of sine waves at times t, given the frequencies, amplitudes and phases.
-    
+
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
@@ -377,16 +377,15 @@ def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
         The phases of a number of sine waves
     t_shift: bool
         Mean center the time axis
-    
+
     Returns
     -------
     numpy.ndarray[Any, dtype[float]]
         Model time series of a sum of sine waves. Varies around 0.
-    
+
     Notes
     -----
-    Assumes the phases are determined with respect
-    to the mean time as zero point by default.
+    Assumes the phases are determined with respect to the mean time as zero point by default.
     """
     if t_shift:
         mean_t = np.mean(time)
@@ -394,11 +393,9 @@ def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
         mean_t = 0
 
     model_sines = np.zeros(len(time))
-    for f, a, ph in zip(f_n, a_n, ph_n):
-        # model_sines += a * np.sin((2 * np.pi * f * (time - mean_t)) + ph)
-        # double loop runs a tad bit quicker when numba-JIT-ted
-        for i, t in enumerate(time):
-            model_sines[i] += a * np.sin((2 * np.pi * f * (t - mean_t)) + ph)
+    for i in nb.prange(len(f_n)):
+        for j in range(len(time)):
+            model_sines[j] += a_n[i] * np.sin((2 * np.pi * f_n[i] * (time[j] - mean_t)) + ph_n[i])
 
     return model_sines
 
