@@ -359,7 +359,7 @@ class MainWindow(QMainWindow):
             upper_plot_data['plot_ys'] = [self.pipeline.model()]
             upper_plot_data['plot_colors'] = ['grey']
             # lower plot area - periodogram
-            freqs, ampls = self.pipeline.periodogram(residual=True)
+            freqs, ampls = self.pipeline.periodogram(subtract_model=True)
             lower_plot_data['plot_xs'].append(freqs)
             lower_plot_data['plot_ys'].append(ampls)
             lower_plot_data['vlines_xs'] = [self.pipeline.result.f_n]
@@ -373,7 +373,7 @@ class MainWindow(QMainWindow):
             upper_plot_data['scatter_xs'] = [self.pipeline.data.time]
             upper_plot_data['scatter_ys'] = [residual]
             # lower plot area - periodogram
-            freqs, ampls = self.pipeline.periodogram(residual=True)
+            freqs, ampls = self.pipeline.periodogram(subtract_model=True)
             lower_plot_data['plot_xs'] = [freqs]
             lower_plot_data['plot_ys'] = [ampls]
 
@@ -531,15 +531,20 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def click_periodogram(self, x, y):
+    def click_periodogram(self, x, y, button):
         """Handle click events on the periodogram plot."""
-        # You can add more logic here to handle the click event
-        if len(self.pipeline.data.file_list) == 0:
+        # Guard against empty data
+        if self.pipeline is None:
             self.append_text(f"Plot clicked at coordinates: ({x}, {y})")
-            self.append_text(f"{self.lower_plot_area.toolbar.mode}")
             return None
 
-        self.pipeline_thread.extract_approx(x)
+        # Left click
+        if button == 1:
+            self.pipeline_thread.extract_approx(x)
+
+        # Right click
+        if button == 3:
+            self.pipeline_thread.remove_approx(x)
 
         return None
 

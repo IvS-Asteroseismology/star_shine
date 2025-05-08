@@ -130,7 +130,7 @@ class Pipeline:
 
         return resid
 
-    def periodogram(self, residual=True):
+    def periodogram(self, subtract_model=True):
         """Compute the Lomb-Scargle periodogram of the time series
 
         Parameters
@@ -144,7 +144,7 @@ class Pipeline:
             Contains the frequencies numpy.ndarray[Any, dtype[float]]
             and the spectrum numpy.ndarray[Any, dtype[float]]
         """
-        if residual:
+        if subtract_model:
             resid = self.data.flux - self.model()
             f, a = pdg.scargle_parallel(self.data.time, resid, f0=-1, fn=-1, df=-1, norm='amplitude')
         else:
@@ -152,26 +152,44 @@ class Pipeline:
 
         return f, a
 
+    def reduce_sinusoids(self):
+        """Remove any frequencies that end up not making the statistical cut"""
+        # remove any frequencies that end up not making the statistical cut
+        out = tsf.reduce_sinusoids(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
+                                   self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
+                                   self.data.i_chunks, logger=self.logger)
+
+        self.result.setter(const=out[0], slope=out[1], f_n=out[2], a_n=out[3], ph_n=out[4])
+
+        return None
+
+    def select_sinusoids(self):
+        """Select frequencies based on some significance criteria."""
+        out = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
+                                   self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
+                                   self.result.ph_n, self.data.i_chunks, logger=self.logger)
+
+        self.result.setter(passed_sigma=out[0], passed_snr=out[1], passed_both=out[2], passed_harmonic=out[3])
+
+        return None
+
     def update_stats(self):
         """Updates the model statistics and formal uncertainties."""
+        # calculate the number of parameters
+        self.result.update_n_param()
+
         # model residual
         resid = self.residual()
 
-        # calculate the number of parameters
-        n_harm = 0
-        if self.result.p_orb > 0:
-            harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
-            n_harm = len(harmonics)
-        n_param = 2 * len(self.result.const) + int(n_harm > 0) + 2 * n_harm + 3 * (len(self.result.f_n) - n_harm)
-
         # set number of parameters, BIC and noise level
-        bic = gof.calc_bic(resid, n_param)
-        noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
-        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
+        bic = gof.calc_bic(resid, self.result.n_param)
+        noise_level = ut.std_unb(resid, len(self.data.time) - self.result.n_param)
+        self.result.setter(bic=bic, noise_level=noise_level)
 
         # calculate formal uncertainties
         out = tsf.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
         self.result.setter(c_err=out[0], sl_err=out[1], f_n_err=out[2], a_n_err=out[3], ph_n_err=out[4])
+
         # period uncertainty
         if self.result.p_orb > 0:
             p_err, _, _ = tsf.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
@@ -188,21 +206,64 @@ class Pipeline:
         f_approx: float
             Approximate location of the frequency of maximum amplitude.
         """
-        f, a, ph = tsf.extract_approx(self.data.time, self.data.flux, f_approx)
+        f, a, ph = tsf.extract_approx(self.data.time, self.residual(), f_approx)
+
+        # if identical frequency exists, assume this was unintentional
+        if len(self.result.f_n) > 0 and np.min(np.abs(f - self.result.f_n)) < self.data.pd_df:
+            self.logger.warning("Existing identical frequency found.")
+            return None
 
         # append the sinusoid to the result
         f_n, a_n, ph_n = self.result.f_n, self.result.a_n, self.result.ph_n
         f_n, a_n, ph_n = np.append(f_n, f), np.append(a_n, a), np.append(ph_n, ph)
         self.result.setter(f_n=f_n, a_n=a_n, ph_n=ph_n)
+        self.logger.info(f"Appended f: {f:1.2f}")
 
-        # update the stats
-        self.update_stats()
+        self.reduce_sinusoids()  # remove any frequencies that end up not making the statistical cut
+        self.select_sinusoids()  # select frequencies based on some significance criteria
+        self.update_stats()  # update the stats
 
-        # set the result description
+        # set the result identifiers and description
+        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
         self.result.setter(description='Manual extraction.')
 
         # print some useful info
-        self.logger.info(f"Appended f: {f:1.2f}")
+        self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
+
+        return None
+
+    def remove_approx(self, f_approx):
+        """Remove a sinusoid from the list at an approximate frequency.
+
+        Parameters
+        ----------
+        f_approx: float
+            Approximate location of the frequency to be removed.
+        """
+        # guard against empty frequency array
+        if len(self.result.f_n) == 0:
+            return None
+
+        index = np.argmin(np.abs(f_approx - self.result.f_n))
+        f_to_remove = self.result.f_n[index]
+
+        # if too far away, assume this was unintentional
+        if abs(f_to_remove - f_approx) > 3 * self.data.f_resolution:
+            self.logger.warning("No close frequency to remove.")
+            return None
+
+        # remove the sinusoid
+        self.result.remove_sinusoids(np.array([index]))
+        self.logger.info(f"Removed f: {f_to_remove:1.2f}")
+
+        self.select_sinusoids()  # select frequencies based on some significance criteria
+        self.update_stats()  # update the stats
+
+        # set the result identifiers and description
+        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
+        self.result.setter(description='Manual extraction.')
+
+        # print some useful info
         self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
 
         return None
@@ -244,23 +305,12 @@ class Pipeline:
                                       logger=self.logger)
         self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
 
-        # remove any frequencies that end up not making the statistical cut
-        out_c = tsf.reduce_sinusoids(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
-                                     self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                     self.data.i_chunks, logger=self.logger)
-        self.result.setter(const=out_c[0], slope=out_c[1], f_n=out_c[2], a_n=out_c[3], ph_n=out_c[4])
+        self.reduce_sinusoids()  # remove any frequencies that end up not making the statistical cut
+        self.select_sinusoids()  # select frequencies based on some significance criteria
+        self.update_stats()  # update the stats
 
-        # select frequencies based on some significance criteria
-        out_d = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
-                                     self.result.const, self.result.slope,
-                                     self.result.f_n, self.result.a_n, self.result.ph_n, self.data.i_chunks,
-                                     logger=self.logger)
-        self.result.setter(passed_sigma=out_d[0], passed_snr=out_d[1], passed_both=out_d[2], passed_harmonic=out_d[3])
-
-        # update the stats
-        self.update_stats()
-
-        # set the result description
+        # set the result identifiers and description
+        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
         self.result.setter(description='Iterative prewhitening results.')
 
         # print some useful info
@@ -312,16 +362,11 @@ class Pipeline:
 
         self.result.setter(const=par_mean[0], slope=par_mean[1], f_n=par_mean[2], a_n=par_mean[3], ph_n=par_mean[4])
 
-        # select frequencies based on some significance criteria
-        out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, 0, self.result.const,
-                                     self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                     self.data.i_chunks, logger=self.logger)
-        self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
+        self.select_sinusoids()  # select frequencies based on some significance criteria
+        self.update_stats()  # update the stats
 
-        # update the stats
-        self.update_stats()
-
-        # set the result description
+        # set the result identifiers and description
+        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
         self.result.setter(description='Multi-sinusoid NL-LS optimisation results.')
         # ut.save_inference_data(file_name, inf_data)  # currently not saved
 
@@ -355,9 +400,10 @@ class Pipeline:
 
         # if given, the input p_orb is refined locally, otherwise the period is searched for globally
         if self.data.p_orb == 0:
-            self.result.p_orb = tsf.find_orbital_period(self.data.time, self.data.flux, self.result.f_n)
+            p_orb = tsf.find_orbital_period(self.data.time, self.data.flux, self.result.f_n)
         else:
-            self.result.p_orb = tsf.refine_orbital_period(self.data.p_orb, self.data.time, self.result.f_n)
+            p_orb = tsf.refine_orbital_period(self.data.p_orb, self.data.time, self.result.f_n)
+        self.result.setter(p_orb=p_orb)
 
         # if time series too short, or no harmonics found, log and warn and maybe cut off the analysis
         freq_res = 1.5 / self.data.t_tot  # Rayleigh criterion
@@ -370,22 +416,12 @@ class Pipeline:
                                                self.data.i_chunks, logger=self.logger)
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
-        # remove any frequencies that end up not making the statistical cut
-        out_b = tsf.reduce_sinusoids(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
-                                     self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                     self.data.i_chunks, logger=self.logger)
-        self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
+        self.reduce_sinusoids()  # remove any frequencies that end up not making the statistical cut
+        self.select_sinusoids()  # select frequencies based on some significance criteria
+        self.update_stats()  # update the stats
 
-        # select frequencies based on some significance criteria
-        out_c = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
-                                     self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
-                                     self.result.ph_n, self.data.i_chunks, logger=self.logger)
-        self.result.setter(passed_sigma=out_c[0], passed_snr=out_c[1], passed_both=out_c[2], passed_harmonic=out_c[3])
-
-        # update the stats
-        self.update_stats()
-
-        # set the result description
+        # set the result identifiers and description
+        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
         self.result.setter(description='Harmonic frequencies coupled to the orbital period.')
 
         # print some useful info
@@ -453,16 +489,11 @@ class Pipeline:
         self.result.setter(p_orb=par_mean[0], const=par_mean[1], slope=par_mean[2], f_n=par_mean[3], a_n=par_mean[4],
                            ph_n=par_mean[5])
 
-        # select frequencies based on some significance criteria
-        out_b = tsf.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
-                                     self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
-                                     self.result.ph_n, self.data.i_chunks, logger=self.logger)
-        self.result.setter(passed_sigma=out_b[0], passed_snr=out_b[1], passed_both=out_b[2], passed_harmonic=out_b[3])
+        self.select_sinusoids()  # select frequencies based on some significance criteria
+        self.update_stats()  # update the stats
 
-        # update the stats
-        self.update_stats()
-
-        # set the result description
+        # set the result identifiers and description
+        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
         self.result.setter(description='Multi-sine NL-LS optimisation results with coupled harmonics.')
         # ut.save_inference_data(file_name, inf_data)  # currently not saved
 
@@ -553,8 +584,6 @@ class Pipeline:
             analysis_step = getattr(self, step_names[step])
             analysis_step()
 
-            # make sure the target id is set before saving
-            self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
             # save the results if conditions are met
             print(step, file_name)
             self.result.save_conditional(file_name)

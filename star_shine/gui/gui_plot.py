@@ -99,7 +99,7 @@ class PlotWidget(QWidget):
     ----------
     """
     # Define a signal that emits the plot ID and clicked coordinates
-    click_signal = Signal(float, float)
+    click_signal = Signal(float, float, int)
 
     def __init__(self, title='Plot', xlabel='x', ylabel='y'):
         """A widget for displaying plots using Matplotlib in a Qt application.
@@ -177,7 +177,14 @@ class PlotWidget(QWidget):
             x, y = event.xdata, event.ydata
             # Ensure valid coordinates
             if x is not None and y is not None:
-                self.click_signal.emit(x, y)
+                self.click_signal.emit(x, y, event.button)
+
+        # Right mouse button click
+        if self.toolbar.click_action.isChecked() and event.button == 3:
+            x, y = event.xdata, event.ydata
+            # Ensure valid coordinates
+            if x is not None and y is not None:
+                self.click_signal.emit(x, y, event.button)
 
         return None
 

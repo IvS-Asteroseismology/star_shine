@@ -8,8 +8,7 @@ Code written by: Luc IJspeert
 import os
 import numpy as np
 
-from star_shine.core import timeseries as tsf, goodness_of_fit as gof
-from star_shine.core import utility as ut
+from star_shine.core import timeseries as tsf, analysis as anf, utility as ut
 from star_shine.core import io
 from star_shine.config.helpers import get_config
 
@@ -95,37 +94,42 @@ class Result:
 
         # linear model parameters
         # y-intercepts
-        self.const = np.zeros(0)
-        self.c_err = np.zeros(0)
+        self.const = np.zeros((0,))
+        self.c_err = np.zeros((0,))
         self.c_hdi = np.zeros((0, 2))
         # slopes
-        self.slope = np.zeros(0)
-        self.sl_err = np.zeros(0)
+        self.slope = np.zeros((0,))
+        self.sl_err = np.zeros((0,))
         self.sl_hdi = np.zeros((0, 2))
 
         # sinusoid model parameters
+        self.sinusoid_property_list = ['f_n', 'a_n', 'ph_n']
+        self.property_type_list = ['', '_err', '_hdi']
+        self.sinusoid_passed_list = ['passed_sigma', 'passed_snr', 'passed_both']
+        # note: I could make the below attrs with a nice loop but then my IDE complains about undefined references
+
         # frequencies
-        self.f_n = np.zeros(0)
-        self.f_n_err = np.zeros(0)
+        self.f_n = np.zeros((0,))
+        self.f_n_err = np.zeros((0,))
         self.f_n_hdi = np.zeros((0, 2))
         # amplitudes
-        self.a_n = np.zeros(0)
-        self.a_n_err = np.zeros(0)
+        self.a_n = np.zeros((0,))
+        self.a_n_err = np.zeros((0,))
         self.a_n_hdi = np.zeros((0, 2))
         # phases
-        self.ph_n = np.zeros(0)
-        self.ph_n_err = np.zeros(0)
+        self.ph_n = np.zeros((0,))
+        self.ph_n_err = np.zeros((0,))
         self.ph_n_hdi = np.zeros((0, 2))
         # passing criteria
-        self.passed_sigma = np.zeros(0, dtype=bool)
-        self.passed_snr = np.zeros(0, dtype=bool)
-        self.passed_both = np.zeros(0, dtype=bool)
+        self.passed_sigma = np.zeros((0,), dtype=bool)
+        self.passed_snr = np.zeros((0,), dtype=bool)
+        self.passed_both = np.zeros((0,), dtype=bool)
 
         # harmonic model
         self.p_orb = 0.
         self.p_err = 0.
-        self.p_hdi = np.zeros(2)
-        self.passed_harmonic = np.zeros(0, dtype=bool)
+        self.p_hdi = np.zeros((2,))
+        self.passed_harmonic = np.zeros((0,), dtype=bool)
 
         return
 
@@ -313,6 +317,44 @@ class Result:
             # save csv files if configured
             if config.save_ascii:
                 self.save_as_csv(file_name)
+
+        return None
+
+    def update_n_param(self):
+        """Evaluate and set the number of free parameters of the model."""
+        # check harmonics
+        n_harm = 0
+        if self.p_orb > 0:
+            harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.f_n, self.p_orb, f_tol=1e-9)
+            n_harm = len(harmonics)
+
+        # equation for number of parameters
+        n_param = 2 * len(self.const) + int(n_harm > 0) + 2 * n_harm + 3 * (len(self.f_n) - n_harm)
+        self.setter(n_param=n_param)
+
+        return None
+
+    def remove_sinusoids(self, indices):
+        """Remove the sinusoids at the provided indices from the list.
+
+        Parameters
+        ----------
+        indices: numpy.ndarray[Any, dtype[int]]
+            Indices of the sinusoids to remove.
+        """
+        # loop through frequencies, amplitudes, and phases and remove the index values
+        for sinusoid_property in self.sinusoid_property_list:
+            for property_type in self.property_type_list:
+                key = sinusoid_property + property_type
+                property_value = getattr(self, key)
+                if np.max(indices) < len(property_value):
+                    setattr(self, key, np.delete(property_value, indices))
+
+        # passing criteria
+        if np.max(indices) < len(self.passed_both):
+            self.passed_sigma = np.delete(self.passed_sigma, indices)
+            self.passed_snr = np.delete(self.passed_snr, indices)
+            self.passed_both = np.delete(self.passed_both, indices)
 
         return None
 

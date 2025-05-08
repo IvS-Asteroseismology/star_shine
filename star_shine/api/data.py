@@ -84,13 +84,13 @@ class Data:
         self.data_id = data_id
 
         # initialise attributes before they are assigned values
-        self._time = np.zeros((0,), dtype=float)
+        self._time = np.zeros((0,))
         self._time_changed = True  # Flag to indicate if time has changed
-        self._flux = np.zeros((0,), dtype=float)
+        self._flux = np.zeros((0,))
         self._flux_changed = True   # Flag to indicate if flux has changed
-        self.flux_err = np.zeros((0,), dtype=float)
+        self.flux_err = np.zeros((0,))
         self.i_chunks = np.zeros((0, 2), dtype=int)
-        self.flux_counts_medians = np.zeros((0,), dtype=float)
+        self.flux_counts_medians = np.zeros((0,))
 
         # Orbital period
         self.p_orb = 0.
@@ -98,7 +98,7 @@ class Data:
         # independent data properties
         self.t_tot = 0.
         self.t_mean = 0.
-        self.t_mean_chunk = np.zeros((0,), dtype=float)
+        self.t_mean_chunk = np.zeros((0,))
         self.t_step = 0.
 
         # data properties relying on config
@@ -106,9 +106,14 @@ class Data:
         self.f_nyquist = 0.
         self.f_resolution = 0.
 
+        # defaults for periodograms
+        self.pd_f0 = 0.
+        self.pd_df = 0.
+        self.pd_fn = 0.
+
         # cache
-        self._periodogram_f = np.zeros((0,), dtype=float)
-        self._periodogram_a = np.zeros((0,), dtype=float)
+        self._periodogram_f = np.zeros((0,))
+        self._periodogram_a = np.zeros((0,))
 
         return
 
@@ -223,24 +228,6 @@ class Data:
         data_dict['flux_counts_medians'] = self.flux_counts_medians
 
         return data_dict
-
-    def update_properties(self):
-        """Calculate the properties of the data and fill them in.
-
-        Running this function again will re-evaluate the properties. This can be useful if the configuration changed.
-        """
-        # set independent data properties
-        self.t_tot = np.ptp(self.time)
-        self.t_mean = np.mean(self.time)
-        self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
-        self.t_step = np.median(np.diff(self.time))
-
-        # set data properties relying on config
-        self.snr_threshold = dp.signal_to_noise_threshold(self.time)
-        self.f_nyquist = dp.nyquist_frequency(self.time)
-        self.f_resolution = dp.frequency_resolution(self.time)
-
-        return None
 
     @classmethod
     def load_data(cls, file_list, data_dir='', target_id='', data_id='', logger=None):
@@ -373,6 +360,29 @@ class Data:
 
         # io module handles writing to file
         io.save_data_hdf5(file_name, data_dict)
+
+        return None
+
+    def update_properties(self):
+        """Calculate the properties of the data and fill them in.
+
+        Running this function again will re-evaluate the properties. This can be useful if the configuration changed.
+        """
+        # set independent data properties
+        self.t_tot = np.ptp(self.time)
+        self.t_mean = np.mean(self.time)
+        self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
+        self.t_step = np.median(np.diff(self.time))
+
+        # set data properties relying on config
+        self.snr_threshold = dp.signal_to_noise_threshold(self.time)
+        self.f_nyquist = dp.nyquist_frequency(self.time)
+        self.f_resolution = dp.frequency_resolution(self.time)
+
+        # set periodogram defaults
+        self.pd_f0 = 0.01 / self.t_tot  # lower than T/100 no good
+        self.pd_df = 0.1 / self.t_tot  # default frequency sampling is about 1/10 of frequency resolution
+        self.pd_fn = 1 / (2 * np.min(self.time[1:] - self.time[:-1]))
 
         return None
 
