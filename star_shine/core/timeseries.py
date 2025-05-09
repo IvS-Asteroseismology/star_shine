@@ -367,8 +367,7 @@ def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
 
     model_sines = np.zeros(len(time))
     for i in nb.prange(len(f_n)):
-        for j in range(len(time)):
-            model_sines[j] += a_n[i] * np.sin((2 * np.pi * f_n[i] * (time[j] - mean_t)) + ph_n[i])
+        model_sines += a_n[i] * np.sin((2 * np.pi * f_n[i] * (time - mean_t)) + ph_n[i])
 
     return model_sines
 
