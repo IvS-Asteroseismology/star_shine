@@ -465,8 +465,9 @@ def scargle(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
     mean_t = np.mean(time)
     mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
+    time_sorter = np.argsort(time)
+    time_ms = time[time_sorter] - mean_t
+    flux_ms = flux[time_sorter] - mean_s
 
     # setup
     nt = len(time_ms)
@@ -549,8 +550,9 @@ def scargle_parallel(time, flux, f0=-1, fn=-1, df=-1, norm='amplitude'):
     # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
     mean_t = np.mean(time)
     mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
+    time_sorter = np.argsort(time)
+    time_ms = time[time_sorter] - mean_t
+    flux_ms = flux[time_sorter] - mean_s
 
     # setup
     nt = len(time_ms)
@@ -820,8 +822,9 @@ def astropy_scargle(time, flux, f0=0, fn=0, df=0, norm='amplitude'):
     # time and flux are mean subtracted (reduce correlation and avoid peak at f=0)
     mean_t = np.mean(time)
     mean_s = np.mean(flux)
-    time_ms = time - mean_t
-    flux_ms = flux - mean_s
+    time_sorter = np.argsort(time)
+    time_ms = time[time_sorter] - mean_t
+    flux_ms = flux[time_sorter] - mean_s
 
     # setup
     n = len(flux)
