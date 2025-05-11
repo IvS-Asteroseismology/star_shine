@@ -17,51 +17,31 @@ class PipelineThread(QThread):
     def __init__(self, pipeline_instance):
         super().__init__()
         self.pipeline_instance = pipeline_instance
+        self.func_name = ''
+        self.args = ()
+        self.kwargs = {}
 
-    def extract_approx(self, f_approx):
-        """Run extract_approx in a separate thread."""
-        # Perform analysis using your Pipeline class
-        try:
-            self.pipeline_instance.extract_approx(f_approx)
-
-            # Emit the signal
-            self.result_signal.emit()
-
-        except Exception as e:
-            self.pipeline_instance.logger.error(f"Error from extract_approx: {e}")
-
-    def remove_approx(self, f_approx):
-        """Run remove_approx in a separate thread."""
-        # Perform analysis using your Pipeline class
-        try:
-            self.pipeline_instance.remove_approx(f_approx)
-
-            # Emit the signal
-            self.result_signal.emit()
-
-        except Exception as e:
-            self.pipeline_instance.logger.error(f"Error from remove_approx: {e}")
-
-    def iterative_prewhitening(self, n_extract=0):
-        """Run iterative_prewhitening in a separate thread."""
-        # Perform analysis using your Pipeline class
-        try:
-            self.pipeline_instance.iterative_prewhitening(n_extract=n_extract)
-
-            # Emit the signal
-            self.result_signal.emit()
-
-        except Exception as e:
-            self.pipeline_instance.logger.error(f"Error from iterative_prewhitening: {e}")
+    def start_function(self, func_name, *args, **kwargs):
+        """Start the thread with a specific function and arguments."""
+        self.func_name = func_name
+        self.args = args
+        self.kwargs = kwargs
+        super().start()
 
     def run(self):
-        """Run the analysis pipeline in a separate thread."""
-        # Perform analysis using your Pipeline class
-        try:
-            self.pipeline_instance.run()
+        """Run the function in a separate thread."""
+        if self.func_name != '':
+            try:
+                # start a thread with the function
+                function_to_run = getattr(self.pipeline_instance, self.func_name)
+                function_to_run(*self.args, **self.kwargs)
 
-            # Emit the signal
-            self.result_signal.emit()
+                # Emit the signal
+                self.result_signal.emit()
 
-        except Exception as e:
-            self.pipeline_instance.logger.error(f"Error during analysis: {e}")
+            except Exception as e:
+                self.pipeline_instance.logger.error(f"Error during analysis: {e}")
+
+    def stop(self):
+        """Stop the thread."""
+        self.quit()

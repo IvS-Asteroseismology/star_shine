@@ -7,9 +7,10 @@ Code written by: Luc IJspeert
 """
 import os
 import sys
+import functools
 
 from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QSplitter, QMenuBar
-from PySide6.QtWidgets import QLabel, QTextEdit, QLineEdit, QFileDialog, QMessageBox, QPushButton
+from PySide6.QtWidgets import QLabel, QTextEdit, QLineEdit, QSpinBox, QFileDialog, QMessageBox, QPushButton
 from PySide6.QtWidgets import QTableView, QHeaderView
 from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor, QIcon
 
@@ -210,18 +211,53 @@ class MainWindow(QMainWindow):
         l_col_widget = QWidget()
         l_col_layout = QVBoxLayout(l_col_widget)
 
-        # Input field for file path
-        input_sub_layout = QHBoxLayout()
-        self.file_path_label = QLabel("File Path:")
-        self.file_path_edit = QLineEdit()
-        input_sub_layout.addWidget(self.file_path_label)
-        input_sub_layout.addWidget(self.file_path_edit)
-        l_col_layout.addLayout(input_sub_layout)
+        # create a horizontal layout with the buttons for each step
+        steps_button_widget = QWidget()
+        steps_button_layout = QHBoxLayout(steps_button_widget)
+
+        # Create a spin box for integer input
+        self.spin_box = QSpinBox(self)
+        self.spin_box.setRange(0, 99999)
+        self.spin_box.setValue(0)
+        # Button for starting analysis
+        self.analyze_button = QPushButton("Extract")
+        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'iterative_prewhitening',
+                                                              n_extract=self.spin_box.value()))
+        steps_button_layout.addWidget(self.analyze_button)
+        steps_button_layout.addWidget(self.spin_box)  # add the number field after the button
 
         # Button for starting analysis
-        self.analyze_button = QPushButton("Analyze")
-        self.analyze_button.clicked.connect(self.perform_analysis)  # Connect the action to a custom method
-        l_col_layout.addWidget(self.analyze_button)
+        self.analyze_button = QPushButton("Free Fit")
+        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid'))
+        steps_button_layout.addWidget(self.analyze_button)
+
+        # Button for starting analysis
+        self.analyze_button = QPushButton("Find Period")
+        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'couple_harmonics'))
+        steps_button_layout.addWidget(self.analyze_button)
+
+        # Button for starting analysis
+        self.analyze_button = QPushButton("Harmonic Fit")
+        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid_h'))
+        steps_button_layout.addWidget(self.analyze_button)
+
+        l_col_layout.addWidget(steps_button_widget)
+
+        # create a horizontal layout with some buttons
+        run_button_widget = QWidget()
+        run_button_layout = QHBoxLayout(run_button_widget)
+
+        # Button for starting analysis
+        self.analyze_button = QPushButton("Run Full Analyis")
+        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'run'))
+        run_button_layout.addWidget(self.analyze_button)
+
+        # Button for starting analysis
+        self.stop_button = QPushButton("Stop")
+        self.stop_button.clicked.connect(self.stop_analysis)
+        run_button_layout.addWidget(self.stop_button)
+
+        l_col_layout.addWidget(run_button_widget)
 
         # Log area
         self.text_field = QTextEdit()
@@ -519,15 +555,23 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def perform_analysis(self):
+    def perform_analysis(self, func_name, *args, **kwargs):
         """Perform analysis on the loaded data and display results."""
         # check whether data is loaded
-        if len(self.pipeline.data.file_list) == 0:
+        if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
             self.logger.error("Input Error: please provide data files.")
             return None
 
-        # set up and start a new thread for the analysis
-        self.pipeline_thread.start()
+        # start a new thread for the analysis
+        self.append_text(func_name + str(*args))
+        self.pipeline_thread.start_function(func_name, *args, **kwargs)
+
+        return None
+
+    def stop_analysis(self):
+        """Stop the analysis, if it is running."""
+        if self.pipeline_thread is not None:
+            self.pipeline_thread.stop()
 
         return None
 
@@ -540,11 +584,11 @@ class MainWindow(QMainWindow):
 
         # Left click
         if button == 1:
-            self.pipeline_thread.extract_approx(x)
+            self.pipeline_thread.start_function('extract_approx', x)
 
         # Right click
         if button == 3:
-            self.pipeline_thread.remove_approx(x)
+            self.pipeline_thread.start_function('remove_approx', x)
 
         return None
 
