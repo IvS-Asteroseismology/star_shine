@@ -334,6 +334,46 @@ def linear_pars(time, flux, i_chunks):
     return y_inter, slope
 
 
+@nb.njit(cache=True)
+def sum_sines_st(time, f_n, a_n, ph_n, t_shift=True):
+    """A sum of sine waves at times t, given the frequencies, amplitudes and phases.
+
+    Single threaded version. Better for one to a few sinusoids.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    t_shift: bool
+        Mean center the time axis
+
+    Returns
+    -------
+    numpy.ndarray[Any, dtype[float]]
+        Model time series of a sum of sine waves. Varies around 0.
+
+    Notes
+    -----
+    Assumes the phases are determined with respect to the mean time as zero point by default.
+    """
+    if t_shift:
+        mean_t = np.mean(time)
+    else:
+        mean_t = 0
+
+    model_sines = np.zeros(len(time))
+    for i in range(len(f_n)):
+        model_sines += a_n[i] * np.sin((2 * np.pi * f_n[i] * (time - mean_t)) + ph_n[i])
+
+    return model_sines
+
+
 @nb.njit(cache=True, parallel=True)
 def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
     """A sum of sine waves at times t, given the frequencies, amplitudes and phases.
@@ -677,10 +717,11 @@ def extract_single(time, flux, f0=-1, fn=-1, select='a'):
     return f_final, a_final, ph_final
 
 
-def extract_local(time, flux, f0, fn, select='a'):
+@nb.njit(cache=True)
+def extract_local(time, flux, f0, fn):
     """Extract a single sinusoid from a time series at a predefined frequency interval.
 
-    The extracted frequency is based on the highest amplitude or signal-to-noise in the periodogram.
+    The extracted frequency is based on the highest amplitude in the periodogram.
     The highest peak is oversampled by a factor 100 to get a precise measurement.
 
     Parameters
@@ -693,8 +734,6 @@ def extract_local(time, flux, f0, fn, select='a'):
         Lowest allowed frequency for extraction.
     fn: float
         Highest allowed frequency for extraction.
-    select: str, optional
-        Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'
 
     Returns
     -------
@@ -717,14 +756,9 @@ def extract_local(time, flux, f0, fn, select='a'):
     freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
 
     # cut off the ends of the frequency range if they are rising
-    i_f_min_edges = ut.uphill_local_max(freqs, -ampls, freqs[[0, -1]])
+    i_f_min_edges = ut.uphill_local_max(freqs, -ampls, freqs[np.array([0, -1])])
     freqs = freqs[i_f_min_edges[0]:i_f_min_edges[1] + 1]
     ampls = ampls[i_f_min_edges[0]:i_f_min_edges[1] + 1]
-
-    # selection step based on flux to noise (refine step keeps using ampl)
-    if select == 'sn':
-        noise_spectrum = pdg.scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0)
-        ampls = ampls / noise_spectrum
 
     # select highest amplitude
     i_f_max = np.argmax(ampls)
@@ -745,6 +779,7 @@ def extract_local(time, flux, f0, fn, select='a'):
     return f_final, a_final, ph_final
 
 
+@nb.njit(cache=True)
 def extract_approx(time, flux, f_approx):
     """Extract a single sinusoid from a time series at an approximate location.
 
@@ -872,7 +907,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
         accept = False
         # remove each frequency one at a time to then re-extract them
         for j in close_f:
-            cur_resid += sum_sines(time, np.array([f_n_temp[j]]), np.array([a_n_temp[j]]), np.array([ph_n_temp[j]]))
+            cur_resid += sum_sines_st(time, np.array([f_n_temp[j]]), np.array([a_n_temp[j]]), np.array([ph_n_temp[j]]))
             const, slope = linear_pars(time, cur_resid, i_chunks)
             resid = cur_resid - linear_curve(time, const, slope, i_chunks)
 
@@ -884,7 +919,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
                 f_j, a_j, ph_j = extract_approx(time, resid, f_n_temp[j])
 
             f_n_temp[j], a_n_temp[j], ph_n_temp[j] = f_j, a_j, ph_j
-            cur_resid -= sum_sines(time, np.array([f_j]), np.array([a_j]), np.array([ph_j]))
+            cur_resid -= sum_sines_st(time, np.array([f_j]), np.array([a_j]), np.array([ph_j]))
 
         # as a last model-refining step, redetermine the constant and slope
         const, slope = linear_pars(time, cur_resid, i_chunks)
@@ -907,7 +942,7 @@ def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_ch
         logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f}) - end refinement')
 
     # redo the constant and slope without the last iteration of changes
-    resid = flux - (model_sinusoid_ncf + sum_sines(time, f_n[close_f], a_n[close_f], ph_n[close_f]))
+    resid = flux - (model_sinusoid_ncf + sum_sines_st(time, f_n[close_f], a_n[close_f], ph_n[close_f]))
     const, slope = linear_pars(time, resid, i_chunks)
 
     return const, slope, f_n, a_n, ph_n
@@ -1063,8 +1098,8 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
             close_f = anf.f_within_rayleigh(n_freq_cur, f_n_temp, freq_res)
 
         # make a model of only the close sinusoids and subtract the current sinusoid
-        model_sinusoid_r = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
-        model_sinusoid_r -= sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+        model_sinusoid_r = sum_sines_st(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
+        model_sinusoid_r -= sum_sines_st(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
 
         if fit_each_step:
             # fit all frequencies for best improvement
@@ -1074,11 +1109,11 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
         elif len(close_f) > 1:
             # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
             refine_out = refine_subset(time, flux, close_f, p_orb, const, slope, f_n_temp, a_n_temp, ph_n_temp,
-                                       i_chunks, logger=logger)
+                                       i_chunks, logger=None)
             const, slope, f_n_temp, a_n_temp, ph_n_temp = refine_out
 
         # make the model of the updated close sinusoids and determine new residuals
-        model_sinusoid_n = sum_sines(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
+        model_sinusoid_n = sum_sines_st(time, f_n_temp[close_f], a_n_temp[close_f], ph_n_temp[close_f])
         cur_resid -= (model_sinusoid_n - model_sinusoid_r)  # add the changes to the sinusoid residuals
 
         # as a last model-refining step, redetermine the constant and slope
@@ -1110,7 +1145,8 @@ def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=No
                          f'f= {f_i:1.6f}, a= {a_i:1.6f}')
 
     if logger is not None:
-        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f}) - end extraction')
+        logger.info(f'End extraction')
+        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total delta= {bic_init - bic_prev:1.2f}).')
 
     # lastly re-determine slope and const
     cur_resid += (model_sinusoid_n - model_sinusoid_r)  # undo last change

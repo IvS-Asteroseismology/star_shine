@@ -342,12 +342,9 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
 
     # update the parameters for each group
     for k, group in enumerate(f_groups):
-        if logger is not None:
-            logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)}')
-
         # subtract all other sines from the data, they are fixed now
         resid = flux - tsf.sum_sines(time, np.delete(res_f_n, group), np.delete(res_a_n, group),
-                                       np.delete(res_ph_n, group))
+                                     np.delete(res_ph_n, group))
 
         # fit only the frequencies in this group (constant and slope are also fitted still)
         output = fit_multi_sinusoid(time, resid, res_const, res_slope, res_f_n[group],
@@ -703,9 +700,6 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     res_f_n, res_a_n, res_ph_n = np.copy(f_n), np.copy(a_n), np.copy(ph_n)
 
     # fit the harmonics (first group)
-    if logger is not None:
-        logger.extra(f'Fit of harmonics')
-
     # remove harmonic frequencies
     resid = flux - tsf.sum_sines(time, np.delete(res_f_n, harmonics), np.delete(res_a_n, harmonics),
                                    np.delete(res_ph_n, harmonics))
@@ -734,9 +728,6 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
 
     # update the parameters for each group
     for k, group in enumerate(f_groups):
-        if logger is not None:
-            logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)}')
-
         # subtract all other sines from the data, they are fixed now
         resid = flux - tsf.sum_sines(time, np.delete(res_f_n, group), np.delete(res_a_n, group),
                                        np.delete(res_ph_n, group))
