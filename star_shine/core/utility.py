@@ -213,12 +213,49 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
 
 
 @nb.njit(cache=True)
-def uphill_local_max(x, y, x_approx):
-    """Find the index of the local maximum in `x` uphill from `x_approx`.
+def find_local_max(y):
+    """Find the indeces of the local maxima in `y`.
 
-    The array `x` must be sorted in ascending order. This function identifies
-    local maxima in the `y` array and returns the index of the `x` value
-    corresponding to the local maximum uphill from `x_approx`.
+    The array `x` must be sorted in ascending order. This function identifies local maxima in the `y` array
+    and returns the corresponding indeces.
+
+    Parameters
+    ----------
+    y: ndarray[Any, dtype[float]]
+        1D array of y-values corresponding to the x-values.
+
+    Returns
+    -------
+    ndarray[Any, dtype[int]]
+        Indeces of the `x` values corresponding to the local maxima.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> y = np.array([1, 3, 2, 5, 4, 6])
+    >>> find_local_max(y)
+    array([1, 3, 5])
+    """
+    # differenced y
+    dy = y[1:] - y[:-1]
+
+    # sign of difference of y
+    sign_dy = np.sign(dy)
+    sign_dy = np.concatenate((np.array([1]), sign_dy, np.array([-1])))  # add 1 and -1 on the ends for maximum finding
+
+    # find the maxima in y
+    extrema = sign_dy[1:] - sign_dy[:-1]  # places where the array dy changes sign
+    maxima = np.arange(len(extrema))[extrema < 0]  # places where y has a maximum
+
+    return maxima
+
+
+@nb.njit(cache=True)
+def uphill_local_max(x, y, x_approx):
+    """Find the index of the local maximum in `y` uphill from `x_approx`.
+
+    The array `x` must be sorted in ascending order. This function identifies local maxima in the `y` array
+    and returns the index of the `x` value corresponding to the local maximum uphill from `x_approx`.
 
     Parameters
     ----------
@@ -227,12 +264,12 @@ def uphill_local_max(x, y, x_approx):
     y: ndarray[Any, dtype[float]]
         1D array of y-values corresponding to the x-values.
     x_approx: ndarray[Any, dtype[float]]
-        The x-value around which to find the nearest local maximum.
+        The x-value(s) around which to find the nearest local maximum.
 
     Returns
     -------
     ndarray[Any, dtype[int]]
-        Index of the `x` value corresponding to the nearest local maximum to `x_approx`.
+        Index of the `x` value(s) corresponding to the nearest local maximum to `x_approx`.
 
     Examples
     --------
@@ -243,6 +280,7 @@ def uphill_local_max(x, y, x_approx):
     >>> uphill_local_max(x, y, x_approx)
     array([1, 3])
     """
+    # [note] this is find_local_max(y), but since we need sign_dy we do this here
     # differenced y
     dy = y[1:] - y[:-1]
 
@@ -265,6 +303,18 @@ def uphill_local_max(x, y, x_approx):
     x_max = maxima[pos_max]
 
     return x_max
+
+
+@nb.njit(cache=True)
+def n_parameters(n_chunks, n_sinusoids, n_harmonics):
+    """Return the number of parameters of the model."""
+    # equation for number of parameters
+    n_param = 2 * n_chunks  # time chunk each with constant and slope
+    n_param += int(n_harmonics > 0)  # one period if harmonics present
+    n_param += 2 * n_harmonics  # harmonics (sinusoids with constrained frequency)
+    n_param += 3 * (n_sinusoids - n_harmonics)  # sinusoids with free frequency
+
+    return n_param
 
 
 @nb.njit(cache=True)

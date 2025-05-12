@@ -329,7 +329,9 @@ class Result:
             n_harm = len(harmonics)
 
         # equation for number of parameters
-        n_param = 2 * len(self.const) + int(n_harm > 0) + 2 * n_harm + 3 * (len(self.f_n) - n_harm)
+        n_chunks = len(self.const)
+        n_sinusoids = len(self.f_n)
+        n_param = ut.n_parameters(n_chunks, n_sinusoids, n_harm)
         self.setter(n_param=n_param)
 
         return None
