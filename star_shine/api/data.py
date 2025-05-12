@@ -8,9 +8,7 @@ Code written by: Luc IJspeert
 import os
 import numpy as np
 
-from star_shine.core import periodogram as pdg
-from star_shine.core import visualisation as vis
-from star_shine.core import utility as ut
+from star_shine.core import periodogram as pdg, utility as ut, visualisation as vis
 from star_shine.core import io
 from star_shine.config.helpers import get_config
 from star_shine.config import data_properties as dp

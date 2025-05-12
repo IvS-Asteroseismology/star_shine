@@ -1,661 +1,1396 @@
 """STAR SHINE
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
-This Python module contains functions for data analysis;
-specifically for the fitting of stellar oscillations and harmonic sinusoids.
+This Python module contains algorithms for data analysis.
 
 Code written by: Luc IJspeert
 """
-
-import numpy as np
 import numba as nb
-import itertools as itt
+import numpy as np
 
-from star_shine.config import data_properties as dp
-
-
-@nb.njit(cache=True)
-def f_within_rayleigh(i, f_n, rayleigh):
-    """Selects a chain of frequencies within the Rayleigh criterion from each other
-    around the chosen frequency.
-    
-    Parameters
-    ----------
-    i: int
-        Index of the frequency around which to search
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    rayleigh: float
-        The appropriate frequency resolution (usually 1.5/T)
-    
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[int]]
-        Indices of close frequencies in the chain
-    """
-    indices = np.arange((len(f_n)))
-    sorter = np.argsort(f_n)  # first sort by frequency
-    f_diff = np.diff(f_n[sorter])  # spaces between frequencies
-    sorted_pos = indices[sorter == i][0]  # position of i in the sorted array
-
-    if np.all(f_diff > rayleigh):
-        # none of the frequencies are close
-        i_close = np.zeros(0, dtype=np.int_)
-    elif np.all(f_diff < rayleigh):
-        # all the frequencies are close
-        i_close = indices
-    else:
-        # the frequency to investigate is somewhere inbetween other frequencies
-        right_not_close = indices[sorted_pos + 1:][f_diff[sorted_pos:] > rayleigh]
-        left_not_close = indices[:sorted_pos][f_diff[:sorted_pos] > rayleigh]
-
-        # if any freqs to left or right are not close, take the first index where this happens
-        if len(right_not_close) > 0:
-            i_right_nc = right_not_close[0]
-        else:
-            i_right_nc = len(f_n)  # else take the right edge of the array
-        if len(left_not_close) > 0:
-            i_left_nc = left_not_close[-1]
-        else:
-            i_left_nc = -1  # else take the left edge of the array (minus one)
-
-        # now select the frequencies close to f_n[i] by using the found boundaries
-        i_close = indices[i_left_nc + 1:i_right_nc]
-
-    # convert back to unsorted indices
-    i_close_unsorted = sorter[i_close]
-
-    return i_close_unsorted
+from star_shine.core import timeseries as ts, periodogram as pdg, fitting as fit, goodness_of_fit as gof
+from star_shine.core import frequency_sets as frs, utility as ut
+from star_shine.core.timeseries import sum_sines, linear_curve, sum_sines_st, linear_pars, formal_uncertainties
 
 
-@nb.njit(cache=True)
-def chains_within_rayleigh(f_n, rayleigh):
-    """Find all chains of frequencies within each other's Rayleigh criterion.
-    
-    Parameters
-    ----------
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    rayleigh: float
-        The appropriate frequency resolution (usually 1.5/T)
-    
-    Returns
-    -------
-    list[numpy.ndarray[Any, dtype[int]]]
-        Indices of close frequencies in all found chains
-    
-    See Also
-    --------
-    f_within_rayleigh
-    """
-    indices = np.arange(len(f_n))
-    used = []
-    groups = []
-    for i in indices:
-        if i not in used:
-            i_close = f_within_rayleigh(i, f_n, rayleigh)
-            if len(i_close) > 1:
-                used.extend(i_close)
-                groups.append(i_close)
+def extract_single(time, flux, f0=-1, fn=-1, select='a'):
+    """Extract a single sinusoid from a time series.
 
-    return groups
+    The extracted frequency is based on the highest amplitude or signal-to-noise in the periodogram.
+    The highest peak is oversampled by a factor 100 to get a precise measurement.
 
-
-@nb.njit(cache=True)
-def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3., sigma_f=1.):
-    """Removes insufficiently significant frequencies in terms of error margins.
-    
-    Parameters
-    ----------
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[Any, dtype[float]]
-        Formal errors in the frequencies
-    a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
-    a_n_err: numpy.ndarray[Any, dtype[float]]
-        Formal errors in the amplitudes
-    sigma_a: float
-        Number of times the error to use for check of significant amplitude
-    sigma_f: float
-        Number of times the error to use for check of significant
-        frequency separation
-    
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[int]]
-        Indices of frequencies deemed insignificant
-    
-    Notes
-    -----
-    Frequencies with an amplitude less than sigma times the error are removed,
-    as well as those that have an overlapping frequency error and are lower amplitude
-    than any of the overlapped frequencies.
-    """
-    # amplitude not significant enough
-    a_insig = (a_n / a_n_err < sigma_a)
-
-    # frequency error overlaps with neighbour
-    f_insig = np.zeros(len(f_n), dtype=np.bool_)
-    for i in range(len(f_n)):
-        overlap = (f_n[i] + sigma_f * f_n_err[i] > f_n) & (f_n[i] - sigma_f * f_n_err[i] < f_n)
-
-        # if any of the overlap is higher in amplitude, throw this one out
-        if np.any((a_n[overlap] > a_n[i]) & (f_n[overlap] != f_n[i])):
-            f_insig[i] = True
-
-    remove = np.arange(len(f_n))[a_insig | f_insig]
-
-    return remove
-
-
-def remove_insignificant_snr(time, a_n, noise_at_f):
-    """Removes insufficiently significant frequencies in terms of S/N.
-    
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    f0: float, optional
+        Lowest allowed frequency for extraction.
+        If left -1, default is f0 = 1/(100*T)
+    fn: float, optional
+        Highest allowed frequency for extraction.
+        If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
+    select: str, optional
+        Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        f_final: float
+            Frequency of the extracted sinusoid
+        a_final: float
+            Amplitude of the extracted sinusoid
+        ph_final: float
+            Phase of the extracted sinusoid
+
+    See Also
+    --------
+    scargle, scargle_phase_single
+    """
+    df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
+
+    # full LS periodogram
+    freqs, ampls = pdg.scargle_parallel(time, flux, f0=f0, fn=fn, df=df)
+
+    # selection step based on flux to noise (refine step keeps using ampl)
+    if select == 'sn':
+        noise_spectrum = pdg.scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0)
+        ampls = ampls / noise_spectrum
+
+    # select highest amplitude
+    i_f_max = np.argmax(ampls)
+
+    # refine frequency by increasing the frequency resolution x100
+    f_left = max(freqs[i_f_max] - df, df / 10)  # may not get too low
+    f_right = freqs[i_f_max] + df
+    f_refine, a_refine = pdg.scargle(time, flux, f0=f_left, fn=f_right, df=df/100)
+
+    # select refined highest amplitude
+    i_f_max = np.argmax(a_refine)
+    f_final = f_refine[i_f_max]
+    a_final = a_refine[i_f_max]
+
+    # finally, compute the phase (and make sure it stays within + and - pi)
+    _, ph_final = pdg.scargle_ampl_phase_single(time, flux, f_final)
+
+    return f_final, a_final, ph_final
+
+
+@nb.njit(cache=True)
+def extract_local(time, flux, f0, fn):
+    """Extract a single sinusoid from a time series at a predefined frequency interval.
+
+    The extracted frequency is based on the highest amplitude in the periodogram.
+    The highest peak is oversampled by a factor 100 to get a precise measurement.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    f0: float
+        Lowest allowed frequency for extraction.
+    fn: float
+        Highest allowed frequency for extraction.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        f_final: float
+            Frequency of the extracted sinusoid
+        a_final: float
+            Amplitude of the extracted sinusoid
+        ph_final: float
+            Phase of the extracted sinusoid
+
+    See Also
+    --------
+    scargle, scargle_phase_single
+    """
+    df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
+
+    # full LS periodogram (accurate version)
+    freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
+
+    # cut off the ends of the frequency range if they are rising
+    i_f_min_edges = ut.uphill_local_max(freqs, -ampls, freqs[np.array([0, -1])])
+    freqs = freqs[i_f_min_edges[0]:i_f_min_edges[1] + 1]
+    ampls = ampls[i_f_min_edges[0]:i_f_min_edges[1] + 1]
+
+    # select highest amplitude
+    i_f_max = np.argmax(ampls)
+
+    # refine frequency by increasing the frequency resolution x100
+    f_left = max(freqs[i_f_max] - df, df / 10)  # may not get too low
+    f_right = freqs[i_f_max] + df
+    f_refine, a_refine = pdg.scargle(time, flux, f0=f_left, fn=f_right, df=df / 100)
+
+    # select refined highest amplitude
+    i_f_max = np.argmax(a_refine)
+    f_final = f_refine[i_f_max]
+    a_final = a_refine[i_f_max]
+
+    # finally, compute the phase (and make sure it stays within + and - pi)
+    _, ph_final = pdg.scargle_ampl_phase_single(time, flux, f_final)
+
+    return f_final, a_final, ph_final
+
+
+@nb.njit(cache=True)
+def extract_approx(time, flux, f_approx):
+    """Extract a single sinusoid from a time series at an approximate location.
+
+    Follows the periodogram upwards to the nearest peak. The periodogram is oversampled for a more precise result.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    f_approx: float
+        Approximate location of the frequency of maximum amplitude.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        f_final: float
+            Frequency of the extracted sinusoid
+        a_final: float
+            Amplitude of the extracted sinusoid
+        ph_final: float
+            Phase of the extracted sinusoid
+    """
+    df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
+
+    # LS periodogram around the approximate location (2.5 times freq res)
+    f0 = max(f_approx - 25 * df, df / 10)
+    fn = f_approx + 25 * df
+    freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
+
+    # get the index of the frequency of the maximum amplitude
+    i_f_max = ut.uphill_local_max(freqs, ampls, np.array([f_approx]))[0]
+
+    # refine frequency by increasing the frequency resolution x100
+    f_left = max(freqs[i_f_max] - df, df / 10)
+    f_right = freqs[i_f_max] + df
+    f_refine, a_refine = pdg.scargle(time, flux, f0=f_left, fn=f_right, df=df / 100)
+
+    # select refined highest amplitude
+    i_f_max = np.argmax(a_refine)
+    f_final = f_refine[i_f_max]
+    a_final = a_refine[i_f_max]
+
+    # finally, compute the phase
+    _, ph_final = pdg.scargle_ampl_phase_single(time, flux, f_final)
+
+    return f_final, a_final, ph_final
+
+
+def refine_subset(time, flux, close_f, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
+    """Refine a subset of frequencies that are within the Rayleigh criterion of each other,
+    taking into account (and not changing the frequencies of) harmonics if present.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    close_f: numpy.ndarray[Any, dtype[int]]
+        Indices of the subset of frequencies to be refined
+    p_orb: float
+        Orbital period of the eclipsing binary in days (can be 0)
+    const: numpy.ndarray[Any, dtype[float]]
+        The y-intercepts of a piece-wise linear curve
+    slope: numpy.ndarray[Any, dtype[float]]
+        The slopes of a piece-wise linear curve
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
     a_n: numpy.ndarray[Any, dtype[float]]
         The amplitudes of a number of sine waves
-    noise_at_f: numpy.ndarray[Any, dtype[float]]
-        The noise level at each frequency
-    
-    Returns
-    -------
-    numpy.ndarray[Any, dtype[int]]
-        Indices of frequencies deemed insignificant
-    
-    Notes
-    -----
-    Frequencies with an amplitude less than the S/N threshold are removed,
-    using a threshold appropriate for TESS as function of the number of
-    data points.
-    
-    The noise_at_f here captures the amount of noise on fitting a
-    sinusoid of a certain frequency to all data points.
-    Not to be confused with the noise on the individual data points of the
-    time series.
-    """
-    snr_threshold = dp.signal_to_noise_threshold(time)
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
-    # signal-to-noise below threshold
-    a_insig_1 = (a_n / noise_at_f < snr_threshold)
-    remove = np.arange(len(a_n))[a_insig_1]
-
-    return remove
-
-
-@nb.njit(cache=True)
-def find_harmonics(f_n, f_n_err, p_orb, sigma=1.):
-    """Find the orbital harmonics from a set of frequencies, given the orbital period.
-    
-    Parameters
-    ----------
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[Any, dtype[float]]
-        Formal errors in the frequencies
-    p_orb: float
-        The orbital period
-    sigma: float
-        Number of times the error to use for check of significance
-    
-    Returns
-    -------
-    numpy.ndarray[bool]
-        Indices of frequencies that are harmonics of p_orb
-    
-    Notes
-    -----
-    Only includes those frequencies that are within sigma * error of an orbital harmonic.
-    If multiple frequencies correspond to one harmonic, only the closest is kept.
-    """
-    # the frequencies divided by the orbital frequency gives integers for harmonics
-    test_int = f_n * p_orb
-    is_harmonic = ((test_int % 1) > 1 - sigma * f_n_err * p_orb) | ((test_int % 1) < sigma * f_n_err * p_orb)
-
-    # look for harmonics that have multiple close frequencies
-    harmonic_f = f_n[is_harmonic]
-    sorter = np.argsort(harmonic_f)
-    harmonic_n = np.round(test_int[is_harmonic], 0, np.zeros(np.sum(is_harmonic)))  # third arg needed for numba
-    n_diff = np.diff(harmonic_n[sorter])
-
-    # only keep the closest frequencies
-    if np.any(n_diff == 0):
-        n_dup = np.unique(harmonic_n[sorter][:-1][n_diff == 0])
-        for n in n_dup:
-            is_harmonic[np.round(test_int, 0, np.zeros(len(test_int))) == n] = False
-            is_harmonic[np.argmin(np.abs(test_int - n))] = True
-
-    i_harmonic = np.arange(len(f_n))[is_harmonic]
-
-    return i_harmonic
-
-
-@nb.njit(cache=True)
-def construct_harmonic_range(f_0, domain):
-    """create a range of harmonic frequencies given the base frequency.
-    
-    Parameters
-    ----------
-    f_0: float
-        Base frequency in the range, from where the rest of the pattern is built.
-    domain: list[float], numpy.ndarray[2, dtype[float]]
-        Two values that give the borders of the range.
-        Sensible values could be the Rayleigh criterion and the Nyquist frequency
-    
     Returns
     -------
     tuple
         A tuple containing the following elements:
-        harmonics: numpy.ndarray[Any, dtype[float]]
-            Frequencies of the harmonic series in the domain
-        n_range: numpy.ndarray[Any, dtype[int]]
-            Corresponding harmonic numbers (base frequency is 1)
-    """
-    # determine where the range of harmonics starts and ends
-    n_start = np.ceil(domain[0] / f_0)
-    n_end = np.floor(domain[1] / f_0)
-    n_range = np.arange(max(1, n_start), n_end + 1).astype(np.int_)
-    harmonics = f_0 * n_range
+        const: numpy.ndarray[Any, dtype[float]]
+            Updated y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            Updated slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            Updated frequencies of a number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            Updated amplitudes of a number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            Updated phases of a number of sine waves
 
-    return harmonics, n_range
-
-
-@nb.njit(cache=True)
-def find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9):
-    """Get the indices of the frequencies matching closest to the harmonics.
-    
-    Parameters
-    ----------
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    p_orb: float
-        The orbital period
-    f_tol: float
-        Tolerance in the frequency for accepting harmonics
-    
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        harmonics: numpy.ndarray[Any, dtype[int]]
-            Indices of the frequencies in f_n that are deemed harmonics
-        harmonic_n: numpy.ndarray[Any, dtype[int]]
-            Corresponding harmonic numbers (base frequency is 1)
-    
-    Notes
-    -----
-    A frequency is only accepted as harmonic if it is within 1e-9 of the pattern
-    (by default). This can now be user defined for more flexibility.
-    """
-    # guard against zero period or empty list
-    if (p_orb == 0) | (len(f_n) == 0):
-        harmonics = np.zeros(0, dtype=np.int_)
-        harmonic_n = np.zeros(0, dtype=np.int_)
-        return harmonics, harmonic_n
-        
-    # make the pattern of harmonics
-    domain = [0, np.max(f_n) + 0.5 / p_orb]
-    harmonic_pattern, harmonic_n = construct_harmonic_range(1 / p_orb, domain)
-
-    # sort the frequencies
-    sorter = np.argsort(f_n)
-    f_n = f_n[sorter]
-
-    # get nearest neighbour in harmonics for each f_n by looking to the left and right of the sorted position
-    i_nn = np.searchsorted(f_n, harmonic_pattern)
-    i_nn[i_nn == len(f_n)] = len(f_n) - 1
-    closest = np.abs(f_n[i_nn] - harmonic_pattern) < np.abs(harmonic_pattern - f_n[i_nn - 1])
-    i_nn = i_nn * closest + (i_nn - 1) * np.invert(closest)
-
-    # get the distances to nearest neighbours
-    d_nn = np.abs(f_n[i_nn] - harmonic_pattern)
-
-    # check that the closest neighbours are reasonably close to the harmonic
-    m_cn = (d_nn < min(f_tol, 1 / (2 * p_orb)))  # distance must be smaller than tolerance (and never larger than 1/2P)
-
-    # keep the ones left over
-    harmonics = sorter[i_nn[m_cn]]
-    harmonic_n = harmonic_n[m_cn]
-
-    return harmonics, harmonic_n
-
-
-@nb.njit(cache=True)
-def find_harmonics_tolerance(f_n, p_orb, f_tol):
-    """Get the indices of the frequencies matching within a tolerance to the harmonics.
-    
-    Parameters
-    ----------
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    p_orb: float
-        The orbital period
-    f_tol: float
-        Tolerance in the frequency for accepting harmonics
-    
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        harmonics: numpy.ndarray[Any, dtype[int]]
-            Indices of the frequencies in f_n that are deemed harmonics
-        harmonic_n: numpy.ndarray[Any, dtype[int]]
-            Corresponding harmonic numbers (base frequency is 1)
-    
-    Notes
-    -----
-    A frequency is only accepted as harmonic if it is within some relative error.
-    This can be user defined for flexibility.
-    """
-    harmonic_n = np.zeros(len(f_n))
-    harmonic_n = np.round(f_n * p_orb, 0, harmonic_n)  # closest harmonic (out argument needed in numba atm)
-    harmonic_n[harmonic_n == 0] = 1  # avoid zeros resulting from large f_tol
-
-    # get the distances to the nearest pattern frequency
-    d_nn = np.abs(f_n - harmonic_n / p_orb)
-
-    # check that the closest neighbours are reasonably close to the harmonic
-    m_cn = (d_nn < min(f_tol, 1 / (2 * p_orb)))  # distance smaller than tolerance (or half the harmonic spacing)
-
-    # produce indices and make the right selection
-    harmonics = np.arange(len(f_n))[m_cn]
-    harmonic_n = harmonic_n[m_cn].astype(np.int_)
-
-    return harmonics, harmonic_n
-
-
-@nb.njit(cache=True)
-def select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol, sigma_f=3):
-    """Selects only those frequencies that are probably harmonics
-
-    Parameters
-    ----------
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[Any, dtype[float]]
-        Formal errors in the frequencies
-    p_orb: float
-        The orbital period
-    f_tol: float
-        Tolerance in the frequency for accepting harmonics
-    sigma_f: float
-        Number of times the error to use for check of significant
-        frequency separation
-    
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-         harmonics_passed: numpy.ndarray[Any, dtype[int]]
-            Indices of the frequencies in f_n that are harmonics
-         harmonic_n: numpy.ndarray[Any, dtype[int]]
-            Corresponding harmonic numbers (base frequency is 1)
+    See Also
+    --------
+    extract_all
 
     Notes
     -----
-    A frequency is only accepted as harmonic if it is within the
-    frequency resolution of the pattern, and if it is within <sigma_f> sigma
-    of the frequency uncertainty
+    Intended as a sub-loop within another extraction routine (extract_all),
+    can work standalone too.
     """
-    # get the harmonics within f_tol
-    harmonics, harm_n = find_harmonics_from_pattern(f_n, p_orb, f_tol=f_tol)
+    n_chunks = len(i_chunks)
+    n_sin = len(f_n)
+    n_g = len(close_f)  # number of frequencies being updated
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    n_harm = len(harmonics)
 
-    # frequency error overlaps with theoretical harmonic
-    passed_h = np.zeros(len(harmonics), dtype=np.bool_)
-    for i, (h, n) in enumerate(zip(harmonics, harm_n)):
-        f_theo = n / p_orb
-        margin = sigma_f * f_n_err[h]
-        overlap_h = (f_n[h] + margin > f_theo) & (f_n[h] - margin < f_theo)
-        if overlap_h:
-            passed_h[i] = True
+    # determine initial bic
+    model_sinusoid_ncf = sum_sines(time, np.delete(f_n, close_f), np.delete(a_n, close_f), np.delete(ph_n, close_f))
+    cur_resid = flux - (model_sinusoid_ncf + sum_sines(time, f_n[close_f], a_n[close_f], ph_n[close_f]))
+    resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+    f_n_i, a_n_i, ph_n_i = np.copy(f_n), np.copy(a_n), np.copy(ph_n)
+    n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
+    bic_prev = gof.calc_bic(resid, n_param)
+    bic_init = bic_prev
 
-    harmonics_passed = harmonics[passed_h]
-    harmonic_n = harm_n[passed_h]
+    # stop the loop when the BIC increases
+    accept = True
+    while accept:
+        accept = False
+        # remove each frequency one at a time to then re-extract them
+        for j in close_f:
+            cur_resid += sum_sines_st(time, np.array([f_n_i[j]]), np.array([a_n_i[j]]), np.array([ph_n_i[j]]))
+            const, slope = linear_pars(time, cur_resid, i_chunks)
+            resid = cur_resid - linear_curve(time, const, slope, i_chunks)
 
-    return harmonics_passed, harmonic_n
-
-
-# @nb.njit()  # won't work due to itertools
-def find_combinations(f_n, f_n_err, sigma=1.):
-    """Find linear combinations from a set of frequencies.
-    
-    Parameters
-    ----------
-    f_n: list[float], numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[Any, dtype[float]]
-        Formal errors on the frequencies
-    sigma: float
-        Number of times the error to use for check of significance
-    
-    Returns
-    -------
-    tuple
-        A tuple containing the following elements:
-        final_o2: dict[int]
-            Dictionary containing the indices of combinations of order 2
-        final_o3: dict[int]
-            Dictionary containing the indices of combinations of order 3
-
-    Notes
-    -----
-    Only includes those frequencies that are within sigma * error of a linear combination.
-    Does 2nd and 3rd order combinations. The number of sigma tolerance can be specified.
-    """
-    indices = np.arange(len(f_n))
-
-    # make all combinations
-    comb_order_2 = np.array(list(itt.combinations_with_replacement(indices, 2)))  # combinations of order 2
-    comb_order_3 = np.array(list(itt.combinations_with_replacement(indices, 3)))  # combinations of order 2
-    comb_freqs_o2 = np.sum(f_n[comb_order_2], axis=1)
-    comb_freqs_o3 = np.sum(f_n[comb_order_3], axis=1)
-
-    # check if any of the frequencies is a combination within error
-    final_o2 = {}
-    final_o3 = {}
-    for i in indices:
-        match_o2 = (f_n[i] > comb_freqs_o2 - sigma * f_n_err[i]) & (f_n[i] < comb_freqs_o2 + sigma * f_n_err[i])
-        match_o3 = (f_n[i] > comb_freqs_o3 - sigma * f_n_err[i]) & (f_n[i] < comb_freqs_o3 + sigma * f_n_err[i])
-        if np.any(match_o2):
-            final_o2[i] = comb_order_2[match_o2]
-        if np.any(match_o3):
-            final_o3[i] = comb_order_3[match_o3]
-
-    return final_o2, final_o3
-
-
-def find_unknown_harmonics(f_n, f_n_err, sigma=1., n_max=5, f_tol=None):
-    """Try to find harmonic series of unknown base frequency
-    
-    Parameters
-    ----------
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    f_n_err: numpy.ndarray[Any, dtype[float]]
-        Formal errors on the frequencies
-    sigma: float
-        Number of times the error to use for check of significance
-    n_max: int
-        Maximum divisor for each frequency in search of a base harmonic
-    f_tol: None, float
-        Tolerance in the frequency for accepting harmonics
-        If None, use sigma matching instead of pattern matching
-    
-    Returns
-    -------
-    dict[int]
-        Dictionary containing dictionaries with the indices of harmonic series
-    
-    Notes
-    -----
-    The first layer of the dictionary has the indices of frequencies as keys,
-    the second layer uses n as keys and values are the indices of the harmonics
-    stored in an array.
-    n denotes the integer by which the frequency in question (index of the
-    first layer) is divided to get the base frequency of the series.
-    """
-    indices = np.arange(len(f_n))
-    n_harm = np.arange(1, n_max + 1)  # range of harmonic number that is tried for each frequency
-
-    # test all frequencies for being the n-th harmonic in a series of harmonics
-    candidate_h = {}
-    for i in indices:
-        for n in n_harm:
-            p_base = n / f_n[i]  # 1/(f_n[i]/n)
-            if f_tol is not None:
-                i_harmonic, _ = find_harmonics_from_pattern(f_n, p_base, f_tol=f_tol)
+            # if f is a harmonic, don't shift the frequency
+            if j in harmonics:
+                f_j = f_n_i[j]
+                a_j, ph_j = pdg.scargle_ampl_phase_single(time, resid, f_j)
             else:
-                i_harmonic = find_harmonics(f_n, f_n_err, p_base, sigma=sigma)  # harmonic indices
+                f_j, a_j, ph_j = extract_approx(time, resid, f_n_i[j])
 
-            if len(i_harmonic) > 1:
-                # don't allow any gaps of more than 20 + the number of preceding harmonics
-                set_i = np.arange(len(i_harmonic))
-                set_sorter = np.argsort(f_n[i_harmonic])
-                harm_n = np.rint(np.sort(f_n[i_harmonic][set_sorter]) / (f_n[i] / n))  # harmonic integer n
-                large_gaps = (np.diff(harm_n) > 20 + set_i[:-1])
-                if np.any(large_gaps):
-                    cut_off = set_i[1:][large_gaps][0]
-                    i_harmonic = i_harmonic[set_sorter][:cut_off]
+            f_n_i[j], a_n_i[j], ph_n_i[j] = f_j, a_j, ph_j
+            cur_resid -= sum_sines_st(time, np.array([f_j]), np.array([a_j]), np.array([ph_j]))
 
-                # only take sets that don't have frequencies lower than f_n[i]
-                cond_1 = np.all(f_n[i_harmonic] >= f_n[i])
-                cond_2 = (len(i_harmonic) > 1)  # check this again after cutting off gap
-                if cond_1 & cond_2 & (i in candidate_h.keys()):
-                    candidate_h[i][n] = i_harmonic
-                elif cond_1 & cond_2:
-                    candidate_h[i] = {n: i_harmonic}
+        # as a last model-refining step, redetermine the constant and slope
+        const, slope = linear_pars(time, cur_resid, i_chunks)
+        resid = cur_resid - linear_curve(time, const, slope, i_chunks)
 
-    # check for conditions that only look at the set itself
-    i_n_remove = []
-    for i in candidate_h.keys():
-        for n in candidate_h[i].keys():
-            set_len = len(candidate_h[i][n])
+        # calculate BIC before moving to the next iteration
+        bic = gof.calc_bic(resid, n_param)
+        d_bic = bic_prev - bic
+        if np.round(d_bic, 2) > 0:
+            # adjust the shifted frequencies
+            f_n[close_f], a_n[close_f], ph_n[close_f] = f_n_i[close_f], a_n_i[close_f], ph_n_i[close_f]
+            bic_prev = bic
+            accept = True
 
-            # determine the harmonic integer n of each frequency in the set
-            harm_n = np.rint(np.sort(f_n[candidate_h[i][n]]) / (f_n[i] / n))
+        if logger is not None:
+            logger.extra(f'N_f= {n_sin}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) '
+                         f'- N_refine= {n_g}, f= {f_j:1.6f}, a= {a_j:1.6f}')
 
-            # remove sets of two where n is larger than two
-            cond_1 = (set_len == 2) & (n > 2)
+    if logger is not None:
+        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f}) - end refinement')
 
-            # remove sets of three where n is larger than three
-            cond_2 = (set_len == 3) & (n > 3)
+    # redo the constant and slope without the last iteration of changes
+    resid = flux - (model_sinusoid_ncf + sum_sines_st(time, f_n[close_f], a_n[close_f], ph_n[close_f]))
+    const, slope = linear_pars(time, resid, i_chunks)
 
-            # remove sets where all gaps are larger than three
-            cond_3 = np.all(np.diff(harm_n) > 3)
-
-            # remove sets with large gap between the first and second frequency
-            cond_4 = (np.diff(harm_n)[0] > 7)
-
-            # also remove any sets with n>1 that are not longer than the one with n=1
-            if cond_1 | cond_2 | cond_3 | cond_4:
-                if [i, n] not in i_n_remove:
-                    i_n_remove.append([i, n])
-
-    # remove entries
-    for i, n in i_n_remove:
-        candidate_h[i].pop(n, None)
-        if len(candidate_h[i]) == 0:
-            candidate_h.pop(i, None)
-
-    # check whether a series is fully contained in another (and other criteria involving other sets)
-    i_n_redundant = []
-    for i in candidate_h.keys():
-        for n in candidate_h[i].keys():
-            # sets of keys to compare current (i, n) to
-            compare = np.array([[j, k] for j in candidate_h.keys() for k in candidate_h[j].keys()
-                                if (j != i) | (k != n)])
-
-            # check whether this set is fully contained in another
-            this_contained = np.array([np.all(np.in1d(candidate_h[i][n], candidate_h[j][k])) for j, k in compare])
-
-            # check whether another set is fully contained in this one
-            other_contained = np.array([np.all(np.in1d(candidate_h[j][k], candidate_h[i][n])) for j, k in compare])
-
-            # check for equal length ones
-            equal_length = np.array([len(candidate_h[i][n]) == len(candidate_h[j][k]) for j, k in compare])
-
-            # those that are fully contained and same length are equal
-            equal = (equal_length & this_contained)
-
-            # remove equals from contained list
-            this_contained = (this_contained & np.invert(equal))
-            other_contained = (other_contained & np.invert(equal))
-
-            # check for sets with the same starting f (or multiple)
-            f_i, e_i = f_n[i] / n, f_n_err[i] / n  # the base frequency and corresponding error
-            same_start = np.array([np.any((f_i + e_i * sigma > f_n[candidate_h[j][k]])
-                                          & (f_i - e_i * sigma < f_n[candidate_h[j][k]])) for j, k in compare])
-
-            # if this set is contained in another (larger) set and n is larger or equal, it is redundant
-            for j, k in compare[this_contained]:
-                if (k <= n) & ([i, n] not in i_n_redundant):
-                    i_n_redundant.append([i, n])
-
-            # if another set is contained in this (larger) one and n is larger, it is redundant
-            for j, k in compare[other_contained]:
-                if (k < n) & ([i, n] not in i_n_redundant):
-                    i_n_redundant.append([i, n])
-
-            # if this set is equal to another set but has higher n, it is redundant (we keep lowest n)
-            for j, k in compare[equal]:
-                if (k < n) & ([i, n] not in i_n_redundant):
-                    i_n_redundant.append([i, n])
-
-            # if this set starts with the same base frequency as another, but has higher n, it is redundant
-            for j, k in compare[same_start]:
-                if (k < n) & ([i, n] not in i_n_redundant):
-                    i_n_redundant.append([i, n])
-
-    # remove redundant entries
-    for i, n in i_n_redundant:
-        candidate_h[i].pop(n, None)
-        if len(candidate_h[i]) == 0:
-            candidate_h.pop(i, None)
-
-    return candidate_h
+    return const, slope, f_n, a_n, ph_n
 
 
-@nb.njit(cache=True)
-def harmonic_series_length(f_test, f_n, freq_res, f_max):
-    """Find the number of harmonics that a set of frequencies has
-    
+def extract_sinusoids(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=None, bic_thr=2, snr_thr=0,
+                      stop_crit='bic', select='hybrid', n_extract=0, f0=-1, fn=-1, fit_each_step=False, logger=None):
+    """Extract all the frequencies from a periodic flux.
+
     Parameters
     ----------
-    f_test: numpy.ndarray[Any, dtype[float]]
-        Frequencies to test at
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    freq_res: float
-        Frequency resolution
-    f_max: float
-        Highest allowed frequency at which signals are extracted
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    p_orb: float, optional
+        Orbital period of the eclipsing binary in days (can be 0)
+    f_n: numpy.ndarray[Any, dtype[float]], optional
+        The frequencies of a number of sine waves (can be empty or None)
+    a_n: numpy.ndarray[Any, dtype[float]], optional
+        The amplitudes of a number of sine waves (can be empty or None)
+    ph_n: numpy.ndarray[Any, dtype[float]], optional
+        The phases of a number of sine waves (can be empty or None)
+    bic_thr: float, optional
+        The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
+    snr_thr: float, optional
+        Threshold for signal-to-noise ratio for a signal to be considered significant.
+    stop_crit: str, optional
+        Use the BIC as stopping criterion or the SNR, choose from 'bic', or 'snr'
+    select: str, optional
+        Select the next frequency based on amplitude ('a'),
+        signal-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).
+    n_extract: int, optional
+        Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.
+    f0: float
+        Lowest allowed frequency for extraction.
+        If left -1, default is f0 = 1/(100*T)
+    fn: float
+        Highest allowed frequency for extraction.
+        If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
+    fit_each_step: bool
+        If set to True, a non-linear least-squares fit of all extracted sinusoids in groups is performed at each
+        iteration. While this increases the quality of the extracted signals, it drastically slows down the code.
+    logger: logging.Logger, optional
+        Instance of the logging library.
 
     Returns
     -------
     tuple
         A tuple containing the following elements:
-        n_harm: numpy.ndarray[Any, dtype[float]]
-            Number of harmonics per pattern
-        completeness: numpy.ndarray[Any, dtype[float]]
-            Completeness factor of each pattern
-        distance: numpy.ndarray[Any, dtype[float]]
-            Sum of squared distances between harmonics
+        const: numpy.ndarray[Any, dtype[float]]
+            The y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            The slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            The frequencies of a number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            The amplitudes of a number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            The phases of a number of sine waves
+
+    Notes
+    -----
+    Spits out frequencies and amplitudes in the same units as the input,
+    and phases that are measured with respect to the first time point.
+    Also determines the flux average, so this does not have to be subtracted
+    before input into this function.
+    Note: does not perform a non-linear least-squares fit at the end,
+    which is highly recommended! (In fact, no fitting is done at all).
+
+    The function optionally takes a pre-existing frequency list to append
+    additional frequencies to. Set these to np.array([]) to start from scratch.
+
+    i_chunks is a 2D array with start and end indices of each (half) sector.
+    This is used to model a piecewise-linear trend in the data.
+    If you have no sectors like the TESS mission does, set
+    i_chunks = np.array([[0, len(time)]])
+
+    Exclusively uses the Lomb-Scargle periodogram (and an iterative parameter
+    improvement scheme) to extract the frequencies.
+    Uses a delta BIC > bic_thr stopping criterion.
+
+    [Author's note] Although it is my belief that doing a non-linear
+    multi-sinusoid fit at each iteration of the prewhitening is the
+    ideal approach, it is also a very (very!) time-consuming one and this
+    algorithm aims to be fast while approaching the optimal solution.
+
+    [Another author's note] I added an option to do the non-linear multi-
+    sinusoid fit at each iteration.
     """
-    n_harm = np.zeros(len(f_test))
-    completeness = np.zeros(len(f_test))
-    distance = np.zeros(len(f_test))
+    if f_n is None:
+        f_n = np.array([])
+    if a_n is None:
+        a_n = np.array([])
+    if ph_n is None:
+        ph_n = np.array([])
+    if n_extract == 0:
+        n_extract = 10**6  # 'a lot'
 
-    for i, f in enumerate(f_test):
-        harmonics, harmonic_n = find_harmonics_from_pattern(f_n, 1 / f, f_tol=freq_res / 2)
-        n_harm[i] = len(harmonics)
-        if n_harm[i] == 0:
-            completeness[i] = 1
-            distance[i] = 0
+    # setup
+    freq_res = 1.5 / np.ptp(time)  # frequency resolution
+    n_chunks = len(i_chunks)
+    n_sin_init = len(f_n)
+    if n_sin_init > 0:
+        harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    else:
+        harmonics = np.array([])
+    n_harm = len(harmonics)
+
+    # set up selection process
+    if select == 'hybrid':
+        switch = True  # when we would normally end, we switch strategy
+        select = 'a'  # start with amplitude extraction
+    else:
+        switch = False
+
+    # determine the initial bic
+    cur_resid = flux - sum_sines(time, f_n, a_n, ph_n)
+    const, slope = linear_pars(time, cur_resid, i_chunks)
+    resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+    n_param = ut.n_parameters(n_chunks, n_sin_init, n_harm)
+    bic_prev = gof.calc_bic(resid, n_param)  # initialise current BIC to the mean (and slope) subtracted flux
+    bic_init = bic_prev
+
+    # log a message
+    if logger is not None:
+        logger.extra(f'N_f= {n_sin_init}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
+
+    # stop the loop when the BIC decreases by less than 2 (or increases)
+    n_sin_cur = -1
+    while (len(f_n) > n_sin_cur) | switch:
+        # switch selection method when extraction would normally stop
+        if switch & (not (len(f_n) > n_sin_cur)):
+            select = 'sn'
+            switch = False
+
+        # update number of current frequencies
+        n_sin_cur = len(f_n)
+
+        # attempt to extract the next frequency
+        f_i, a_i, ph_i = extract_single(time, resid, f0=f0, fn=fn, select=select)
+
+        # now improve frequencies - make a temporary array including the current one
+        f_n_i, a_n_i, ph_n_i = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
+        if fit_each_step:
+            # select all frequencies for the full fit
+            close_f = np.arange(n_sin_cur + 1)  # all f
         else:
-            completeness[i] = n_harm[i] / (f_max // f)
-            distance[i] = np.sum((f_n[harmonics] - harmonic_n * f)**2)
+            # select only close frequencies for iteration\
+            close_f = frs.f_within_rayleigh(n_sin_cur, f_n_i, freq_res)
 
-    return n_harm, completeness, distance
+        # make a model of only the close sinusoids and subtract the current sinusoid
+        model_sinusoid_r = sum_sines_st(time, f_n_i[close_f], a_n_i[close_f], ph_n_i[close_f])
+        model_sinusoid_r -= sum_sines_st(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+
+        if fit_each_step:
+            # fit all frequencies for best improvement
+            fit_out = fit.fit_multi_sinusoid_per_group(time, flux, const, slope, f_n_i, a_n_i, ph_n_i,
+                                                       i_chunks, logger=logger)
+            const, slope, f_n_i, a_n_i, ph_n_i = fit_out
+        elif len(close_f) > 1:
+            # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
+            refine_out = refine_subset(time, flux, close_f, p_orb, const, slope, f_n_i, a_n_i, ph_n_i,
+                                       i_chunks, logger=None)
+            const, slope, f_n_i, a_n_i, ph_n_i = refine_out
+
+        # make the model of the updated close sinusoids and determine new residuals
+        model_sinusoid_n = sum_sines_st(time, f_n_i[close_f], a_n_i[close_f], ph_n_i[close_f])
+        cur_resid -= (model_sinusoid_n - model_sinusoid_r)  # add the changes to the sinusoid residuals
+
+        # as a last model-refining step, redetermine the constant and slope
+        const, slope = linear_pars(time, cur_resid, i_chunks)
+        resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
+        # calculate BIC
+        n_param = ut.n_parameters(n_chunks, n_sin_cur + 1, n_harm)
+        bic = gof.calc_bic(resid, n_param)
+        d_bic = bic_prev - bic
+        condition = np.round(d_bic, 2) > bic_thr
+        # calculate SNR in a 1 c/d window around the extracted frequency
+        if stop_crit == 'snr':
+            noise = pdg.scargle_noise_at_freq(np.array([f_i]), time, resid, window_width=1.0)
+            snr = a_i / noise
+            condition = snr > snr_thr
+
+        # check acceptance condition before moving to the next iteration
+        if condition & (n_sin_cur - n_sin_init < n_extract):
+            # accept the new frequency
+            f_n, a_n, ph_n = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
+
+            # adjust the shifted frequencies
+            f_n[close_f], a_n[close_f], ph_n[close_f] = f_n_i[close_f], a_n_i[close_f], ph_n_i[close_f]
+            bic_prev = bic
+
+        if logger is not None:
+            logger.extra(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) - '
+                         f'f= {f_i:1.6f}, a= {a_i:1.6f}')
+
+    if logger is not None:
+        logger.info(f'End extraction')
+        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total delta= {bic_init - bic_prev:1.2f}).')
+
+    # lastly re-determine slope and const
+    cur_resid += (model_sinusoid_n - model_sinusoid_r)  # undo last change
+    const, slope = linear_pars(time, cur_resid, i_chunks)
+
+    return const, slope, f_n, a_n, ph_n
+
+
+def extract_sinusoids_new(time, flux, i_chunks, p_orb=0, f_n=None, a_n=None, ph_n=None, bic_thr=2, snr_thr=0,
+                      stop_crit='bic', select='hybrid', n_extract=0, f0=-1, fn=-1, fit_each_step=False, logger=None):
+    """Extract all the frequencies from a periodic flux.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    p_orb: float, optional
+        Orbital period of the eclipsing binary in days (can be 0)
+    f_n: numpy.ndarray[Any, dtype[float]], optional
+        The frequencies of a number of sine waves (can be empty or None)
+    a_n: numpy.ndarray[Any, dtype[float]], optional
+        The amplitudes of a number of sine waves (can be empty or None)
+    ph_n: numpy.ndarray[Any, dtype[float]], optional
+        The phases of a number of sine waves (can be empty or None)
+    bic_thr: float, optional
+        The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
+    snr_thr: float, optional
+        Threshold for signal-to-noise ratio for a signal to be considered significant.
+    stop_crit: str, optional
+        Use the BIC as stopping criterion or the SNR, choose from 'bic', or 'snr'
+    select: str, optional
+        Select the next frequency based on amplitude ('a'),
+        signal-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).
+    n_extract: int, optional
+        Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.
+    f0: float
+        Lowest allowed frequency for extraction.
+        If left -1, default is f0 = 1/(100*T)
+    fn: float
+        Highest allowed frequency for extraction.
+        If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
+    fit_each_step: bool
+        If set to True, a non-linear least-squares fit of all extracted sinusoids in groups is performed at each
+        iteration. While this increases the quality of the extracted signals, it drastically slows down the code.
+    logger: logging.Logger, optional
+        Instance of the logging library.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            The y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            The slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            The frequencies of a number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            The amplitudes of a number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            The phases of a number of sine waves
+
+    Notes
+    -----
+    Spits out frequencies and amplitudes in the same units as the input,
+    and phases that are measured with respect to the first time point.
+    Also determines the flux average, so this does not have to be subtracted
+    before input into this function.
+    Note: does not perform a non-linear least-squares fit at the end,
+    which is highly recommended! (In fact, no fitting is done at all).
+
+    The function optionally takes a pre-existing frequency list to append
+    additional frequencies to. Set these to np.array([]) to start from scratch.
+
+    i_chunks is a 2D array with start and end indices of each (half) sector.
+    This is used to model a piecewise-linear trend in the data.
+    If you have no sectors like the TESS mission does, set
+    i_chunks = np.array([[0, len(time)]])
+
+    Exclusively uses the Lomb-Scargle periodogram (and an iterative parameter
+    improvement scheme) to extract the frequencies.
+    Uses a delta BIC > bic_thr stopping criterion.
+
+    [Author's note] Although it is my belief that doing a non-linear
+    multi-sinusoid fit at each iteration of the prewhitening is the
+    ideal approach, it is also a very (very!) time-consuming one and this
+    algorithm aims to be fast while approaching the optimal solution.
+
+    [Another author's note] I added an option to do the non-linear multi-
+    sinusoid fit at each iteration.
+    """
+    if f_n is None:
+        f_n = np.array([])
+    if a_n is None:
+        a_n = np.array([])
+    if ph_n is None:
+        ph_n = np.array([])
+    if n_extract == 0:
+        n_extract = 10 ** 6  # 'a lot'
+
+    # setup
+    freq_res = 1.5 / np.ptp(time)  # frequency resolution
+    n_chunks = len(i_chunks)
+    n_sin_init = len(f_n)
+    if n_sin_init > 0:
+        harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    else:
+        harmonics = np.array([])
+    n_harm = len(harmonics)
+
+    # set up selection process
+    if select == 'hybrid':
+        switch = True  # when we would normally end, we switch strategy
+        select = 'a'  # start with amplitude extraction
+    else:
+        switch = False
+
+    # determine the initial bic
+    cur_resid = flux - sum_sines(time, f_n, a_n, ph_n)
+    const, slope = linear_pars(time, cur_resid, i_chunks)
+    resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+    n_param = ut.n_parameters(n_chunks, n_sin_init, n_harm)
+    bic_prev = gof.calc_bic(resid, n_param)  # initialise current BIC to the mean (and slope) subtracted flux
+    bic_init = bic_prev
+
+    # log a message
+    if logger is not None:
+        logger.extra(f'N_f= {n_sin_init}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
+
+    # stop the loop when the BIC decreases by less than 2 (or increases)
+    n_sin_cur = -1
+    while (len(f_n) > n_sin_cur) | switch:
+        # switch selection method when extraction would normally stop
+        if switch & (not (len(f_n) > n_sin_cur)):
+            select = 'sn'
+            switch = False
+
+        # update number of current frequencies
+        n_sin_cur = len(f_n)
+
+        # attempt to extract the next frequency
+        f_i, a_i, ph_i = extract_single(time, resid, f0=f0, fn=fn, select=select)
+        # make a temporary array including the current extraction
+        f_n_i, a_n_i, ph_n_i = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
+
+        # imporve frequencies with some strategy
+        if fit_each_step:
+            # fit all frequencies for best improvement
+            fit_out = fit.fit_multi_sinusoid_per_group(time, flux, const, slope, f_n_i, a_n_i, ph_n_i, i_chunks,
+                                                       logger=logger)
+            const, slope, f_n_i, a_n_i, ph_n_i = fit_out
+        else:
+            # select only close frequencies for iteration
+            close_f = frs.f_within_rayleigh(n_sin_cur, f_n_i, freq_res)
+
+            if len(close_f) > 1:
+                # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
+                refine_out = refine_subset(time, flux, close_f, p_orb, const, slope, f_n_i, a_n_i, ph_n_i, i_chunks,
+                                           logger=None)
+                const, slope, f_n_i, a_n_i, ph_n_i = refine_out
+
+            # make a model of only the close sinusoids and subtract the current sinusoid
+            model_sinusoid_r = sum_sines_st(time, f_n_i[close_f], a_n_i[close_f], ph_n_i[close_f])
+            model_sinusoid_r -= sum_sines_st(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+
+            # make the model of the updated close sinusoids and determine new residuals
+            model_sinusoid_n = sum_sines_st(time, f_n_i[close_f], a_n_i[close_f], ph_n_i[close_f]) - sum_sines_st(time, f_n_i[close_f], a_n_i[close_f], ph_n_i[close_f]) + sum_sines_st(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+            model_sinusoid_n = sum_sines_st(time, f_n_i[close_f], a_n_i[close_f], ph_n_i[close_f])
+            cur_resid -= (model_sinusoid_n - model_sinusoid_r)  # add the changes to the sinusoid residuals
+
+        # as a last model-refining step, redetermine the constant and slope
+        const, slope = linear_pars(time, cur_resid, i_chunks)
+        resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
+        # todo: remove frequencies? Only close group?
+
+        # calculate BIC
+        n_param = ut.n_parameters(n_chunks, n_sin_cur + 1, n_harm)
+        bic = gof.calc_bic(resid, n_param)
+        d_bic = bic_prev - bic
+        condition = np.round(d_bic, 2) > bic_thr
+
+        # calculate SNR in a 1 c/d window around the extracted frequency
+        if stop_crit == 'snr':
+            noise = pdg.scargle_noise_at_freq(np.array([f_i]), time, resid, window_width=1.0)
+            snr = a_i / noise
+            condition = snr > snr_thr
+
+        # check acceptance condition before moving to the next iteration
+        if condition & (n_sin_cur - n_sin_init < n_extract):
+            # accept the new frequency
+            f_n, a_n, ph_n = np.append(f_n, f_i), np.append(a_n, a_i), np.append(ph_n, ph_i)
+
+            # adjust the shifted frequencies
+            f_n, a_n, ph_n = np.copy(f_n_i), np.copy(a_n_i), np.copy(ph_n_i)
+            bic_prev = bic
+
+        if logger is not None:
+            logger.extra(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) - '
+                         f'f= {f_i:1.6f}, a= {a_i:1.6f}')
+
+    if logger is not None:
+        logger.info(f'End extraction')
+        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (total delta= {bic_init - bic_prev:1.2f}).')
+
+    # lastly re-determine slope and const
+    cur_resid += (model_sinusoid_n - model_sinusoid_r)  # undo last change
+    const, slope = linear_pars(time, cur_resid, i_chunks)
+
+    return const, slope, f_n, a_n, ph_n
+
+
+def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, ph_n=None, logger=None):
+    """Tries to extract more harmonics from the flux
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    p_orb: float
+        Orbital period of the eclipsing binary in days
+    f_n: numpy.ndarray[Any, dtype[float]], optional
+        The frequencies of a number of sine waves (can be empty or None)
+    a_n: numpy.ndarray[Any, dtype[float]], optional
+        The amplitudes of a number of sine waves (can be empty or None)
+    ph_n: numpy.ndarray[Any, dtype[float]], optional
+        The phases of a number of sine waves (can be empty or None)
+    i_chunks: numpy.ndarray[Any, dtype[int]], optional
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    bic_thr: float
+        The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
+    logger: logging.Logger, optional
+        Instance of the logging library.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of a (higher) number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of a (higher) number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of a (higher) number of sine waves
+
+    See Also
+    --------
+    fix_harmonic_frequency
+
+    Notes
+    -----
+    Looks for missing harmonics and checks whether adding them
+    decreases the BIC sufficiently (by more than 2).
+    Assumes the harmonics are already fixed multiples of 1/p_orb
+    as can be achieved with fix_harmonic_frequency.
+    """
+    if f_n is None:
+        f_n = np.array([])
+    if a_n is None:
+        a_n = np.array([])
+    if ph_n is None:
+        ph_n = np.array([])
+
+    # setup
+    f_max = 1 / (2 * np.min(time[1:] - time[:-1]))  # Nyquist freq
+    n_chunks = len(i_chunks)
+    n_sin = len(f_n)
+
+    # extract the existing harmonics using the period
+    if n_sin > 0:
+        harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    else:
+        harmonics, harmonic_n = np.array([], dtype=int), np.array([], dtype=int)
+    n_harm = len(harmonics)
+
+    # make a list of not-present possible harmonics
+    h_candidate = np.arange(1, p_orb * f_max, dtype=int)
+    h_candidate = np.delete(h_candidate, harmonic_n - 1)  # harmonic_n minus one is the position
+
+    # initial residuals
+    cur_resid = flux - sum_sines(time, f_n, a_n, ph_n)
+    const, slope = linear_pars(time, cur_resid, i_chunks)
+    resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+    n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
+    bic_init = gof.calc_bic(resid, n_param)
+    bic_prev = bic_init
+    if logger is not None:
+        logger.extra(f'N_f= {n_sin}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction')
+
+    # loop over candidates and try to extract (BIC decreases by 2 or more)
+    n_h_acc = []
+    for h_c in h_candidate:
+        f_c = h_c / p_orb
+        a_c, ph_c = pdg.scargle_ampl_phase_single(time, resid, f_c)
+
+        # redetermine the constant and slope
+        model_sinusoid_n = sum_sines(time, np.array([f_c]), np.array([a_c]), np.array([ph_c]))
+        cur_resid -= model_sinusoid_n
+        const, slope = linear_pars(time, cur_resid, i_chunks)
+        resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
+        # determine new BIC and whether it improved
+        n_harm_cur = n_harm + len(n_h_acc) + 1
+        n_param = ut.n_parameters(n_chunks, n_sin, n_harm_cur)
+        bic = gof.calc_bic(resid, n_param)
+        d_bic = bic_prev - bic
+        if np.round(d_bic, 2) > bic_thr:
+            # h_c is accepted, add it to the final list and continue
+            bic_prev = bic
+            f_n, a_n, ph_n = np.append(f_n, f_c), np.append(a_n, a_c), np.append(ph_n, ph_c)
+            n_h_acc.append(h_c)
+        else:
+            # h_c is rejected, revert to previous residual
+            cur_resid += model_sinusoid_n
+            const, slope = linear_pars(time, cur_resid, i_chunks)
+            resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
+        if logger is not None:
+            logger.extra(f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f})'
+                         f' - h= {h_c}')
+
+    if logger is not None:
+        logger.extra(f'N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f}) - end extraction')
+        if len(n_h_acc) > 0:
+            logger.extra(f'Successfully extracted harmonics {n_h_acc}')
+
+    return const, slope, f_n, a_n, ph_n
+
+
+def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
+    """Fixes the frequency of harmonics to the theoretical value, then
+    re-determines the amplitudes and phases.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    p_orb: float
+        Orbital period of the eclipsing binary in days
+    const: numpy.ndarray[Any, dtype[float]]
+        The y-intercepts of a piece-wise linear curve
+    slope: numpy.ndarray[Any, dtype[float]]
+        The slopes of a piece-wise linear curve
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    logger: logging.Logger, optional
+        Instance of the logging library.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of the same number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of the same number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of the same number of sine waves
+    """
+    # extract the harmonics using the period and determine some numbers
+    freq_res = 1.5 / np.ptp(time)
+    harmonics, harmonic_n = frs.find_harmonics_tolerance(f_n, p_orb, f_tol=freq_res / 2)
+    if len(harmonics) == 0:
+        raise ValueError('No harmonic frequencies found')
+
+    n_chunks = len(i_chunks)
+    n_sin = len(f_n)
+    n_harm_init = len(harmonics)
+
+    # indices of harmonic candidates to remove
+    remove_harm_c = np.zeros(0, dtype=np.int_)
+    f_new, a_new, ph_new = np.zeros((3, 0))
+
+    # determine initial bic
+    model_sinusoid = sum_sines(time, f_n, a_n, ph_n)
+    cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
+    resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+    n_param = ut.n_parameters(n_chunks, n_sin, n_harm_init)
+    bic_init = gof.calc_bic(resid, n_param)
+
+    # go through the harmonics by harmonic number and re-extract them (removing all duplicate n's in the process)
+    for n in np.unique(harmonic_n):
+        remove = np.arange(len(f_n))[harmonics][harmonic_n == n]
+        # make a model of the removed sinusoids and subtract it from the full sinusoid residual
+        model_sinusoid_r = sum_sines(time, f_n[remove], a_n[remove], ph_n[remove])
+        cur_resid += model_sinusoid_r
+        const, slope = linear_pars(time, resid, i_chunks)  # redetermine const and slope
+        resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
+        # calculate the new harmonic
+        f_i = n / p_orb  # fixed f
+        a_i, ph_i = pdg.scargle_ampl_phase_single(time, resid, f_i)
+
+        # make a model of the new sinusoid and add it to the full sinusoid residual
+        model_sinusoid_n = sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+        cur_resid -= model_sinusoid_n
+
+        # add to freq list and removal list
+        f_new, a_new, ph_new = np.append(f_new, f_i), np.append(a_new, a_i), np.append(ph_new, ph_i)
+        remove_harm_c = np.append(remove_harm_c, remove)
+        if logger is not None:
+            logger.extra(f'Harmonic number {n} re-extracted, replacing {len(remove)} candidates')
+
+    # lastly re-determine slope and const (not needed here)
+    # const, slope = linear_pars(time, cur_resid, i_chunks)
+    # finally, remove all the designated sinusoids from the lists and add the new ones
+    f_n = np.append(np.delete(f_n, remove_harm_c), f_new)
+    a_n = np.append(np.delete(a_n, remove_harm_c), a_new)
+    ph_n = np.append(np.delete(ph_n, remove_harm_c), ph_new)
+
+    # re-extract the non-harmonics
+    n_sin = len(f_n)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    non_harm = np.delete(np.arange(n_sin), harmonics)
+    n_harm = len(harmonics)
+    remove_non_harm = np.zeros(0, dtype=np.int_)
+    for i in non_harm:
+        # make a model of the removed sinusoid and subtract it from the full sinusoid residual
+        model_sinusoid_r = sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
+        cur_resid += model_sinusoid_r
+        const, slope = linear_pars(time, cur_resid, i_chunks)  # redetermine const and slope
+        resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+
+        # extract the updated frequency
+        fl, fr = f_n[i] - freq_res, f_n[i] + freq_res
+        f_n[i], a_n[i], ph_n[i] = extract_approx(time, resid, f_n[i])
+        if (f_n[i] <= fl) | (f_n[i] >= fr):
+            remove_non_harm = np.append(remove_non_harm, [i])
+
+        # make a model of the new sinusoid and add it to the full sinusoid residual
+        model_sinusoid_n = sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
+        cur_resid -= model_sinusoid_n
+
+    # finally, remove all the designated sinusoids from the lists and add the new ones
+    f_n = np.delete(f_n, non_harm[remove_non_harm])
+    a_n = np.delete(a_n, non_harm[remove_non_harm])
+    ph_n = np.delete(ph_n, non_harm[remove_non_harm])
+
+    # re-establish cur_resid
+    model_sinusoid = sum_sines(time, f_n, a_n, ph_n)
+    cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
+    const, slope = linear_pars(time, cur_resid, i_chunks)  # lastly re-determine slope and const
+
+    if logger is not None:
+        resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+        n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
+        bic = gof.calc_bic(resid, n_param)
+        logger.extra(f'Candidate harmonics replaced: {n_harm_init} ({n_harm} left). '
+                     f'N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {bic_init - bic:1.2f})')
+
+    return const, slope, f_n, a_n, ph_n
+
+
+# @nb.njit(cache=True)
+def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
+    """Attempt the removal of individual frequencies
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    p_orb: float
+        Orbital period of the eclipsing binary in days (can be 0)
+    const: numpy.ndarray[Any, dtype[float]]
+        The y-intercepts of a piece-wise linear curve
+    slope: numpy.ndarray[Any, dtype[float]]
+        The slopes of a piece-wise linear curve
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    logger: logging.Logger, optional
+        Instance of the logging library.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of a (lower) number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of a (lower) number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of a (lower) number of sine waves
+
+    Notes
+    -----
+    Checks whether the BIC can be improved by removing a frequency.
+    Harmonics are taken into account.
+    """
+    n_chunks = len(i_chunks)
+    n_sin = len(f_n)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    n_harm = len(harmonics)
+
+    # indices of single frequencies to remove
+    remove_single = np.zeros(0, dtype=np.int_)
+
+    # determine initial bic
+    model_sinusoid = sum_sines(time, f_n, a_n, ph_n)
+    cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
+    resid = cur_resid - linear_curve(time, const, slope, i_chunks)
+    n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
+    bic_prev = gof.calc_bic(resid, n_param)
+    bic_init = bic_prev
+    n_prev = -1
+
+    # while frequencies are added to the remove list, continue loop
+    while len(remove_single) > n_prev:
+        n_prev = len(remove_single)
+        for i in range(n_sin):
+            if i in remove_single:
+                continue
+
+            # make a model of the removed sinusoids and subtract it from the full sinusoid model
+            model_sinusoid_r = sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
+            resid = cur_resid + model_sinusoid_r
+            const, slope = linear_pars(time, resid, i_chunks)  # redetermine const and slope
+            resid -= linear_curve(time, const, slope, i_chunks)
+
+            # number of parameters and bic
+            n_harm_i = n_harm - len([h for h in remove_single if h in harmonics]) - 1 * (i in harmonics)
+            n_sin_i = n_sin - len(remove_single) - 1 - n_harm_i
+            n_param = ut.n_parameters(n_chunks, n_sin_i, n_harm_i)
+            bic = gof.calc_bic(resid, n_param)
+
+            # if improvement, add to list of removed freqs
+            if np.round(bic_prev - bic, 2) > 0:
+                remove_single = np.append(remove_single, i)
+                cur_resid += model_sinusoid_r
+                bic_prev = bic
+
+    # lastly re-determine slope and const
+    const, slope = linear_pars(time, cur_resid, i_chunks)
+
+    # finally, remove all the designated sinusoids from the lists
+    f_n = np.delete(f_n, remove_single)
+    a_n = np.delete(a_n, remove_single)
+    ph_n = np.delete(ph_n, remove_single)
+
+    if logger is not None:
+        str_bic = ut.float_to_str(bic_prev, dec=2)
+        str_delta = ut.float_to_str(bic_init - bic_prev, dec=2)
+        logger.extra(f'Single frequencies removed: {n_sin - len(f_n)}, '
+                     f'N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})')
+
+    return const, slope, f_n, a_n, ph_n
+
+
+# @nb.njit(cache=True)
+def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
+    """Attempt the replacement of groups of frequencies by a single one
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    p_orb: float
+        Orbital period of the eclipsing binary in days (can be 0)
+    const: numpy.ndarray[Any, dtype[float]]
+        The y-intercepts of a piece-wise linear curve
+    slope: numpy.ndarray[Any, dtype[float]]
+        The slopes of a piece-wise linear curve
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    logger: logging.Logger, optional
+        Instance of the logging library.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of a (lower) number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of a (lower) number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of a (lower) number of sine waves
+
+    Notes
+    -----
+    Checks whether the BIC can be improved by replacing a group of
+    frequencies by only one. Harmonics are never removed.
+    """
+    freq_res = 1.5 / np.ptp(time)  # frequency resolution
+    n_chunks = len(i_chunks)
+    n_sin = len(f_n)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    non_harm = np.delete(np.arange(n_sin), harmonics)
+    n_harm = len(harmonics)
+
+    # make an array of sets of frequencies (non-harmonic) to be investigated for replacement
+    close_f_groups = frs.chains_within_rayleigh(f_n[non_harm], freq_res)
+    close_f_groups = [non_harm[group] for group in close_f_groups]  # convert to the right indices
+    f_sets = [g[np.arange(p1, p2 + 1)]
+              for g in close_f_groups
+              for p1 in range(len(g) - 1)
+              for p2 in range(p1 + 1, len(g))]
+
+    # make an array of sets of frequencies (now with harmonics) to be investigated for replacement
+    close_f_groups = frs.chains_within_rayleigh(f_n, freq_res)
+    f_sets_h = [g[np.arange(p1, p2 + 1)]
+                for g in close_f_groups
+                for p1 in range(len(g) - 1)
+                for p2 in range(p1 + 1, len(g))
+                if np.any(np.array([g_f in harmonics for g_f in g[np.arange(p1, p2 + 1)]]))]
+
+    # join the two lists, and remember which is which
+    harm_sets = np.arange(len(f_sets), len(f_sets) + len(f_sets_h))
+    f_sets.extend(f_sets_h)
+    remove_sets = np.zeros(0, dtype=np.int_)  # sets of frequencies to replace (by 1 freq)
+    used_sets = np.zeros(0, dtype=np.int_)  # sets that are not to be examined anymore
+    f_new, a_new, ph_new = np.zeros((3, 0))
+
+    # determine initial bic
+    model_sinusoid = sum_sines(time, f_n, a_n, ph_n)
+    best_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
+    resid = best_resid - linear_curve(time, const, slope, i_chunks)
+    n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
+    bic_prev = gof.calc_bic(resid, n_param)
+    bic_init = bic_prev
+    n_prev = -1
+
+    # while frequencies are added to the remove list, continue loop
+    while len(remove_sets) > n_prev:
+        n_prev = len(remove_sets)
+        for i, set_i in enumerate(f_sets):
+            if i in used_sets:
+                continue
+
+            # make a model of the removed and new sinusoids and subtract/add it from/to the full sinusoid model
+            model_sinusoid_r = sum_sines(time, f_n[set_i], a_n[set_i], ph_n[set_i])
+            resid = best_resid + model_sinusoid_r
+            const, slope = linear_pars(time, resid, i_chunks)  # redetermine const and slope
+            resid -= linear_curve(time, const, slope, i_chunks)
+
+            # extract a single freq to try replacing the set
+            if i in harm_sets:
+                harm_i = np.array([h for h in set_i if h in harmonics])
+                f_i = f_n[harm_i]  # fixed f
+                a_i, ph_i = pdg.scargle_ampl_phase(time, resid, f_n[harm_i])
+            else:
+                edges = [min(f_n[set_i]) - freq_res, max(f_n[set_i]) + freq_res]
+                out = extract_local(time, resid, f0=edges[0], fn=edges[1])
+                f_i, a_i, ph_i = np.array([out[0]]), np.array([out[1]]), np.array([out[2]])
+
+            # make a model including the new freq
+            model_sinusoid_n = sum_sines(time, f_i, a_i, ph_i)
+            resid -= model_sinusoid_n
+            const, slope = linear_pars(time, resid, i_chunks)  # redetermine const and slope
+            resid -= linear_curve(time, const, slope, i_chunks)
+
+            # number of parameters and bic
+            n_sin_i = n_sin - sum([len(f_sets[j]) for j in remove_sets]) - len(set_i) + len(f_new) + len(f_i) - n_harm
+            n_param = ut.n_parameters(n_chunks, n_sin_i, n_harm)
+            bic = gof.calc_bic(resid, n_param)
+            if np.round(bic_prev - bic, 2) > 0:
+                # do not look at sets with the same freqs as the just removed set anymore
+                overlap = [j for j, subset in enumerate(f_sets) if np.any(np.array([k in set_i for k in subset]))]
+                used_sets = np.unique(np.append(used_sets, overlap))
+
+                # add to list of removed sets
+                remove_sets = np.append(remove_sets, i)
+
+                # remember the new frequency (or the current one if it is a harmonic)
+                f_new, a_new, ph_new = np.append(f_new, f_i), np.append(a_new, a_i), np.append(ph_new, ph_i)
+                best_resid += model_sinusoid_r - model_sinusoid_n
+                bic_prev = bic
+
+    # lastly re-determine slope and const
+    const, slope = linear_pars(time, best_resid, i_chunks)
+
+    # finally, remove all the designated sinusoids from the lists and add the new ones
+    i_to_remove = [k for i in remove_sets for k in f_sets[i]]
+    f_n = np.append(np.delete(f_n, i_to_remove), f_new)
+    a_n = np.append(np.delete(a_n, i_to_remove), a_new)
+    ph_n = np.append(np.delete(ph_n, i_to_remove), ph_new)
+
+    if logger is not None:
+        str_bic = ut.float_to_str(bic_prev, dec=2)
+        str_delta = ut.float_to_str(bic_init - bic_prev, dec=2)
+        logger.extra(f'Frequency sets replaced by a single frequency: {len(remove_sets)} '
+                     f'({len(i_to_remove)} frequencies). N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})')
+
+    return const, slope, f_n, a_n, ph_n
+
+
+def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
+    """Attempt to reduce the number of frequencies taking into account any harmonics if present.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    p_orb: float
+        Orbital period of the eclipsing binary in days (can be 0)
+    const: numpy.ndarray[Any, dtype[float]]
+        The y-intercepts of a piece-wise linear curve
+    slope: numpy.ndarray[Any, dtype[float]]
+        The slopes of a piece-wise linear curve
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    logger: logging.Logger, optional
+        Instance of the logging library.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        const: numpy.ndarray[Any, dtype[float]]
+            (Updated) y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            (Updated) slopes of a piece-wise linear curve
+        f_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) frequencies of a (lower) number of sine waves
+        a_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) amplitudes of a (lower) number of sine waves
+        ph_n: numpy.ndarray[Any, dtype[float]]
+            (Updated) phases of a (lower) number of sine waves
+
+    Notes
+    -----
+    Checks whether the BIC can be improved by removing a frequency. Special attention
+    is given to frequencies that are within the Rayleigh criterion of each other.
+    It is attempted to replace these by a single frequency.
+    """
+    # first check if any frequency can be left out (after the fit, this may be possible)
+    out_a = remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=logger)
+    const, slope, f_n, a_n, ph_n = out_a
+
+    # Now go on to trying to replace sets of frequencies that are close together
+    out_b = replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=logger)
+    const, slope, f_n, a_n, ph_n = out_b
+
+    return const, slope, f_n, a_n, ph_n
+
+
+def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
+    """Selects the credible frequencies from the given set
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+        If the sinusoids exclude the eclipse model,
+        this should be the residuals of the eclipse model
+    flux_err: numpy.ndarray[Any, dtype[float]]
+        Errors in the measurement values
+    p_orb: float
+        Orbital period of the eclipsing binary in days.
+        May be zero.
+    const: numpy.ndarray[Any, dtype[float]]
+        The y-intercepts of a piece-wise linear curve
+    slope: numpy.ndarray[Any, dtype[float]]
+        The slopes of a piece-wise linear curve
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    logger: logging.Logger, optional
+        Instance of the logging library.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        passed_sigma: numpy.ndarray[bool]
+            Non-harmonic frequencies that passed the sigma check
+        passed_snr: numpy.ndarray[bool]
+            Non-harmonic frequencies that passed the signal-to-noise check
+        passed_both: numpy.ndarray[bool]
+            Non-harmonic frequencies that passed both checks
+        passed_harmonic: numpy.ndarray[bool]
+            Harmonic frequencies that passed
+
+    Notes
+    -----
+    Harmonic frequencies that are said to be passing the criteria
+    are in fact passing the criteria for individual frequencies,
+    not those for a set of harmonics (which would be a looser constraint).
+    """
+    t_tot = np.ptp(time)
+    freq_res = 1.5 / t_tot  # Rayleigh criterion
+
+    # obtain the errors on the sine waves (depends on residual and thus model)
+    model_lin = linear_curve(time, const, slope, i_chunks)
+    model_sin = sum_sines(time, f_n, a_n, ph_n)
+    residuals = flux - (model_lin + model_sin)
+    errors = formal_uncertainties(time, residuals, flux_err, a_n, i_chunks)
+    c_err, sl_err, f_n_err, a_n_err, ph_n_err = errors
+
+    # find the insignificant frequencies
+    remove_sigma = frs.remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3, sigma_f=3)
+
+    # apply the signal-to-noise threshold
+    noise_at_f = pdg.scargle_noise_at_freq(f_n, time, residuals, window_width=1.0)
+    remove_snr = frs.remove_insignificant_snr(time, a_n, noise_at_f)
+
+    # frequencies that pass sigma criteria
+    passed_sigma = np.ones(len(f_n), dtype=bool)
+    passed_sigma[remove_sigma] = False
+
+    # frequencies that pass S/N criteria
+    passed_snr = np.ones(len(f_n), dtype=bool)
+    passed_snr[remove_snr] = False
+
+    # passing both
+    passed_both = (passed_sigma & passed_snr)
+
+    # candidate harmonic frequencies
+    passed_harmonic = np.zeros(len(f_n), dtype=bool)
+    if p_orb != 0:
+        harmonics, harmonic_n = frs.select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol=freq_res / 2, sigma_f=3)
+        passed_harmonic[harmonics] = True
+    else:
+        harmonics = np.array([], dtype=int)
+    if logger is not None:
+        logger.extra(f'Number of frequencies passed criteria: {np.sum(passed_both)} of {len(f_n)}. '
+                     f'Candidate harmonics: {np.sum(passed_harmonic)}, '
+                     f'of which {np.sum(passed_both[harmonics])} passed.')
+
+    return passed_sigma, passed_snr, passed_both, passed_harmonic

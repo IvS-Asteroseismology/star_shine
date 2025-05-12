@@ -8,7 +8,7 @@ Code written by: Luc IJspeert
 import os
 import numpy as np
 
-from star_shine.core import timeseries as tsf, analysis as anf, utility as ut
+from star_shine.core import timeseries as tsf, frequency_sets as frs, utility as ut
 from star_shine.core import io
 from star_shine.config.helpers import get_config
 
@@ -325,7 +325,7 @@ class Result:
         # check harmonics
         n_harm = 0
         if self.p_orb > 0:
-            harmonics, harmonic_n = anf.find_harmonics_from_pattern(self.f_n, self.p_orb, f_tol=1e-9)
+            harmonics, harmonic_n = frs.find_harmonics_from_pattern(self.f_n, self.p_orb, f_tol=1e-9)
             n_harm = len(harmonics)
 
         # equation for number of parameters

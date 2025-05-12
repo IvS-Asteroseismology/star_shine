@@ -12,6 +12,8 @@ import numpy as np
 import scipy as sp
 import scipy.stats
 
+import star_shine.core.frequency_sets
+
 try:
     # optional functionality
     import pymc3 as pm
@@ -204,7 +206,7 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
     time_t = time.reshape(-1, 1)  # transposed time
     t_mean = tt.as_tensor_variable(np.mean(time))
     t_mean_s = tt.as_tensor_variable(np.array([np.mean(time[s[0]:s[1]]) for s in i_chunks]))
-    harmonics, harmonic_n = af.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = star_shine.core.frequency_sets.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(len(f_n)), harmonics)
     lin_shape = (len(const),)
     sin_shape = (len(f_n[non_harm]),)

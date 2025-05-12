@@ -11,7 +11,6 @@ import scipy as sp
 import numba as nb
 
 from star_shine.core import periodogram as pdg
-from star_shine.core import utility as ut
 
 
 @nb.njit(cache=True)
