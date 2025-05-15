@@ -61,7 +61,7 @@ class LinearModel:
         numpy.ndarray[Any, dtype[float]]
             The y-intercepts of a piece-wise linear curve.
         """
-        return self._const
+        return self._const.copy()
 
     @property
     def slope(self):
@@ -72,7 +72,7 @@ class LinearModel:
         numpy.ndarray[Any, dtype[float]]
             The slopes of a piece-wise linear curve.
         """
-        return self._slope
+        return self._slope.copy()
 
     @property
     def linear_model(self):
@@ -83,10 +83,10 @@ class LinearModel:
         numpy.ndarray[Any, dtype[float]]
             Time series model of the piece-wise linear curve.
         """
-        return self._linear_model
+        return self._linear_model.copy()
 
     def get_linear_parameters(self):
-        """Get the current linear parameters.
+        """Get a copy of the current linear parameters.
 
         Returns
         -------
@@ -190,7 +190,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The frequencies of a number of sine waves.
         """
-        return self._f_n
+        return self._f_n.copy()
 
     @property
     def a_n(self):
@@ -201,7 +201,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The amplitudes of a number of sine waves.
         """
-        return self._a_n
+        return self._a_n.copy()
 
     @property
     def ph_n(self):
@@ -212,7 +212,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The phases of a number of sine waves.
         """
-        return self._ph_n
+        return self._ph_n.copy()
 
     @property
     def p_orb(self):
@@ -234,7 +234,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             Time series model of the sinusoids.
         """
-        return self._sinusoid_model
+        return self._sinusoid_model.copy()
 
     @property
     def n_param(self):
@@ -242,7 +242,7 @@ class SinusoidModel:
         return int(self.n_harm > 0) + 2 * self.n_harm + 3 * self.n_sin
 
     def get_sinusoid_parameters(self):
-        """Get the current sinusoid parameters.
+        """Get a copy of the current sinusoid parameters.
 
         Returns
         -------
