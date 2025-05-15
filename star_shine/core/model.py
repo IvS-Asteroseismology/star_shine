@@ -9,7 +9,7 @@ Code written by: Luc IJspeert
 from copy import deepcopy
 import numpy as np
 
-from star_shine.core import timeseries as ts, goodness_of_fit as gof
+from star_shine.core import timeseries as ts, goodness_of_fit as gof, frequency_sets as frs
 from star_shine.config.helpers import get_config
 
 
@@ -183,7 +183,7 @@ class SinusoidModel:
 
     @property
     def f_n(self):
-        """Get the current model frequencies.
+        """Get a copy of the current model frequencies.
 
         Returns
         -------
@@ -194,7 +194,7 @@ class SinusoidModel:
 
     @property
     def a_n(self):
-        """Get the current model amplitudes.
+        """Get a copy of the current model amplitudes.
 
         Returns
         -------
@@ -205,7 +205,7 @@ class SinusoidModel:
 
     @property
     def ph_n(self):
-        """Get the current model phases.
+        """Get a copy of the current model phases.
 
         Returns
         -------
@@ -227,7 +227,7 @@ class SinusoidModel:
 
     @property
     def sinusoid_model(self):
-        """Get the current sinusoid model.
+        """Get a copy of the current sinusoid model.
 
         Returns
         -------
@@ -250,6 +250,12 @@ class SinusoidModel:
             Consisting of three numpy.ndarray[Any, dtype[float]] for f_n, a_n, ph_n.
         """
         return self.f_n, self.a_n, self.ph_n
+
+    def get_harmonics(self):
+        """Get a list of indices of the harmonics in the model"""
+        harmonics, harmonic_n = frs.find_harmonics_from_pattern(self._f_n, self._p_orb, f_tol=1e-9)
+
+        return harmonics, harmonic_n
 
     def set_sinusoids(self, time, f_n_new, a_n_new, ph_n_new):
         """Set the current sinusoid model with the new parameters.
