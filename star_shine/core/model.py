@@ -311,6 +311,40 @@ class SinusoidModel:
 
         return None
 
+    def update_sinusoid(self, time, f_new, a_new, ph_new, index):
+        """Update the current sinusoid model with a change at the given index.
+
+        For updating multiple sinusoids, see update_sinusoids and set_sinusoids.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series
+        f_new: float
+            The frequency of a sine wave.
+        a_new: float
+            The amplitude of a sine wave.
+        ph_new: float
+            The phase of a sine wave.
+        index: float
+            Indices for the sinusoids to update.
+        """
+        # get the current model at the indices
+        cur_model_i = ts.sum_sines_st(time, self._f_n[index], self._a_n[index], self._ph_n[index])
+
+        # make the new model at the indices
+        new_model = ts.sum_sines_st(time, np.atleast_1d(f_new), np.atleast_1d(a_new), np.atleast_1d(ph_new))
+
+        # update the model
+        self._sinusoid_model = self._sinusoid_model - cur_model_i + new_model
+
+        # change the sinusoid properties
+        self._f_n[index] = f_new
+        self._a_n[index] = a_new
+        self._ph_n[index] = ph_new
+
+        return None
+
     def update_sinusoids(self, time, f_n_new, a_n_new, ph_n_new, indices):
         """Update the current sinusoid model with changes at the given indices.
 
