@@ -283,7 +283,7 @@ class SinusoidModel:
         return None
 
     def add_sinusoids(self, time, f_n_new, a_n_new, ph_n_new):
-        """Remove the sinusoids at the provided indices from the list.
+        """Add the sinusoids to the list.
 
         Meant for adding a limited number of sinusoids, less efficient for large numbers.
         For that case, see set_sinusoids.
@@ -317,6 +317,44 @@ class SinusoidModel:
 
         return None
 
+    def insert_sinusoids(self, time, f_n_new, a_n_new, ph_n_new, indices):
+        """Insert the sinusoids at the provided indices into the list.
+
+        Meant for adding a limited number of sinusoids, less efficient for large numbers.
+        For that case, see set_sinusoids.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series
+        f_n_new: numpy.ndarray[Any, dtype[float]]
+            The frequencies of a number of sine waves. May also be a float.
+        a_n_new: numpy.ndarray[Any, dtype[float]]
+            The amplitudes of a number of sine waves. May also be a float.
+        ph_n_new: numpy.ndarray[Any, dtype[float]]
+            The phases of a number of sine waves. May also be a float.
+        indices: numpy.ndarray[Any, dtype[int]]
+            Sinusoids are inserted before these indices.
+        """
+        f_n_new = np.atleast_1d(f_n_new)
+        a_n_new = np.atleast_1d(a_n_new)
+        ph_n_new = np.atleast_1d(ph_n_new)
+        indices = np.atleast_1d(indices)
+
+        # get the current model at the indices
+        new_model = ts.sum_sines_st(time, f_n_new, a_n_new, ph_n_new)
+
+        # update the model
+        self._sinusoid_model += new_model
+
+        # remove the sinusoid properties
+        self._f_n = np.insert(self._f_n, indices, f_n_new)
+        self._a_n = np.insert(self._a_n, indices, a_n_new)
+        self._ph_n = np.insert(self._ph_n, indices, ph_n_new)
+        self.n_sin = len(self._f_n)
+
+        return None
+
     def update_sinusoids(self, time, f_n_new, a_n_new, ph_n_new, indices):
         """Update the current sinusoid model with changes at the given indices.
 
@@ -336,6 +374,8 @@ class SinusoidModel:
         indices: numpy.ndarray[Any, dtype[int]]
             Indices for the sinusoids to update.
         """
+        indices = np.atleast_1d(indices)
+
         # get the current model at the indices
         cur_model_i = ts.sum_sines_st(time, self._f_n[indices], self._a_n[indices], self._ph_n[indices])
 
@@ -365,6 +405,8 @@ class SinusoidModel:
         indices: numpy.ndarray[Any, dtype[int]]
             Indices of the sinusoids to remove.
         """
+        indices = np.atleast_1d(indices)
+
         # get the current model at the indices
         cur_model_i = ts.sum_sines_st(time, self._f_n[indices], self._a_n[indices], self._ph_n[indices])
 
@@ -500,6 +542,10 @@ class TimeSeriesModel:
     def add_sinusoids(self, f_n_new, a_n_new, ph_n_new):
         """Delegates to add_sinusoids of SinusoidModel."""
         self.sinusoid.add_sinusoids(self.time, f_n_new, a_n_new, ph_n_new)
+
+    def insert_sinusoids(self, f_n_new, a_n_new, ph_n_new, indices):
+        """Delegates to insert_sinusoids of SinusoidModel."""
+        self.sinusoid.insert_sinusoids(self.time, f_n_new, a_n_new, ph_n_new, indices)
 
     def update_sinusoids(self, f_n_new, a_n_new, ph_n_new, indices):
         """Delegates to update_sinusoids of SinusoidModel."""
