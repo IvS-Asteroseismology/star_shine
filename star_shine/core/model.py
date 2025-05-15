@@ -330,7 +330,7 @@ class SinusoidModel:
             Indices for the sinusoids to update.
         """
         # get the current model at the indices
-        cur_model_i = ts.sum_sines_st(time, self._f_n[index], self._a_n[index], self._ph_n[index])
+        cur_model_i = ts.sum_sines_st(time, self._f_n[[index]], self._a_n[[index]], self._ph_n[[index]])
 
         # make the new model at the indices
         new_model = ts.sum_sines_st(time, np.atleast_1d(f_new), np.atleast_1d(a_new), np.atleast_1d(ph_new))
