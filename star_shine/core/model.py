@@ -485,7 +485,7 @@ class TimeSeriesModel:
 
     def update_linear_model(self):
         """Delegates to update_linear_model of LinearModel."""
-        self.linear.update_linear_model(self.time, self.residual(), self.i_chunks)
+        self.linear.update_linear_model(self.time, self.flux - self.sinusoid.sinusoid_model, self.i_chunks)
 
     def set_sinusoids(self, f_n_new, a_n_new, ph_n_new):
         """Delegates to set_sinusoids of SinusoidModel."""
