@@ -529,6 +529,10 @@ class TimeSeriesModel:
         """Delegates to add_sinusoids of SinusoidModel."""
         self.sinusoid.add_sinusoids(self.time, f_n_new, a_n_new, ph_n_new)
 
+    def update_sinusoid(self, f_new, a_new, ph_new, index):
+        """Delegates to update_sinusoid of SinusoidModel."""
+        self.sinusoid.update_sinusoid(self.time, f_new, a_new, ph_new, index)
+
     def update_sinusoids(self, f_n_new, a_n_new, ph_n_new, indices):
         """Delegates to update_sinusoids of SinusoidModel."""
         self.sinusoid.update_sinusoids(self.time, f_n_new, a_n_new, ph_n_new, indices)
