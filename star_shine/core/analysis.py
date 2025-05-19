@@ -617,9 +617,9 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
     h_candidate = np.delete(h_candidate, harmonic_n - 1)  # harmonic_n minus one is the position
 
     # initial residuals
-    cur_resid = flux - ts.sum_sines(time, f_n, a_n, ph_n)
-    const, slope = ts.linear_pars(time, cur_resid, i_chunks)
-    resid = cur_resid - ts.linear_curve(time, const, slope, i_chunks)
+    cur_resid = flux - mdl.sum_sines(time, f_n, a_n, ph_n)
+    const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
+    resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
     n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
     bic_init = gof.calc_bic(resid, n_param)
     bic_prev = bic_init
@@ -633,10 +633,10 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
         a_c, ph_c = pdg.scargle_ampl_phase_single(time, resid, f_c)
 
         # redetermine the constant and slope
-        model_sinusoid_n = ts.sum_sines(time, np.array([f_c]), np.array([a_c]), np.array([ph_c]))
+        model_sinusoid_n = mdl.sum_sines(time, np.array([f_c]), np.array([a_c]), np.array([ph_c]))
         cur_resid -= model_sinusoid_n
-        const, slope = ts.linear_pars(time, cur_resid, i_chunks)
-        resid = cur_resid - ts.linear_curve(time, const, slope, i_chunks)
+        const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
+        resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
 
         # determine new BIC and whether it improved
         n_harm_cur = n_harm + len(n_h_acc) + 1
@@ -651,8 +651,8 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
         else:
             # h_c is rejected, revert to previous residual
             cur_resid += model_sinusoid_n
-            const, slope = ts.linear_pars(time, cur_resid, i_chunks)
-            resid = cur_resid - ts.linear_curve(time, const, slope, i_chunks)
+            const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
+            resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
 
         if logger is not None:
             logger.extra(f"N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f})"
@@ -724,9 +724,9 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     f_new, a_new, ph_new = np.zeros((3, 0))
 
     # determine initial bic
-    model_sinusoid = ts.sum_sines(time, f_n, a_n, ph_n)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    resid = cur_resid - ts.linear_curve(time, const, slope, i_chunks)
+    resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
     n_param = ut.n_parameters(n_chunks, n_sin, n_harm_init)
     bic_init = gof.calc_bic(resid, n_param)
 
@@ -734,17 +734,17 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     for n in np.unique(harmonic_n):
         remove = np.arange(len(f_n))[harmonics][harmonic_n == n]
         # make a model of the removed sinusoids and subtract it from the full sinusoid residual
-        model_sinusoid_r = ts.sum_sines(time, f_n[remove], a_n[remove], ph_n[remove])
+        model_sinusoid_r = mdl.sum_sines(time, f_n[remove], a_n[remove], ph_n[remove])
         cur_resid += model_sinusoid_r
-        const, slope = ts.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-        resid = cur_resid - ts.linear_curve(time, const, slope, i_chunks)
+        const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
+        resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
 
         # calculate the new harmonic
         f_i = n / p_orb  # fixed f
         a_i, ph_i = pdg.scargle_ampl_phase_single(time, resid, f_i)
 
         # make a model of the new sinusoid and add it to the full sinusoid residual
-        model_sinusoid_n = ts.sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+        model_sinusoid_n = mdl.sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
         cur_resid -= model_sinusoid_n
 
         # add to freq list and removal list
@@ -754,7 +754,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             logger.extra(f"Harmonic number {n} re-extracted, replacing {len(remove)} candidates")
 
     # lastly re-determine slope and const (not needed here)
-    # const, slope = ts.linear_pars(time, cur_resid, i_chunks)
+    # const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
     # finally, remove all the designated sinusoids from the lists and add the new ones
     f_n = np.append(np.delete(f_n, remove_harm_c), f_new)
     a_n = np.append(np.delete(a_n, remove_harm_c), a_new)
@@ -768,10 +768,10 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     remove_non_harm = np.zeros(0, dtype=np.int_)
     for i in non_harm:
         # make a model of the removed sinusoid and subtract it from the full sinusoid residual
-        model_sinusoid_r = ts.sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
+        model_sinusoid_r = mdl.sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
         cur_resid += model_sinusoid_r
-        const, slope = ts.linear_pars(time, cur_resid, i_chunks)  # redetermine const and slope
-        resid = cur_resid - ts.linear_curve(time, const, slope, i_chunks)
+        const, slope = mdl.linear_pars(time, cur_resid, i_chunks)  # redetermine const and slope
+        resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
 
         # extract the updated frequency
         fl, fr = f_n[i] - freq_res, f_n[i] + freq_res
@@ -780,7 +780,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             remove_non_harm = np.append(remove_non_harm, [i])
 
         # make a model of the new sinusoid and add it to the full sinusoid residual
-        model_sinusoid_n = ts.sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
+        model_sinusoid_n = mdl.sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
         cur_resid -= model_sinusoid_n
 
     # finally, remove all the designated sinusoids from the lists and add the new ones
@@ -789,12 +789,12 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     ph_n = np.delete(ph_n, non_harm[remove_non_harm])
 
     # re-establish cur_resid
-    model_sinusoid = ts.sum_sines(time, f_n, a_n, ph_n)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    const, slope = ts.linear_pars(time, cur_resid, i_chunks)  # lastly re-determine slope and const
+    const, slope = mdl.linear_pars(time, cur_resid, i_chunks)  # lastly re-determine slope and const
 
     if logger is not None:
-        resid = cur_resid - ts.linear_curve(time, const, slope, i_chunks)
+        resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
         n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
         bic = gof.calc_bic(resid, n_param)
         logger.extra(f"Candidate harmonics replaced: {n_harm_init} ({n_harm} left). "
@@ -860,9 +860,9 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     remove_single = np.zeros(0, dtype=np.int_)
 
     # determine initial bic
-    model_sinusoid = ts.sum_sines(time, f_n, a_n, ph_n)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    resid = cur_resid - ts.linear_curve(time, const, slope, i_chunks)
+    resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
     n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
     bic_prev = gof.calc_bic(resid, n_param)
     bic_init = bic_prev
@@ -876,10 +876,10 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 continue
 
             # make a model of the removed sinusoids and subtract it from the full sinusoid model
-            model_sinusoid_r = ts.sum_sines_st(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
+            model_sinusoid_r = mdl.sum_sines_st(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
             resid = cur_resid + model_sinusoid_r
-            const, slope = ts.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-            resid -= ts.linear_curve(time, const, slope, i_chunks)
+            const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
+            resid -= mdl.linear_curve(time, const, slope, i_chunks)
 
             # number of parameters and bic
             n_harm_i = n_harm - len([h for h in remove_single if h in harmonics]) - 1 * (i in harmonics)
@@ -894,7 +894,7 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 bic_prev = bic
 
     # lastly re-determine slope and const
-    const, slope = ts.linear_pars(time, cur_resid, i_chunks)
+    const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
 
     # finally, remove all the designated sinusoids from the lists
     f_n = np.delete(f_n, remove_single)
@@ -989,9 +989,9 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     f_new, a_new, ph_new = np.zeros((3, 0))
 
     # determine initial bic
-    model_sinusoid = ts.sum_sines(time, f_n, a_n, ph_n)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
     best_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    resid = best_resid - ts.linear_curve(time, const, slope, i_chunks)
+    resid = best_resid - mdl.linear_curve(time, const, slope, i_chunks)
     n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
     bic_prev = gof.calc_bic(resid, n_param)
     bic_init = bic_prev
@@ -1005,10 +1005,10 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 continue
 
             # make a model of the removed and new sinusoids and subtract/add it from/to the full sinusoid model
-            model_sinusoid_r = ts.sum_sines(time, f_n[set_i], a_n[set_i], ph_n[set_i])
+            model_sinusoid_r = mdl.sum_sines(time, f_n[set_i], a_n[set_i], ph_n[set_i])
             resid = best_resid + model_sinusoid_r
-            const, slope = ts.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-            resid -= ts.linear_curve(time, const, slope, i_chunks)
+            const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
+            resid -= mdl.linear_curve(time, const, slope, i_chunks)
 
             # extract a single freq to try replacing the set
             if i in harm_sets:
@@ -1021,10 +1021,10 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 f_i, a_i, ph_i = np.array([out[0]]), np.array([out[1]]), np.array([out[2]])
 
             # make a model including the new freq
-            model_sinusoid_n = ts.sum_sines(time, f_i, a_i, ph_i)
+            model_sinusoid_n = mdl.sum_sines(time, f_i, a_i, ph_i)
             resid -= model_sinusoid_n
-            const, slope = ts.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-            resid -= ts.linear_curve(time, const, slope, i_chunks)
+            const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
+            resid -= mdl.linear_curve(time, const, slope, i_chunks)
 
             # number of parameters and bic
             n_sin_i = n_sin - sum([len(f_sets[j]) for j in remove_sets]) - len(set_i) + len(f_new) + len(f_i) - n_harm
@@ -1044,7 +1044,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 bic_prev = bic
 
     # lastly re-determine slope and const
-    const, slope = ts.linear_pars(time, best_resid, i_chunks)
+    const, slope = mdl.linear_pars(time, best_resid, i_chunks)
 
     # finally, remove all the designated sinusoids from the lists and add the new ones
     i_to_remove = [k for i in remove_sets for k in f_sets[i]]
@@ -1175,8 +1175,8 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     freq_res = 1.5 / t_tot  # Rayleigh criterion
 
     # obtain the errors on the sine waves (depends on residual and thus model)
-    model_lin = ts.linear_curve(time, const, slope, i_chunks)
-    model_sin = ts.sum_sines(time, f_n, a_n, ph_n)
+    model_lin = mdl.linear_curve(time, const, slope, i_chunks)
+    model_sin = mdl.sum_sines(time, f_n, a_n, ph_n)
     residuals = flux - (model_lin + model_sin)
     errors = ts.formal_uncertainties(time, residuals, flux_err, a_n, i_chunks)
     c_err, sl_err, f_n_err, a_n_err, ph_n_err = errors

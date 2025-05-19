@@ -1,20 +1,240 @@
 """STAR SHINE
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
-This Python module contains the result class for handling the sinusoid model. Includes a piece-wise linear trend
+This Python module contains classes for handling the models. Includes a piece-wise linear model
 and harmonics.
 
 Code written by: Luc IJspeert
 """
 from copy import deepcopy
-import numpy as np
 
-from star_shine.core import timeseries as ts, goodness_of_fit as gof, frequency_sets as frs
+import numpy as np
+import numba as nb
+
+from star_shine.core import goodness_of_fit as gof, frequency_sets as frs
 from star_shine.config.helpers import get_config
 
 
 # load configuration
 config = get_config()
+
+
+@nb.njit(cache=True, parallel=True)
+def linear_curve(time, const, slope, i_chunks, t_shift=True):
+    """Returns a piece-wise linear curve for the given time points
+    with slopes and y-intercepts.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    const: numpy.ndarray[Any, dtype[float]]
+        The y-intercepts of a piece-wise linear curve
+    slope: numpy.ndarray[Any, dtype[float]]
+        The slopes of a piece-wise linear curve
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    t_shift: bool
+        Mean center the time axis
+
+    Returns
+    -------
+    numpy.ndarray[Any, dtype[float]]
+        The model time series of a (set of) straight line(s)
+
+    Notes
+    -----
+    Assumes the constants and slopes are determined with respect to the sector mean time as zero point.
+    """
+    curve = np.zeros(len(time))
+    for i in nb.prange(len(const)):
+        s = i_chunks[i]
+        if t_shift:
+            t_sector_mean = np.mean(time[s[0]:s[1]])
+        else:
+            t_sector_mean = 0
+
+        curve[s[0]:s[1]] = const[i] + slope[i] * (time[s[0]:s[1]] - t_sector_mean)
+
+    return curve
+
+
+@nb.njit(cache=True, parallel=True)
+def linear_pars(time, flux, i_chunks):
+    """Calculate the slopes and y-intercepts of a linear trend with the MLE.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        y_inter: numpy.ndarray[Any, dtype[float]]
+            The y-intercepts of a piece-wise linear curve
+        slope: numpy.ndarray[Any, dtype[float]]
+            The slopes of a piece-wise linear curve
+
+    Notes
+    -----
+    Source: https://towardsdatascience.com/linear-regression-91eeae7d6a2e
+    Determines the constants and slopes with respect to the sector mean time as zero point to avoid correlations.
+    """
+    y_inter = np.zeros(len(i_chunks))
+    slope = np.zeros(len(i_chunks))
+
+    for i in nb.prange(len(i_chunks)):
+        s = i_chunks[i]
+
+        # mean and mean subtracted quantities
+        x_m = np.mean(time[s[0]:s[1]])
+        x_ms = (time[s[0]:s[1]] - x_m)
+        y_m = np.mean(flux[s[0]:s[1]])
+        y_ms = (flux[s[0]:s[1]] - y_m)
+
+        # sums
+        s_xx = np.sum(x_ms ** 2)
+        s_xy = np.sum(x_ms * y_ms)
+
+        # parameters
+        slope[i] = s_xy / s_xx
+        # y_inter[i] = y_m - slope[i] * x_m  # original non-mean-centered formula
+        y_inter[i] = y_m  # mean-centered value
+
+    return y_inter, slope
+
+
+@nb.njit(cache=True)
+def sum_sines_st(time, f_n, a_n, ph_n, t_shift=True):
+    """A sum of sine waves at times t, given the frequencies, amplitudes and phases.
+
+    Single threaded version. Better for one to a few sinusoids.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    t_shift: bool
+        Mean center the time axis
+
+    Returns
+    -------
+    numpy.ndarray[Any, dtype[float]]
+        Model time series of a sum of sine waves. Varies around 0.
+
+    Notes
+    -----
+    Assumes the phases are determined with respect to the mean time as zero point by default.
+    """
+    if t_shift:
+        mean_t = np.mean(time)
+    else:
+        mean_t = 0
+
+    model_sines = np.zeros(len(time))
+    for i in range(len(f_n)):
+        model_sines += a_n[i] * np.sin((2 * np.pi * f_n[i] * (time - mean_t)) + ph_n[i])
+
+    return model_sines
+
+
+@nb.njit(cache=True, parallel=True)
+def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
+    """A sum of sine waves at times t, given the frequencies, amplitudes and phases.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    t_shift: bool
+        Mean center the time axis
+
+    Returns
+    -------
+    numpy.ndarray[Any, dtype[float]]
+        Model time series of a sum of sine waves. Varies around 0.
+
+    Notes
+    -----
+    Assumes the phases are determined with respect to the mean time as zero point by default.
+    """
+    if t_shift:
+        mean_t = np.mean(time)
+    else:
+        mean_t = 0
+
+    model_sines = np.zeros(len(time))
+    for i in nb.prange(len(f_n)):
+        model_sines += a_n[i] * np.sin((2 * np.pi * f_n[i] * (time - mean_t)) + ph_n[i])
+
+    return model_sines
+
+
+@nb.njit(cache=True, parallel=True)
+def sum_sines_deriv(time, f_n, a_n, ph_n, deriv=1, t_shift=True):
+    """The time derivative of a sum of sine waves at times t.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    f_n: list[float], numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    a_n: list[float], numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    ph_n: list[float], numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sine waves
+    deriv: int
+        Number of time derivatives taken (>= 1)
+    t_shift: bool
+        Mean center the time axis
+
+    Returns
+    -------
+    numpy.ndarray[Any, dtype[float]]
+        Model time series of a sum of sine wave derivatives. Varies around 0.
+
+    Notes
+    -----
+    Assumes the phases are determined with respect to the mean time as zero point by default.
+    """
+    if t_shift:
+        mean_t = np.mean(time)
+    else:
+        mean_t = 0
+
+    model_sines = np.zeros(len(time))
+    mod_2 = deriv % 2
+    mod_4 = deriv % 4
+    ph_cos = (np.pi / 2) * mod_2  # alternate between cosine and sine
+    sign = (-1) ** ((mod_4 - mod_2) // 2)  # (1, -1, -1, 1, 1, -1, -1... for deriv=1, 2, 3...)
+
+    for i in nb.prange(len(f_n)):
+        for j in range(len(time)):
+            model_sines[j] += (sign * (2 * np.pi * f_n[i]) ** deriv * a_n[i] *
+                               np.sin((2 * np.pi * f_n[i] * (time[j] - mean_t)) + ph_n[i] + ph_cos))
+
+    return model_sines
 
 
 class LinearModel:
@@ -111,7 +331,7 @@ class LinearModel:
             the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
         """
         # make the new model
-        self._linear_model = ts.linear_curve(time, const_new, slope_new, i_chunks)
+        self._linear_model = linear_curve(time, const_new, slope_new, i_chunks)
 
         # set the parameters
         self._const = const_new
@@ -133,7 +353,7 @@ class LinearModel:
             the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
         """
         # get new parameters
-        const_new, slope_new = ts.linear_pars(time, residual, i_chunks)
+        const_new, slope_new = linear_pars(time, residual, i_chunks)
 
         # set the new parameters and model
         self.set_linear_model(time, const_new, slope_new, i_chunks)
@@ -179,7 +399,7 @@ class SinusoidModel:
         self.n_harm = 0
 
         # current model
-        self._sinusoid_model = np.zeros((0,))
+        self._sinusoid_model = np.zeros((n_time,))
 
     @property
     def f_n(self):
@@ -272,7 +492,7 @@ class SinusoidModel:
             The phases of a number of sine waves.
         """
         # make the new model
-        self._sinusoid_model = ts.sum_sines(time, f_n_new, a_n_new, ph_n_new)
+        self._sinusoid_model = sum_sines(time, f_n_new, a_n_new, ph_n_new)
 
         # set the sinusoid properties
         self._f_n = f_n_new
@@ -304,7 +524,7 @@ class SinusoidModel:
         ph_n_new = np.atleast_1d(ph_n_new)
 
         # get the current model at the indices
-        new_model = ts.sum_sines_st(time, f_n_new, a_n_new, ph_n_new)
+        new_model = sum_sines_st(time, f_n_new, a_n_new, ph_n_new)
 
         # update the model
         self._sinusoid_model += new_model
@@ -342,7 +562,7 @@ class SinusoidModel:
         indices = np.atleast_1d(indices)
 
         # get the current model at the indices
-        new_model = ts.sum_sines_st(time, f_n_new, a_n_new, ph_n_new)
+        new_model = sum_sines_st(time, f_n_new, a_n_new, ph_n_new)
 
         # update the model
         self._sinusoid_model += new_model
@@ -377,10 +597,10 @@ class SinusoidModel:
         indices = np.atleast_1d(indices)
 
         # get the current model at the indices
-        cur_model_i = ts.sum_sines_st(time, self._f_n[indices], self._a_n[indices], self._ph_n[indices])
+        cur_model_i = sum_sines_st(time, self._f_n[indices], self._a_n[indices], self._ph_n[indices])
 
         # make the new model at the indices
-        new_model = ts.sum_sines_st(time, f_n_new[indices], a_n_new[indices], ph_n_new[indices])
+        new_model = sum_sines_st(time, f_n_new[indices], a_n_new[indices], ph_n_new[indices])
 
         # update the model
         self._sinusoid_model = self._sinusoid_model - cur_model_i + new_model
@@ -408,7 +628,7 @@ class SinusoidModel:
         indices = np.atleast_1d(indices)
 
         # get the current model at the indices
-        cur_model_i = ts.sum_sines_st(time, self._f_n[indices], self._a_n[indices], self._ph_n[indices])
+        cur_model_i = sum_sines_st(time, self._f_n[indices], self._a_n[indices], self._ph_n[indices])
 
         # update the model
         self._sinusoid_model = self._sinusoid_model - cur_model_i

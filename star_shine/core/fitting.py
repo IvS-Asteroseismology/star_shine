@@ -20,8 +20,7 @@ import numba as nb
 import scipy as sp
 import scipy.optimize
 
-import star_shine.core.frequency_sets
-from star_shine.core import timeseries as ts, goodness_of_fit as gof, frequency_sets as frs
+from star_shine.core import model as mdl, goodness_of_fit as gof, frequency_sets as frs
 
 
 @nb.njit(cache=True)
@@ -108,8 +107,8 @@ def objective_sinusoids(params, time, flux, i_chunks):
     ph_n = params[2 * n_chunk + 2 * n_sin:2 * n_chunk + 3 * n_sin]
 
     # make the linear and sinusoid model
-    model_linear = ts.linear_curve(time, const, slope, i_chunks)
-    model_sinusoid = ts.sum_sines(time, f_n, a_n, ph_n)
+    model_linear = mdl.linear_curve(time, const, slope, i_chunks)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
 
     # calculate the likelihood (minus this for minimisation)
     resid = flux - model_linear - model_sinusoid
@@ -158,8 +157,8 @@ def jacobian_sinusoids(params, time, flux, i_chunks):
     ph_n = params[2 * n_chunk + 2 * n_sin:2 * n_chunk + 3 * n_sin]
 
     # make the linear and sinusoid model
-    model_linear = ts.linear_curve(time, const, slope, i_chunks)
-    model_sinusoid = ts.sum_sines(time, f_n, a_n, ph_n)
+    model_linear = mdl.linear_curve(time, const, slope, i_chunks)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
 
     # calculate the likelihood derivative (minus this for minimisation)
     resid = flux - model_linear - model_sinusoid
@@ -270,8 +269,8 @@ def fit_multi_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, logge
     res_ph_n = result.x[2 * n_chunk + 2 * n_sin:2 * n_chunk + 3 * n_sin]
 
     if logger is not None:
-        model_linear = ts.linear_curve(time, res_const, res_slope, i_chunks)
-        model_sinusoid = ts.sum_sines(time, res_f_n, res_a_n, res_ph_n)
+        model_linear = mdl.linear_curve(time, res_const, res_slope, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, res_f_n, res_a_n, res_ph_n)
         resid = flux - model_linear - model_sinusoid
         bic = gof.calc_bic(resid, 2 * n_chunk + 3 * n_sin)
         logger.extra(f'Fit convergence: {result.success} - BIC: {bic:1.2f}. '
@@ -326,7 +325,7 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
     fits per group of 15-20 frequencies, leaving the other frequencies as
     fixed parameters.
     """
-    f_groups = star_shine.core.frequency_sets.group_frequencies_for_fit(a_n, g_min=45, g_max=50)
+    f_groups = frs.group_frequencies_for_fit(a_n, g_min=45, g_max=50)
     n_groups = len(f_groups)
     n_chunk = len(i_chunks)
     n_sin = len(f_n)
@@ -341,8 +340,8 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
     # update the parameters for each group
     for k, group in enumerate(f_groups):
         # subtract all other sines from the data, they are fixed now
-        resid = flux - ts.sum_sines(time, np.delete(res_f_n, group), np.delete(res_a_n, group),
-                                     np.delete(res_ph_n, group))
+        resid = flux - mdl.sum_sines(time, np.delete(res_f_n, group), np.delete(res_a_n, group),
+                                                       np.delete(res_ph_n, group))
 
         # fit only the frequencies in this group (constant and slope are also fitted still)
         output = fit_multi_sinusoid(time, resid, res_const, res_slope, res_f_n[group],
@@ -354,8 +353,8 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
         res_ph_n[group] = out_ph_n
 
         if logger is not None:
-            model_linear = ts.linear_curve(time, res_const, res_slope, i_chunks)
-            model_sinusoid = ts.sum_sines(time, res_f_n, res_a_n, res_ph_n)
+            model_linear = mdl.linear_curve(time, res_const, res_slope, i_chunks)
+            model_sinusoid = mdl.sum_sines(time, res_f_n, res_a_n, res_ph_n)
             resid = flux - model_linear - model_sinusoid
             bic = gof.calc_bic(resid, 2 * n_chunk + 3 * n_sin)
             logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')
@@ -417,8 +416,8 @@ def objective_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
     ph_n[n_sin:] = params[1 + 2 * n_chunk + 3 * n_sin + n_harm:1 + 2 * n_chunk + 3 * n_sin + 2 * n_harm]
 
     # make the linear and sinusoid model
-    model_linear = ts.linear_curve(time, const, slope, i_chunks)
-    model_sinusoid = ts.sum_sines(time, f_n, a_n, ph_n)
+    model_linear = mdl.linear_curve(time, const, slope, i_chunks)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
 
     # calculate the likelihood (minus this for minimisation)
     resid = flux - model_linear - model_sinusoid
@@ -482,8 +481,8 @@ def jacobian_sinusoids_harmonics(params, time, flux, harmonic_n, i_chunks):
     ph_n[n_sin:] = params[1 + 2 * n_chunk + 3 * n_sin + n_harm:1 + 2 * n_chunk + 3 * n_sin + 2 * n_harm]
 
     # make the linear and sinusoid model and subtract from the flux
-    model_linear = ts.linear_curve(time, const, slope, i_chunks)
-    model_sinusoid = ts.sum_sines(time, f_n, a_n, ph_n)
+    model_linear = mdl.linear_curve(time, const, slope, i_chunks)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
     resid = flux - model_linear - model_sinusoid
 
     # common factor
@@ -616,8 +615,8 @@ def fit_multi_sinusoid_harmonics(time, flux, p_orb, const, slope, f_n, a_n, ph_n
     res_ph_n[harmonics] = result.x[1 + 2 * n_chunk + 3 * n_sin + n_harm:1 + 2 * n_chunk + 3 * n_sin + 2 * n_harm]
 
     if logger is not None:
-        model_linear = ts.linear_curve(time, res_const, res_slope, i_chunks)
-        model_sinusoid = ts.sum_sines(time, res_f_n, res_a_n, res_ph_n)
+        model_linear = mdl.linear_curve(time, res_const, res_slope, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, res_f_n, res_a_n, res_ph_n)
         resid = flux - model_linear - model_sinusoid
         bic = gof.calc_bic(resid, 1 + 2 * n_chunk + 3 * n_sin + 2 * n_harm)
         logger.extra(f'Fit convergence: {result.success} - BIC: {bic:1.2f}. '
@@ -685,7 +684,7 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     indices = np.arange(len(f_n))
     i_non_harm = np.delete(indices, harmonics)
-    f_groups = star_shine.core.frequency_sets.group_frequencies_for_fit(a_n[i_non_harm], g_min=45, g_max=50)
+    f_groups = frs.group_frequencies_for_fit(a_n[i_non_harm], g_min=45, g_max=50)
     f_groups = [i_non_harm[g] for g in f_groups]  # convert back to indices for full f_n list
     n_groups = len(f_groups)
     n_chunk = len(i_chunks)  # each sector has its own slope (or two)
@@ -699,8 +698,8 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
 
     # fit the harmonics (first group)
     # remove harmonic frequencies
-    resid = flux - ts.sum_sines(time, np.delete(res_f_n, harmonics), np.delete(res_a_n, harmonics),
-                                   np.delete(res_ph_n, harmonics))
+    resid = flux - mdl.sum_sines(time, np.delete(res_f_n, harmonics), np.delete(res_a_n, harmonics),
+                                                   np.delete(res_ph_n, harmonics))
     par_init = np.concatenate(([p_orb], res_const, res_slope, a_n[harmonics], ph_n[harmonics]))
     par_bounds = [(0, None)] + [(None, None) for _ in range(2 * n_chunk)]
     par_bounds = par_bounds + [(0, None) for _ in range(n_harm)] + [(None, None) for _ in range(n_harm)]
@@ -718,8 +717,8 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     res_ph_n[harmonics] = result.x[1 + 2 * n_chunk + n_harm:1 + 2 * n_chunk + 2 * n_harm]
 
     if logger is not None:
-        model_linear = ts.linear_curve(time, res_const, res_slope, i_chunks)
-        model_sinusoid = ts.sum_sines(time, res_f_n, res_a_n, res_ph_n)
+        model_linear = mdl.linear_curve(time, res_const, res_slope, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, res_f_n, res_a_n, res_ph_n)
         resid = flux - model_linear - model_sinusoid
         bic = gof.calc_bic(resid, 1 + 2 * n_chunk + 3 * n_sin + 2 * n_harm)
         logger.extra(f'Fit of harmonics - BIC: {bic:1.2f}. N_iter: {int(result.nit)}, N_fev: {int(result.nfev)}.')
@@ -727,8 +726,8 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     # update the parameters for each group
     for k, group in enumerate(f_groups):
         # subtract all other sines from the data, they are fixed now
-        resid = flux - ts.sum_sines(time, np.delete(res_f_n, group), np.delete(res_a_n, group),
-                                       np.delete(res_ph_n, group))
+        resid = flux - mdl.sum_sines(time, np.delete(res_f_n, group), np.delete(res_a_n, group),
+                                                       np.delete(res_ph_n, group))
 
         # fit only the frequencies in this group (constant and slope are also fitted still)
         output = fit_multi_sinusoid(time, resid, res_const, res_slope, res_f_n[group],
@@ -739,8 +738,8 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
         res_ph_n[group] = out_ph_n
 
         if logger is not None:
-            model_linear = ts.linear_curve(time, res_const, res_slope, i_chunks)
-            model_sinusoid = ts.sum_sines(time, res_f_n, res_a_n, res_ph_n)
+            model_linear = mdl.linear_curve(time, res_const, res_slope, i_chunks)
+            model_sinusoid = mdl.sum_sines(time, res_f_n, res_a_n, res_ph_n)
             resid_new = flux - (model_linear + model_sinusoid)
             bic = gof.calc_bic(resid_new, 1 + 2 * n_chunk + 3 * n_sin + 2 * n_harm)
             logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')

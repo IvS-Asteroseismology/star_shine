@@ -12,16 +12,13 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-import star_shine.core.frequency_sets
-
 try:
     import arviz as az  # optional functionality
 except ImportError:
     az = None
     pass
 
-from star_shine.core import timeseries as tsf
-from star_shine.core import analysis as anf
+from star_shine.core import timeseries as tsf, model as mdl, periodogram as pdg, frequency_sets as frs
 from star_shine.core import utility as ut
 from star_shine.config.helpers import get_mpl_stylesheet_path
 
@@ -54,11 +51,11 @@ def plot_pd(time, flux, i_chunks, plot_per_chunk=False, file_name=None, show=Tru
     None
     """
     # make the periodograms
-    freqs, ampls = tsf.astropy_scargle(time, flux)
+    freqs, ampls = pdg.astropy_scargle(time, flux)
     freqs_list, ampls_list = [], []
     if plot_per_chunk:
         for ch in i_chunks:
-            f, a = tsf.astropy_scargle(time[ch[0]:ch[1]], flux[ch[0]:ch[1]])
+            f, a = pdg.astropy_scargle(time[ch[0]:ch[1]], flux[ch[0]:ch[1]])
             freqs_list.append(f)
             ampls_list.append(a)
 
@@ -131,17 +128,17 @@ def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n,
     None
     """
     # separate harmonics
-    harmonics, harmonic_n = star_shine.core.frequency_sets.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
 
     # make model
-    model_linear = tsf.linear_curve(time, const, slope, i_chunks)
-    model_sinusoid = tsf.sum_sines(time, f_n, a_n, ph_n)
+    model_linear = mdl.linear_curve(time, const, slope, i_chunks)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
     model = model_linear + model_sinusoid
 
     # make periodograms
-    freqs, ampls = tsf.astropy_scargle(time, flux)
+    freqs, ampls = pdg.astropy_scargle(time, flux)
     freq_range = np.ptp(freqs)
-    freqs_r, ampls_r = tsf.astropy_scargle(time, flux - model)
+    freqs_r, ampls_r = pdg.astropy_scargle(time, flux - model)
 
     # get error values
     errors = tsf.formal_uncertainties(time, flux - model, flux_err, a_n, i_chunks)
@@ -223,13 +220,13 @@ def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a
     None
     """
     # make periodograms
-    freqs, ampls = tsf.astropy_scargle(time, flux - np.mean(flux))
+    freqs, ampls = pdg.astropy_scargle(time, flux - np.mean(flux))
     freq_range = np.ptp(freqs)
-    freqs_1, ampls_1 = tsf.astropy_scargle(time, flux - models[0] - np.all(models[0] == 0) * np.mean(flux))
-    freqs_2, ampls_2 = tsf.astropy_scargle(time, flux - models[1] - np.all(models[1] == 0) * np.mean(flux))
-    freqs_3, ampls_3 = tsf.astropy_scargle(time, flux - models[2] - np.all(models[2] == 0) * np.mean(flux))
-    freqs_4, ampls_4 = tsf.astropy_scargle(time, flux - models[3] - np.all(models[3] == 0) * np.mean(flux))
-    freqs_5, ampls_5 = tsf.astropy_scargle(time, flux - models[4] - np.all(models[4] == 0) * np.mean(flux))
+    freqs_1, ampls_1 = pdg.astropy_scargle(time, flux - models[0] - np.all(models[0] == 0) * np.mean(flux))
+    freqs_2, ampls_2 = pdg.astropy_scargle(time, flux - models[1] - np.all(models[1] == 0) * np.mean(flux))
+    freqs_3, ampls_3 = pdg.astropy_scargle(time, flux - models[2] - np.all(models[2] == 0) * np.mean(flux))
+    freqs_4, ampls_4 = pdg.astropy_scargle(time, flux - models[3] - np.all(models[3] == 0) * np.mean(flux))
+    freqs_5, ampls_5 = pdg.astropy_scargle(time, flux - models[4] - np.all(models[4] == 0) * np.mean(flux))
 
     # get error values
     err_1 = tsf.formal_uncertainties(time, flux - models[0], flux_err, a_n_i[0], i_chunks)
@@ -382,8 +379,8 @@ def plot_lc_sinusoids(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, file_n
     t_mean = np.mean(time)
 
     # make models
-    model_linear = tsf.linear_curve(time, const, slope, i_chunks)
-    model_sines = tsf.sum_sines(time, f_n, a_n, ph_n)
+    model_linear = mdl.linear_curve(time, const, slope, i_chunks)
+    model_sines = mdl.sum_sines(time, f_n, a_n, ph_n)
     resid = flux - (model_linear + model_sines)
 
     # plot the full model light curve
@@ -450,11 +447,11 @@ def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_
     t_mean = np.mean(time)
 
     # make models
-    model_line = tsf.linear_curve(time, const, slope, i_chunks)
-    harmonics, harmonic_n = star_shine.core.frequency_sets.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
-    model_h = tsf.sum_sines(time, f_n[harmonics], a_n[harmonics], ph_n[harmonics])
-    model_nh = tsf.sum_sines(time, np.delete(f_n, harmonics), np.delete(a_n, harmonics),
-                             np.delete(ph_n, harmonics))
+    model_line = mdl.linear_curve(time, const, slope, i_chunks)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    model_h = mdl.sum_sines(time, f_n[harmonics], a_n[harmonics], ph_n[harmonics])
+    model_nh = mdl.sum_sines(time, np.delete(f_n, harmonics), np.delete(a_n, harmonics),
+                                               np.delete(ph_n, harmonics))
     resid_nh = flux - model_nh
     resid_h = flux - model_h
 
@@ -548,7 +545,7 @@ def plot_pair_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n, save_file
     # convert phases to interval [-pi, pi] from [0, 2pi]
     above_pi = (ph_n >= np.pi)
     ph_n[above_pi] = ph_n[above_pi] - 2 * np.pi
-    harmonics, harmonic_n = star_shine.core.frequency_sets.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(len(f_n)), harmonics)
     ref_values = {'p_orb': p_orb, 'const': const, 'slope': slope,
                   'f_n': f_n[non_harm], 'a_n': a_n[non_harm], 'ph_n': ph_n[non_harm],
@@ -598,7 +595,7 @@ def plot_trace_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n):
     # convert phases to interval [-pi, pi] from [0, 2pi]
     above_pi = (ph_n >= np.pi)
     ph_n[above_pi] = ph_n[above_pi] - 2 * np.pi
-    harmonics, harmonic_n = star_shine.core.frequency_sets.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(len(f_n)), harmonics)
     par_lines = [('p_orb', {}, p_orb), ('const', {}, const), ('slope', {}, slope),
                  ('f_n', {}, f_n[non_harm]), ('a_n', {}, a_n[non_harm]), ('ph_n', {}, ph_n[non_harm]),
@@ -655,8 +652,8 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
         const_1, slope_1, f_n_1, a_n_1, ph_n_1 = results['sin_mean']
-        model_linear = tsf.linear_curve(time, const_1, slope_1, i_chunks)
-        model_sinusoid = tsf.sum_sines(time, f_n_1, a_n_1, ph_n_1)
+        model_linear = mdl.linear_curve(time, const_1, slope_1, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_1, a_n_1, ph_n_1)
         model_1 = model_linear + model_sinusoid
     else:
         const_1, slope_1, f_n_1, a_n_1, ph_n_1 = np.array([[], [], [], [], []])
@@ -666,8 +663,8 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
         const_2, slope_2, f_n_2, a_n_2, ph_n_2 = results['sin_mean']
-        model_linear = tsf.linear_curve(time, const_2, slope_2, i_chunks)
-        model_sinusoid = tsf.sum_sines(time, f_n_2, a_n_2, ph_n_2)
+        model_linear = mdl.linear_curve(time, const_2, slope_2, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_2, a_n_2, ph_n_2)
         model_2 = model_linear + model_sinusoid
     else:
         const_2, slope_2, f_n_2, a_n_2, ph_n_2 = np.array([[], [], [], [], []])
@@ -679,8 +676,8 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
         const_3, slope_3, f_n_3, a_n_3, ph_n_3 = results['sin_mean']
         p_orb_3, _ = results['ephem']
         p_err_3, _ = results['ephem_err']
-        model_linear = tsf.linear_curve(time, const_3, slope_3, i_chunks)
-        model_sinusoid = tsf.sum_sines(time, f_n_3, a_n_3, ph_n_3)
+        model_linear = mdl.linear_curve(time, const_3, slope_3, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_3, a_n_3, ph_n_3)
         model_3 = model_linear + model_sinusoid
     else:
         const_3, slope_3, f_n_3, a_n_3, ph_n_3 = np.array([[], [], [], [], []])
@@ -691,8 +688,8 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
     if os.path.isfile(file_name):
         results = read_result_hdf5(file_name, verbose=False)
         const_4, slope_4, f_n_4, a_n_4, ph_n_4 = results['sin_mean']
-        model_linear = tsf.linear_curve(time, const_4, slope_4, i_chunks)
-        model_sinusoid = tsf.sum_sines(time, f_n_4, a_n_4, ph_n_4)
+        model_linear = mdl.linear_curve(time, const_4, slope_4, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_4, a_n_4, ph_n_4)
         model_4 = model_linear + model_sinusoid
     else:
         const_4, slope_4, f_n_4, a_n_4, ph_n_4 = np.array([[], [], [], [], []])
@@ -705,10 +702,10 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
         p_orb_5, _ = results['ephem']
         p_err_5, _ = results['ephem_err']
         t_tot, t_mean, t_mean_s, t_int, n_param_5, bic_5, noise_level_5 = results['stats']
-        model_linear = tsf.linear_curve(time, const_5, slope_5, i_chunks)
-        model_sinusoid = tsf.sum_sines(time, f_n_5, a_n_5, ph_n_5)
+        model_linear = mdl.linear_curve(time, const_5, slope_5, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_5, a_n_5, ph_n_5)
         model_5 = model_linear + model_sinusoid
-        harmonics, harmonic_n = star_shine.core.frequency_sets.find_harmonics_from_pattern(f_n_5, p_orb_5, f_tol=1e-9)
+        harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n_5, p_orb_5, f_tol=1e-9)
         f_h_5, a_h_5, ph_h_5 = f_n_5[harmonics], a_n_5[harmonics], ph_n_5[harmonics]
     else:
         const_5, slope_5, f_n_5, a_n_5, ph_n_5 = np.array([[], [], [], [], []])
