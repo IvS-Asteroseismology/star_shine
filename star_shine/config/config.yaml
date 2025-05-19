@@ -61,7 +61,7 @@ overwrite: False
 data_dir: ''
 
 # save_dir description:
-# Save directory where analysis results will be stored; if empty will use current dir
+# Root directory where analysis results will be saved; if empty will use current dir
 save_dir: ''
 
 # save_ascii description:

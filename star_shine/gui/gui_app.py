@@ -70,9 +70,13 @@ class MainWindow(QMainWindow):
         self.pipeline = None
         self.pipeline_thread = None
 
-        # some things that are needed
+        # some things that need a default
         self.data_dir = config.data_dir
+        if self.data_dir == '':
+            self.data_dir = os.path.expanduser('~')
         self.save_dir = config.save_dir
+        if self.save_dir == '':
+            self.save_dir = os.path.expanduser('~')
         self.save_subdir = ''
 
     def _setup_central_widget(self):
@@ -134,41 +138,34 @@ class MainWindow(QMainWindow):
 
     def _setup_file_menu(self, file_menu):
         """Set up the file menu."""
+
         # Add "Load Data" button to "File" menu
         load_data_action = QAction("Load Data", self)
-        load_data_action.triggered.connect(self.load_data_external)
+        load_data_action.triggered.connect(self.load_data)
         file_menu.addAction(load_data_action)
+
+        # Add "Save Data Object" button to "File" menu
+        save_data_action = QAction("Save Data", self)
+        save_data_action.triggered.connect(self.save_data)
+        file_menu.addAction(save_data_action)
+
+        # Add "Load Result Object" button to "File" menu
+        load_result_action = QAction("Load Result", self)
+        load_result_action.triggered.connect(self.load_result)
+        file_menu.addAction(load_result_action)
+
+        # Add "Save Result Object" button to "File" menu
+        save_result_action = QAction("Save Result", self)
+        save_result_action.triggered.connect(self.save_result)
+        file_menu.addAction(save_result_action)
+
+        # Add a horizontal separator
+        file_menu.addSeparator()
 
         # Add "Set Save Location" button to "File" menu
         set_save_location_action = QAction("Set Save Location", self)
         set_save_location_action.triggered.connect(self.set_save_location)
         file_menu.addAction(set_save_location_action)
-
-        # Add a horizontal separator
-        file_menu.addSeparator()
-
-        # Add "Load Data Object" button to "File" menu
-        load_data_object_action = QAction("Load Data Object", self)
-        load_data_object_action.triggered.connect(self.load_data)
-        file_menu.addAction(load_data_object_action)
-
-        # Add "Save Data Object" button to "File" menu
-        save_data_object_action = QAction("Save Data Object", self)
-        save_data_object_action.triggered.connect(self.save_data)
-        file_menu.addAction(save_data_object_action)
-
-        # Add "Load Result Object" button to "File" menu
-        load_result_object_action = QAction("Load Result Object", self)
-        load_result_object_action.triggered.connect(self.load_result)
-        file_menu.addAction(load_result_object_action)
-
-        # Add "Save Result Object" button to "File" menu
-        save_result_object_action = QAction("Save Result Object", self)
-        save_result_object_action.triggered.connect(self.save_result)
-        file_menu.addAction(save_result_object_action)
-
-        # Add a horizontal separator
-        file_menu.addSeparator()
 
         # Add "Settings" action to open the settings dialog
         settings_action = QAction("Settings", self)
@@ -220,26 +217,31 @@ class MainWindow(QMainWindow):
         self.spin_box.setRange(0, 99999)
         self.spin_box.setValue(0)
         # Button for starting analysis
-        self.analyze_button = QPushButton("Extract")
-        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'iterative_prewhitening',
+        self.extract_button = QPushButton("Extract")
+        self.extract_button.clicked.connect(functools.partial(self.perform_analysis, 'iterative_prewhitening',
                                                               n_extract=self.spin_box.value()))
-        steps_button_layout.addWidget(self.analyze_button)
+        steps_button_layout.addWidget(self.extract_button)
         steps_button_layout.addWidget(self.spin_box)  # add the number field after the button
 
         # Button for starting analysis
-        self.analyze_button = QPushButton("Free Fit")
-        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid'))
-        steps_button_layout.addWidget(self.analyze_button)
+        self.free_fit_button = QPushButton("Free Fit")
+        self.free_fit_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid'))
+        steps_button_layout.addWidget(self.free_fit_button)
 
         # Button for starting analysis
-        self.analyze_button = QPushButton("Find Period")
-        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'couple_harmonics'))
-        steps_button_layout.addWidget(self.analyze_button)
+        self.find_period_button = QPushButton("Find Period")
+        self.find_period_button.clicked.connect(functools.partial(self.perform_analysis, 'couple_harmonics'))
+        steps_button_layout.addWidget(self.find_period_button)
 
         # Button for starting analysis
-        self.analyze_button = QPushButton("Harmonic Fit")
-        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid_h'))
-        steps_button_layout.addWidget(self.analyze_button)
+        self.harmonic_fit_button = QPushButton("Harmonic Fit")
+        self.harmonic_fit_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid_h'))
+        steps_button_layout.addWidget(self.harmonic_fit_button)
+
+        # Button for saving the results
+        self.save_result_button = QPushButton("Save Result")
+        self.save_result_button.clicked.connect(self.save_result)
+        steps_button_layout.addWidget(self.save_result_button)
 
         l_col_layout.addWidget(steps_button_widget)
 
@@ -463,7 +465,7 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def load_data_external(self):
+    def load_data(self):
         """Read data from a file or multiple files using a dialog window."""
         # get the path(s) from a standard file selection screen
         file_paths, _ = QFileDialog.getOpenFileNames(self, caption="Read Data", dir=self.save_dir,
@@ -474,25 +476,12 @@ class MainWindow(QMainWindow):
             return None
 
         # load data into instance
-        data = Data.load_data(file_list=file_paths, data_dir='', target_id='', data_id='', logger=self.logger)
-
-        # set up some things
-        self.new_dataset(data)
-
-        return None
-
-    def load_data(self):
-        """Load data from a file using a dialog window."""
-        # get the path(s) from a standard file selection screen
-        file_path, _ = QFileDialog.getOpenFileName(self, caption="Load Data", dir=self.save_dir,
-                                                    filter="HDF5 Files (*.hdf5);;All Files (*)")
-
-        # do nothing in case no file selected
-        if not file_path:
-            return None
-
-        # load data into instance
-        data = Data.load(file_name=file_path, data_dir='', logger=self.logger)
+        if len(file_paths) == 1 and file_paths[0].endswith('.hdf5'):
+            # a single hdf5 file is loaded as a star shine data object
+            data = Data.load(file_name=file_paths[0], data_dir='', logger=self.logger)
+        else:
+            # any other files are loaded as external data
+            data = Data.load_data(file_list=file_paths, data_dir='', target_id='', data_id='', logger=self.logger)
 
         # set up some things
         self.new_dataset(data)

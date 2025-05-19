@@ -1,6 +1,6 @@
 [project]
 name = "star_shine"
-version = "0.1.7"
+version = "0.2.0"
 description = "Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction"
 authors = [
     { name = "Luc IJspeert" }
