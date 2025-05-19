@@ -298,16 +298,10 @@ class Pipeline:
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         # extract all frequencies with the iterative scheme
-        # out_b = ana.extract_sinusoids(self.data.time, self.data.flux, self.data.i_chunks, self.result.p_orb,
-        #                               self.result.f_n, self.result.a_n, self.result.ph_n, bic_thr=config.bic_thr,
-        #                               snr_thr=config.snr_thr, stop_crit=config.stop_criterion,
-        #                               select=config.select_next, f0=0, fn=self.data.f_nyquist,
-        #                               fit_each_step=config.optimise_step, logger=self.logger)
-
         ts_model = mdl.TimeSeriesModel(self.data.time, self.data.flux, self.data.i_chunks)
         ts_model.set_sinusoids(self.result.f_n, self.result.a_n, self.result.ph_n)
         ts_model.update_linear_model()
-        ts_model = ana.extract_sinusoids_new(ts_model, bic_thr=config.bic_thr,
+        ts_model = ana.extract_sinusoids(ts_model, bic_thr=config.bic_thr,
                                          snr_thr=config.snr_thr, stop_crit=config.stop_criterion,
                                          select=config.select_next, f0=0, fn=self.data.f_nyquist,
                                          fit_each_step=config.optimise_step, logger=self.logger)
