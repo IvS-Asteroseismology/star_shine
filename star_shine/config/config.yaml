@@ -17,6 +17,14 @@ stop_at_stage: 0
 # Select the next frequency in iterative extraction based on 'amp', 'snr', or 'hybrid' (first amp then snr)
 select_next: 'hybrid'
 
+# optimise_step description:
+# Optimise with a non-linear multi-sinusoid fit at every step (T) or only at the end (F)
+optimise_step: True
+
+# replace_step description:
+# Attempt to replace closely spaced sinusoids by one sinusoid at every step (T) or only at the end (F)
+replace_step: True
+
 # stop_criterion description:
 # Stop criterion for the iterative extraction of sinusoids will be based on 'bic', or 'snr'
 stop_criterion: 'bic'
@@ -38,17 +46,13 @@ nyquist_method: 'simple'
 nyquist_value: -1.
 
 # resolution_factor description:
-# If the Nyquist method is 'custom', this overrides the simple Nyquist estimate if it is higher
+# The frequency resolution (1/T) is multiplied by this factor
 resolution_factor: 1.5
 
 # ---------------------------------------------- Optimisation settings -------------------------------------------------
 # optimise_method description:
 # 'fitter' or 'sampler' method is used for model optimisation
 optimise_method: 'fitter'
-
-# optimise_step description:
-# Optimise at every step (T) or only at the end (F)
-optimise_step: True
 
 ########################################################################################################################
 # ---------------------------------------------- Data and file settings ------------------------------------------------

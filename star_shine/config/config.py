@@ -44,6 +44,8 @@ class Config:
 
     # Extraction settings
     select_next: str = 'hybrid'
+    optimise_step: bool = True
+    replace_step: bool = True
     stop_criterion: str = 'bic'
     bic_thr: float = 2.
     snr_thr: float = -1.
@@ -53,7 +55,6 @@ class Config:
 
     # Optimisation settings
     optimise_method: str = 'fitter'
-    optimise_step: bool = True
 
     # Data and file settings
     overwrite: bool = False
