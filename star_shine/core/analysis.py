@@ -803,7 +803,6 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     return const, slope, f_n, a_n, ph_n
 
 
-# @nb.njit(cache=True)
 def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Attempt the removal of individual frequencies
 
@@ -902,15 +901,12 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     ph_n = np.delete(ph_n, remove_single)
 
     if logger is not None:
-        str_bic = ut.float_to_str(bic_prev, dec=2)
-        str_delta = ut.float_to_str(bic_init - bic_prev, dec=2)
         logger.extra(f"Single frequencies removed: {n_sin - len(f_n)}, "
-                     f"N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})")
+                     f"N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f})")
 
     return const, slope, f_n, a_n, ph_n
 
 
-# @nb.njit(cache=True)
 def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
     """Attempt the replacement of groups of frequencies by a single one
 
@@ -1053,10 +1049,8 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     ph_n = np.append(np.delete(ph_n, i_to_remove), ph_new)
 
     if logger is not None:
-        str_bic = ut.float_to_str(bic_prev, dec=2)
-        str_delta = ut.float_to_str(bic_init - bic_prev, dec=2)
-        logger.extra(f"Frequency sets replaced by a single frequency: {len(remove_sets)} "
-                     f"({len(i_to_remove)} frequencies). N_f= {len(f_n)}, BIC= {str_bic} (delta= {str_delta})")
+        logger.extra(f"Frequency sets replaced: {len(remove_sets)} ({len(i_to_remove)} frequencies). "
+                     f"N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f})")
 
     return const, slope, f_n, a_n, ph_n
 

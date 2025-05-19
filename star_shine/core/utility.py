@@ -31,7 +31,32 @@ def datetime_formatted():
 
 
 @nb.njit(cache=True)
-def float_to_str(x, dec=2):
+def decimal_figures(x, n_sf):
+    """Determine the number of decimal figures to print given a target
+    number of significant figures
+
+    Parameters
+    ----------
+    x: float
+        Value to determine the number of decimals for.
+    n_sf: int
+        Number of significant figures to compute.
+
+    Returns
+    -------
+    int
+        Number of decimal places to round to.
+    """
+    if x != 0:
+        decimals = (n_sf - 1) - int(np.floor(np.log10(abs(x))))
+    else:
+        decimals = 1
+
+    return decimals
+
+
+@nb.njit(cache=True)
+def float_to_str_numba(x, dec=2):
     """Convert float to string for Numba up to some decimal place
     
     Parameters
@@ -52,6 +77,46 @@ def float_to_str(x, dec=2):
     s = str(x_int) + '.' + str(x_dec).zfill(dec)
 
     return s
+
+
+def float_to_str_scientific(x, x_err, error=True, brackets=False):
+    """Conversion of a number with an error margin to string in scientific notation.
+
+    Uses two significant figures by default as no distinction is made between having a 1, 2 or higher number
+    in the error value.
+
+    Parameters
+    ----------
+    x: float
+        Value to determine the number of decimals for.
+    x_err: float
+        Value to determine the number of decimals for.
+    error: bool, optional
+        Include the error value.
+    brackets: bool, optional
+        Place the error value in brackets.
+
+    Returns
+    -------
+    str
+        Formatted string conversion.
+    """
+    # determine the decimal places to round to
+    rnd_x = max(decimal_figures(x_err, 2), decimal_figures(x, 2))
+
+    # format the error value
+    if brackets:
+        err_str = f"(\u00B1{x_err:.{rnd_x}f})"
+    else:
+        err_str = f"\u00B1 {x_err:.{rnd_x}f}"
+
+    # format the rest of the string
+    if error:
+        number_str = f"{x:.{rnd_x}f} {err_str}"
+    else:
+        number_str = f"{x:.{rnd_x}f}"
+
+    return number_str
 
 
 @nb.njit(cache=True)
@@ -101,71 +166,6 @@ def std_unb(x, n):
     std = np.sqrt(sum_r_2 / n)  # unbiased standard deviation of the residuals
 
     return std
-
-
-@nb.njit(cache=True)
-def decimal_figures(x, n_sf):
-    """Determine the number of decimal figures to print given a target
-    number of significant figures
-    
-    Parameters
-    ----------
-    x: float
-        Value to determine the number of decimals for.
-    n_sf: int
-        Number of significant figures to compute.
-    
-    Returns
-    -------
-    int
-        Number of decimal places to round to.
-    """
-    if x != 0:
-        decimals = (n_sf - 1) - int(np.floor(np.log10(abs(x))))
-    else:
-        decimals = 1
-
-    return decimals
-
-
-def float_to_str_scientific(x, x_err, error=True, brackets=False):
-    """Conversion of a number with an error margin to string in scientific notation.
-
-    Uses two significant figures by default as no distinction is made between having a 1, 2 or higher number
-    in the error value.
-
-    Parameters
-    ----------
-    x: float
-        Value to determine the number of decimals for.
-    x_err: float
-        Value to determine the number of decimals for.
-    error: bool, optional
-        Include the error value.
-    brackets: bool, optional
-        Place the error value in brackets.
-
-    Returns
-    -------
-    str
-        Formatted string conversion.
-    """
-    # determine the decimal places to round to
-    rnd_x = max(decimal_figures(x_err, 2), decimal_figures(x, 2))
-
-    # format the error value
-    if brackets:
-        err_str = f"(\u00B1{x_err:.{rnd_x}f})"
-    else:
-        err_str = f"\u00B1 {x_err:.{rnd_x}f}"
-
-    # format the rest of the string
-    if error:
-        number_str = f"{x:.{rnd_x}f} {err_str}"
-    else:
-        number_str = f"{x:.{rnd_x}f}"
-
-    return number_str
 
 
 def consecutive_subsets(x):
@@ -305,6 +305,58 @@ def uphill_local_max(x, y, x_approx):
     x_max = maxima[pos_max]
 
     return x_max
+
+
+@nb.njit(cache=True)
+def mask_between(x, locations):
+    """Mask out everything except the parts between the given timestamps
+
+    Parameters
+    ----------
+    x: numpy.ndarray[Any, dtype[float]]
+        Time series to be masked.
+    locations: numpy.ndarray[Any, dtype[float]]
+        Pairs of points in the time series. Everything but the space between points is masked.
+
+    Returns
+    -------
+    numpy.ndarray[bool]
+        Boolean mask that is True between the locations.
+    """
+    mask = np.zeros(len(x), dtype=np.bool_)
+    for loc in locations:
+        mask = mask | ((x >= loc[0]) & (x <= loc[-1]))
+
+    return mask
+
+
+@nb.njit(cache=True)
+def mark_gaps(x, min_gap=1.):
+    """Mark gaps in a time series.
+
+    Parameters
+    ----------
+    x: numpy.ndarray[Any, dtype[float]]
+        Time series with gaps.
+    min_gap: float, optional
+        Minimum width for a gap (in time units).
+
+    Returns
+    -------
+    gaps: numpy.ndarray[Any, dtype[float]]
+        Gap timestamps in pairs.
+    """
+    # mark the gaps
+    t_sorted = np.sort(x)
+    t_diff = t_sorted[1:] - t_sorted[:-1]  # np.diff(a)
+    gaps = (t_diff > min_gap)
+
+    # get the timestamps
+    t_left = t_sorted[:-1][gaps]
+    t_right = t_sorted[1:][gaps]
+    gaps = np.column_stack((t_left, t_right))
+
+    return gaps
 
 
 @nb.njit(cache=True)

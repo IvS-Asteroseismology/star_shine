@@ -14,58 +14,6 @@ from star_shine.core import periodogram as pdg, frequency_sets as frs
 from star_shine.core import utility as ut
 
 
-@nb.njit(cache=True)
-def mask_timestamps(time, stamps):
-    """Mask out everything except the parts between the given timestamps
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    stamps: numpy.ndarray[Any, dtype[float]]
-        Pairs of timestamps
-
-    Returns
-    -------
-    numpy.ndarray[bool]
-        Boolean mask that is True between the stamps
-    """
-    mask = np.zeros(len(time), dtype=np.bool_)
-    for ts in stamps:
-        mask = mask | ((time >= ts[0]) & (time <= ts[-1]))
-
-    return mask
-
-
-@nb.njit(cache=True)
-def mark_gaps(time, min_gap=1.):
-    """Mark gaps in a series of time points.
-
-    Parameters
-    ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series.
-    min_gap: float, optional
-        Minimum width for a gap (in time units).
-
-    Returns
-    -------
-    gaps: numpy.ndarray[Any, dtype[float]]
-        Gap timestamps in pairs.
-    """
-    # mark the gaps
-    t_sorted = np.sort(time)
-    t_diff = t_sorted[1:] - t_sorted[:-1]  # np.diff(a)
-    gaps = (t_diff > min_gap)
-
-    # get the timestamps
-    t_left = t_sorted[:-1][gaps]
-    t_right = t_sorted[1:][gaps]
-    gaps = np.column_stack((t_left, t_right))
-
-    return gaps
-
-
 def refine_orbital_period(p_orb, time, f_n):
     """Find the most likely eclipse period from a sinusoid model
 
@@ -411,8 +359,8 @@ def linear_regression_uncertainty_ephem(time, p_orb, sigma_t=1):
     y = np.ones(n, dtype=int)  # 'positive measurement'
 
     # remove points in gaps
-    gaps = mark_gaps(time, min_gap=1.)
-    mask = mask_timestamps(x * p_orb, gaps)  # convert x to time domain
+    gaps = ut.mark_gaps(time, min_gap=1.)
+    mask = ut.mask_between(x * p_orb, gaps)  # convert x to time domain
     x = x[~mask] - n//2  # also centre the time for minimal correlation
     y = y[~mask]
 
