@@ -309,9 +309,8 @@ def replace_subset(ts_model, close_f, logger=None):
     n_sin_init = ts_model.sinusoid.n_sin
     harmonics, harmonic_n = ts_model.sinusoid.get_harmonics()
 
-    # make all combinations of frequencies in close_f (longer sets first)
-    n_close_f = len(close_f)
-    close_f_sets = [close_f[p1:p1 + l] for l in range(n_close_f, 1, -1) for p1 in range(n_close_f - l + 1)]
+    # make all combinations of consecutive frequencies in close_f (longer sets first)
+    close_f_sets = ut.consecutive_subsets(close_f)
 
     # determine initial bic
     bic_prev = ts_model.bic()
@@ -325,7 +324,7 @@ def replace_subset(ts_model, close_f, logger=None):
             continue
 
         # convert the indices for removed fs
-        conv_set_i = [i - sum(1 for r in removed if r < i) for i in set_i]
+        conv_set_i = ut.adjust_indices_removed(set_i, removed)
 
         # make a deep copy of the current model
         ts_model_i = ts_model.copy()
@@ -342,7 +341,7 @@ def replace_subset(ts_model, close_f, logger=None):
         # remove all frequencies in the set and re-extract one
         if len(harm_i) > 0:
             # convert harmonic indices
-            harm_i = [i - sum(1 for r in removed if r < i) for i in harm_i]
+            harm_i = ut.adjust_indices_removed(harm_i, removed)
             # if f is a harmonic, don't shift the frequency
             f_i = f_n_i[harm_i]
             a_i, ph_i = pdg.scargle_ampl_phase(ts_model_i.time, ts_model_i.residual(), f_i)
@@ -485,7 +484,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         ts_model_i.add_sinusoids(f_i, a_i, ph_i)
 
         # imporve frequencies with some strategy
-        if fit_each_step:
+        if False:#fit_each_step:
             # fit all frequencies for best improvement
             out = fit.fit_multi_sinusoid_per_group(ts_model_i.time, ts_model_i.flux, *ts_model_i.get_parameters(),
                                                    ts_model_i.i_chunks, logger=logger)
@@ -504,7 +503,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
                 ts_model_i.update_linear_model()
 
         # possibly replace close frequencies
-        if replace_each_step:
+        if False:#replace_each_step:
             close_f = frs.f_within_rayleigh(ts_model_i.sinusoid.n_sin - 1, ts_model_i.sinusoid.f_n, freq_res)
             ts_model_i = replace_subset(ts_model_i, close_f, logger=None)
 

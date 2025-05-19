@@ -185,6 +185,50 @@ def remove_insignificant_snr(time, a_n, noise_at_f):
     return remove
 
 
+def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
+    """Groups frequencies into sets of g_min to g_max for multi-sine fitting
+
+    Parameters
+    ----------
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    g_min: int
+        Minimum group size
+    g_max: int
+        Maximum group size (g_max > g_min)
+
+    Returns
+    -------
+    list[numpy.ndarray[Any, dtype[int]]]
+        List of sets of indices indicating the groups
+
+    Notes
+    -----
+    To make the task of fitting more manageable, the free parameters are binned into groups,
+    in which the remaining parameters are kept fixed. Frequencies of similar amplitude are
+    grouped together, and the group cut-off is determined by the biggest gaps in amplitude
+    between frequencies, but group size is always kept between g_min and g_max. g_min < g_max.
+    The idea of using amplitudes is that frequencies of similar amplitude have a similar
+    amount of influence on each other.
+    """
+    # keep track of which freqs have been used with the sorted indices
+    not_used = np.argsort(a_n)[::-1]
+    groups = []
+    while len(not_used) > 0:
+        if len(not_used) > g_min + 1:
+            a_diff = np.diff(a_n[not_used[g_min:g_max + 1]])
+            i_max = np.argmin(a_diff)  # the diffs are negative so this is max absolute difference
+            i_group = g_min + i_max + 1
+            group_i = not_used[:i_group]
+        else:
+            group_i = np.copy(not_used)
+            i_group = len(not_used)
+        not_used = np.delete(not_used, np.arange(i_group))
+        groups.append(group_i)
+
+    return groups
+
+
 @nb.njit(cache=True)
 def find_harmonics(f_n, f_n_err, p_orb, sigma=1.):
     """Find the orbital harmonics from a set of frequencies, given the orbital period.

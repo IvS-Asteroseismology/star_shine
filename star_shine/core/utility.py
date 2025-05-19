@@ -168,48 +168,50 @@ def float_to_str_scientific(x, x_err, error=True, brackets=False):
     return number_str
 
 
-def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
-    """Groups frequencies into sets of g_min to g_max for multi-sine fitting
-    
+def consecutive_subsets(x):
+    """Creates all consecutive subsets of the given list.
+
     Parameters
     ----------
-    a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
-    g_min: int
-        Minimum group size
-    g_max: int
-        Maximum group size (g_max > g_min)
-    
+    x: list[Any], ndarray[Any, dtype[Any]]
+        A list of values.
+
     Returns
     -------
-    list[numpy.ndarray[Any, dtype[int]]]
-        List of sets of indices indicating the groups
-    
-    Notes
-    -----
-    To make the task of fitting more manageable, the free parameters are binned into groups,
-    in which the remaining parameters are kept fixed. Frequencies of similar amplitude are
-    grouped together, and the group cut-off is determined by the biggest gaps in amplitude
-    between frequencies, but group size is always kept between g_min and g_max. g_min < g_max.
-    The idea of using amplitudes is that frequencies of similar amplitude have a similar
-    amount of influence on each other.
+    list
+        The list of consecutive subsets ordered by size and with length two or more.
     """
-    # keep track of which freqs have been used with the sorted indices
-    not_used = np.argsort(a_n)[::-1]
-    groups = []
-    while len(not_used) > 0:
-        if len(not_used) > g_min + 1:
-            a_diff = np.diff(a_n[not_used[g_min:g_max + 1]])
-            i_max = np.argmin(a_diff)  # the diffs are negative so this is max absolute difference
-            i_group = g_min + i_max + 1
-            group_i = not_used[:i_group]
-        else:
-            group_i = np.copy(not_used)
-            i_group = len(not_used)
-        not_used = np.delete(not_used, np.arange(i_group))
-        groups.append(group_i)
+    n = len(x)
 
-    return groups
+    # create the subsets from largest to smallest
+    subsets = [x[p1:p1 + l] for l in range(n, 1, -1) for p1 in range(n - l + 1)]
+
+    return subsets
+
+
+def adjust_indices_removed(x, removed):
+    """Adjusts the indices in `x` to account for removals.
+
+    If y_reduced=np.delete(y, removed), and x are indices indicating items in y, this function gives
+    the indices x_adj that indicate the same items in y_reduced. Assumes that none of the removed items
+    are indicated by indices in x.
+
+    Parameters
+    ----------
+    x: list[int], ndarray[Any, dtype[int]]
+        A list of indices that slice another array, y.
+    removed: list[int], ndarray[Any, dtype[int]]
+        A second list of indices indicating removals from y.
+
+    Returns
+    -------
+    list[int]
+        Adjusted indices that can be used with the reduced y.
+    """
+    # adjust the indices
+    x_adj = [i - sum(1 for r in removed if r < i) for i in x]
+
+    return x_adj
 
 
 @nb.njit(cache=True)

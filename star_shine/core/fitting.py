@@ -20,8 +20,8 @@ import numba as nb
 import scipy as sp
 import scipy.optimize
 
+import star_shine.core.frequency_sets
 from star_shine.core import timeseries as ts, goodness_of_fit as gof, frequency_sets as frs
-from star_shine.core import utility as ut
 
 
 @nb.njit(cache=True)
@@ -326,7 +326,7 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
     fits per group of 15-20 frequencies, leaving the other frequencies as
     fixed parameters.
     """
-    f_groups = ut.group_frequencies_for_fit(a_n, g_min=45, g_max=50)
+    f_groups = star_shine.core.frequency_sets.group_frequencies_for_fit(a_n, g_min=45, g_max=50)
     n_groups = len(f_groups)
     n_chunk = len(i_chunks)
     n_sin = len(f_n)
@@ -685,7 +685,7 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
     indices = np.arange(len(f_n))
     i_non_harm = np.delete(indices, harmonics)
-    f_groups = ut.group_frequencies_for_fit(a_n[i_non_harm], g_min=45, g_max=50)
+    f_groups = star_shine.core.frequency_sets.group_frequencies_for_fit(a_n[i_non_harm], g_min=45, g_max=50)
     f_groups = [i_non_harm[g] for g in f_groups]  # convert back to indices for full f_n list
     n_groups = len(f_groups)
     n_chunk = len(i_chunks)  # each sector has its own slope (or two)
