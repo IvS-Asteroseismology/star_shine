@@ -121,6 +121,42 @@ class Data:
 
         return
 
+    @property
+    def time(self):
+        """Getter for the time attribute."""
+        return self._time
+
+    @time.setter
+    def time(self, value):
+        """Setter for the time attribute with flag update."""
+        self._time = value
+        self._time_changed = True
+
+    @property
+    def flux(self):
+        """Getter for the flux attribute."""
+        return self._flux
+
+    @flux.setter
+    def flux(self, value):
+        """Setter for the flux attribute with flag update."""
+        self._flux = value
+        self._flux_changed = True
+
+    def setter(self, **kwargs):
+        """Fill in the attributes with data.
+
+        Parameters
+        ----------
+        kwargs:
+            Accepts any of the class attributes as keyword input and sets them accordingly
+        """
+        # set any attribute that exists if it is in the kwargs
+        for key in kwargs.keys():
+            setattr(self, key, kwargs[key])
+
+        return None
+
     def _check_file_existence(self, logger=None):
         """Checks whether the given file(s) exist.
 
@@ -156,39 +192,26 @@ class Data:
 
         return None
 
-    @property
-    def time(self):
-        """Getter for the time attribute."""
-        return self._time
+    def update_properties(self):
+        """Calculate the properties of the data and fill them in.
 
-    @time.setter
-    def time(self, value):
-        """Setter for the time attribute with flag update."""
-        self._time = value
-        self._time_changed = True
-
-    @property
-    def flux(self):
-        """Getter for the flux attribute."""
-        return self._flux
-
-    @flux.setter
-    def flux(self, value):
-        """Setter for the flux attribute with flag update."""
-        self._flux = value
-        self._flux_changed = True
-
-    def setter(self, **kwargs):
-        """Fill in the attributes with data.
-
-        Parameters
-        ----------
-        kwargs:
-            Accepts any of the class attributes as keyword input and sets them accordingly
+        Running this function again will re-evaluate the properties. This can be useful if the configuration changed.
         """
-        # set any attribute that exists if it is in the kwargs
-        for key in kwargs.keys():
-            setattr(self, key, kwargs[key])
+        # set independent data properties
+        self.t_tot = np.ptp(self.time)
+        self.t_mean = np.mean(self.time)
+        self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
+        self.t_step = np.median(np.diff(self.time))
+
+        # set data properties relying on config
+        self.snr_threshold = dp.signal_to_noise_threshold(self.time)
+        self.f_nyquist = dp.nyquist_frequency(self.time)
+        self.f_resolution = dp.frequency_resolution(self.time)
+
+        # set periodogram defaults
+        self.pd_f0 = 0.01 / self.t_tot  # lower than T/100 no good
+        self.pd_df = 0.1 / self.t_tot  # default frequency sampling is about 1/10 of frequency resolution
+        self.pd_fn = 1 / (2 * np.min(self.time[1:] - self.time[:-1]))
 
         return None
 
@@ -345,6 +368,9 @@ class Data:
         # fill in the data
         instance.setter(**data_dict)
 
+        # calculate properties of the data
+        instance.update_properties()
+
         if logger is not None:
             logger.info(f"Loaded data file with target identifier: {data_dict['target_id']}, "
                         f"created on {data_dict['date_time']}. Data identifier: {data_dict['data_id']}.")
@@ -364,29 +390,6 @@ class Data:
 
         # io module handles writing to file
         io.save_data_hdf5(file_name, data_dict)
-
-        return None
-
-    def update_properties(self):
-        """Calculate the properties of the data and fill them in.
-
-        Running this function again will re-evaluate the properties. This can be useful if the configuration changed.
-        """
-        # set independent data properties
-        self.t_tot = np.ptp(self.time)
-        self.t_mean = np.mean(self.time)
-        self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
-        self.t_step = np.median(np.diff(self.time))
-
-        # set data properties relying on config
-        self.snr_threshold = dp.signal_to_noise_threshold(self.time)
-        self.f_nyquist = dp.nyquist_frequency(self.time)
-        self.f_resolution = dp.frequency_resolution(self.time)
-
-        # set periodogram defaults
-        self.pd_f0 = 0.01 / self.t_tot  # lower than T/100 no good
-        self.pd_df = 0.1 / self.t_tot  # default frequency sampling is about 1/10 of frequency resolution
-        self.pd_fn = 1 / (2 * np.min(self.time[1:] - self.time[:-1]))
 
         return None
 
