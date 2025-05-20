@@ -8,7 +8,7 @@ Code written by: Luc IJspeert
 import os
 import numpy as np
 
-from star_shine.core import model as mdl, frequency_sets as frs, utility as ut
+from star_shine.core import time_series as tms, frequency_sets as frs, utility as ut
 from star_shine.core import io
 from star_shine.config.helpers import get_config
 
@@ -376,7 +376,7 @@ class Result:
         numpy.ndarray[Any, dtype[float]]
             The model time series of a (set of) straight line(s)
         """
-        curve = mdl.linear_curve(time, self.const, self.slope, i_chunks)
+        curve = tms.linear_curve(time, self.const, self.slope, i_chunks)
 
         return curve
 
@@ -393,6 +393,6 @@ class Result:
         numpy.ndarray[Any, dtype[float]]
             Model time series of a sum of sine waves. Varies around 0.
         """
-        curve = mdl.sum_sines(time, self.f_n, self.a_n, self.ph_n)
+        curve = tms.sum_sines(time, self.f_n, self.a_n, self.ph_n)
 
         return curve

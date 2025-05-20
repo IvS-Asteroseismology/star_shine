@@ -1,8 +1,8 @@
 """STAR SHINE
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
-This Python module contains classes for handling the models. Includes a piece-wise linear model
-and harmonics.
+This Python module contains classes for handling the models for the time series. Includes a piece-wise linear model,
+sum of sinusoids, and harmonics.
 
 Code written by: Luc IJspeert
 """
@@ -642,6 +642,54 @@ class SinusoidModel:
         return None
 
 
+class TimeSeries():
+    """This class handles the time series.
+
+    Attributes
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series.
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series.
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    """
+
+    def __init__(self, time, flux, i_chunks):
+        """Initialises the Result object.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series.
+        flux: numpy.ndarray[Any, dtype[float]]
+            Measurement values of the time series.
+        i_chunks: numpy.ndarray[Any, dtype[int]]
+            Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+            the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+        """
+        # time series
+        self.time = time
+        self.flux = flux
+        self.i_chunks = i_chunks
+
+        # some numbers
+        self.n_t = len(time)
+        self.n_chunks = len(i_chunks)
+
+        # set time properties
+        self.t_tot = np.ptp(self.time)
+        self.t_mean = np.mean(self.time)
+        self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
+        self.t_step = np.median(np.diff(self.time))
+
+        # data properties relying on config
+        self.snr_threshold = 0.
+        self.f_nyquist = 0.
+        self.f_resolution = 0.
+
+
 class TimeSeriesModel:
     """This class handles the full time series model.
 
@@ -654,9 +702,9 @@ class TimeSeriesModel:
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-    linear: LinearModel
+    linear: star_shine.core.time_series.LinearModel
         Model of the piece-wise linear curve.
-    sinusoid: SinusoidModel
+    sinusoid: star_shine.core.time_series.SinusoidModel
         Model of the sinusoids.
     """
 

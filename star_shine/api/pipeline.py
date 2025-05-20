@@ -12,7 +12,7 @@ import numpy as np
 from star_shine.api.data import Data
 from star_shine.api.result import Result
 
-from star_shine.core import analysis as ana, model as mdl, timeseries as ts
+from star_shine.core import analysis as ana, time_series as tms
 from star_shine.core import frequency_sets as frs, periodogram as pdg, fitting as fit
 from star_shine.core import goodness_of_fit as gof, mcmc as mcf, utility as ut
 from star_shine.config.helpers import get_config, get_custom_logger
@@ -187,13 +187,13 @@ class Pipeline:
         self.result.setter(bic=bic, noise_level=noise_level)
 
         # calculate formal uncertainties
-        out = ts.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
+        out = ut.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
         self.result.setter(c_err=out[0], sl_err=out[1], f_n_err=out[2], a_n_err=out[3], ph_n_err=out[4])
 
         # period uncertainty
         if self.result.p_orb > 0:
-            p_err, _, _ = ts.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
-                                                                  sigma_t=self.data.t_step / 2)
+            p_err, _, _ = ut.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
+                                                                                      sigma_t=self.data.t_step / 2)
             self.result.setter(p_err=p_err)
 
         return None
@@ -298,7 +298,7 @@ class Pipeline:
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         # extract all frequencies with the iterative scheme
-        ts_model = mdl.TimeSeriesModel(self.data.time, self.data.flux, self.data.i_chunks)
+        ts_model = tms.TimeSeriesModel(self.data.time, self.data.flux, self.data.i_chunks)
         ts_model.set_sinusoids(self.result.f_n, self.result.a_n, self.result.ph_n)
         ts_model.update_linear_model()
         ts_model = ana.extract_sinusoids(ts_model, bic_thr=config.bic_thr, snr_thr=config.snr_thr,
@@ -347,9 +347,9 @@ class Pipeline:
             noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
 
             # formal linear and sinusoid parameter errors
-            c_err, sl_err, f_n_err, a_n_err, ph_n_err = ts.formal_uncertainties(self.data.time, resid,
-                                                                                 self.data.flux_err, self.result.a_n,
-                                                                                 self.data.i_chunks)
+            c_err, sl_err, f_n_err, a_n_err, ph_n_err = ut.formal_uncertainties(self.data.time, resid,
+                                                                                                     self.data.flux_err, self.result.a_n,
+                                                                                                     self.data.i_chunks)
 
             # do not include those frequencies that have too big uncertainty
             include = (ph_n_err < 1 / np.sqrt(6))  # circular distribution for ph_n cannot handle these
@@ -404,9 +404,9 @@ class Pipeline:
 
         # if given, the input p_orb is refined locally, otherwise the period is searched for globally
         if self.data.p_orb == 0:
-            p_orb = ts.find_orbital_period(self.data.time, self.data.flux, self.result.f_n)
+            p_orb = ana.find_orbital_period(self.data.time, self.data.flux, self.result.f_n)
         else:
-            p_orb = ts.refine_orbital_period(self.data.p_orb, self.data.time, self.result.f_n)
+            p_orb = ana.refine_orbital_period(self.data.p_orb, self.data.time, self.result.f_n)
         self.result.setter(p_orb=p_orb)
 
         # if time series too short, or no harmonics found, log and warn and maybe cut off the analysis
@@ -470,11 +470,11 @@ class Pipeline:
             noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
 
             # formal linear and sinusoid parameter errors
-            c_err, sl_err, f_n_err, a_n_err, ph_n_err = ts.formal_uncertainties(self.data.time, resid,
-                                                                                 self.data.flux_err, self.result.a_n,
-                                                                                 self.data.i_chunks)
-            p_err, _, _ = ts.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
-                                                                  sigma_t=self.data.t_step / 2)
+            c_err, sl_err, f_n_err, a_n_err, ph_n_err = ut.formal_uncertainties(self.data.time, resid,
+                                                                                                     self.data.flux_err, self.result.a_n,
+                                                                                                     self.data.i_chunks)
+            p_err, _, _ = ut.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
+                                                                                      sigma_t=self.data.t_step / 2)
 
             # do not include those frequencies that have too big uncertainty
             include = (ph_n_err < 1 / np.sqrt(6))  # circular distribution for ph_n cannot handle these

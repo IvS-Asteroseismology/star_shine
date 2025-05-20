@@ -8,8 +8,8 @@ Code written by: Luc IJspeert
 import numba as nb
 import numpy as np
 
-from star_shine.core import timeseries as ts, periodogram as pdg, fitting as fit
-from star_shine.core import model as mdl, goodness_of_fit as gof, frequency_sets as frs
+from star_shine.core import time_series as tms, periodogram as pdg, fitting as fit
+from star_shine.core import goodness_of_fit as gof, frequency_sets as frs
 from star_shine.core import utility as ut
 from star_shine.config.helpers import get_config
 
@@ -205,7 +205,7 @@ def refine_subset(ts_model, close_f, logger=None):
 
     Parameters
     ----------
-    ts_model: mdl.TimeSeriesModel
+    ts_model: tms.TimeSeriesModel
         Instance of TimeSeriesModel containing the time series and model parameters.
     close_f: numpy.ndarray[Any, dtype[int]]
         Indices of the subset of frequencies to be refined
@@ -214,7 +214,7 @@ def refine_subset(ts_model, close_f, logger=None):
 
     Returns
     -------
-    ts_model: mdl.TimeSeriesModel
+    ts_model: tms.TimeSeriesModel
         Instance of TimeSeriesModel containing the time series and model parameters.
 
     See Also
@@ -288,7 +288,7 @@ def replace_subset(ts_model, close_f, logger=None):
 
     Parameters
     ----------
-    ts_model: mdl.TimeSeriesModel
+    ts_model: tms.TimeSeriesModel
         Instance of TimeSeriesModel containing the time series and model parameters.
     close_f: numpy.ndarray[Any, dtype[int]]
         Indices of the subset of frequencies to be (subdivided and) replaced.
@@ -297,7 +297,7 @@ def replace_subset(ts_model, close_f, logger=None):
 
     Returns
     -------
-    ts_model: mdl.TimeSeriesModel
+    ts_model: tms.TimeSeriesModel
         Instance of TimeSeriesModel containing the time series and model parameters.
 
     See Also
@@ -382,7 +382,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
 
     Parameters
     ----------
-    ts_model: mdl.TimeSeriesModel
+    ts_model: tms.TimeSeriesModel
         Instance of TimeSeriesModel containing the time series and model parameters.
     bic_thr: float, optional
         The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
@@ -413,7 +413,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
 
     Returns
     -------
-    ts_model: mdl.TimeSeriesModel
+    ts_model: tms.TimeSeriesModel
         Instance of TimeSeriesModel containing the time series and model parameters.
 
     Notes
@@ -484,7 +484,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         ts_model_i.add_sinusoids(f_i, a_i, ph_i)
 
         # imporve frequencies with some strategy
-        if False:#fit_each_step:
+        if fit_each_step:
             # fit all frequencies for best improvement
             out = fit.fit_multi_sinusoid_per_group(ts_model_i.time, ts_model_i.flux, *ts_model_i.get_parameters(),
                                                    ts_model_i.i_chunks, logger=logger)
@@ -503,7 +503,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
                 ts_model_i.update_linear_model()
 
         # possibly replace close frequencies
-        if False:#replace_each_step:
+        if replace_each_step:
             close_f = frs.f_within_rayleigh(ts_model_i.sinusoid.n_sin - 1, ts_model_i.sinusoid.f_n, freq_res)
             ts_model_i = replace_subset(ts_model_i, close_f, logger=None)
 
@@ -617,9 +617,9 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
     h_candidate = np.delete(h_candidate, harmonic_n - 1)  # harmonic_n minus one is the position
 
     # initial residuals
-    cur_resid = flux - mdl.sum_sines(time, f_n, a_n, ph_n)
-    const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
-    resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
+    cur_resid = flux - tms.sum_sines(time, f_n, a_n, ph_n)
+    const, slope = tms.linear_pars(time, cur_resid, i_chunks)
+    resid = cur_resid - tms.linear_curve(time, const, slope, i_chunks)
     n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
     bic_init = gof.calc_bic(resid, n_param)
     bic_prev = bic_init
@@ -633,10 +633,10 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
         a_c, ph_c = pdg.scargle_ampl_phase_single(time, resid, f_c)
 
         # redetermine the constant and slope
-        model_sinusoid_n = mdl.sum_sines(time, np.array([f_c]), np.array([a_c]), np.array([ph_c]))
+        model_sinusoid_n = tms.sum_sines(time, np.array([f_c]), np.array([a_c]), np.array([ph_c]))
         cur_resid -= model_sinusoid_n
-        const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
-        resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
+        const, slope = tms.linear_pars(time, cur_resid, i_chunks)
+        resid = cur_resid - tms.linear_curve(time, const, slope, i_chunks)
 
         # determine new BIC and whether it improved
         n_harm_cur = n_harm + len(n_h_acc) + 1
@@ -651,8 +651,8 @@ def extract_harmonics(time, flux, p_orb, i_chunks, bic_thr, f_n=None, a_n=None, 
         else:
             # h_c is rejected, revert to previous residual
             cur_resid += model_sinusoid_n
-            const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
-            resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
+            const, slope = tms.linear_pars(time, cur_resid, i_chunks)
+            resid = cur_resid - tms.linear_curve(time, const, slope, i_chunks)
 
         if logger is not None:
             logger.extra(f"N_f= {len(f_n)}, BIC= {bic:1.2f} (delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f})"
@@ -724,9 +724,9 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     f_new, a_new, ph_new = np.zeros((3, 0))
 
     # determine initial bic
-    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
+    model_sinusoid = tms.sum_sines(time, f_n, a_n, ph_n)
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
+    resid = cur_resid - tms.linear_curve(time, const, slope, i_chunks)
     n_param = ut.n_parameters(n_chunks, n_sin, n_harm_init)
     bic_init = gof.calc_bic(resid, n_param)
 
@@ -734,17 +734,17 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     for n in np.unique(harmonic_n):
         remove = np.arange(len(f_n))[harmonics][harmonic_n == n]
         # make a model of the removed sinusoids and subtract it from the full sinusoid residual
-        model_sinusoid_r = mdl.sum_sines(time, f_n[remove], a_n[remove], ph_n[remove])
+        model_sinusoid_r = tms.sum_sines(time, f_n[remove], a_n[remove], ph_n[remove])
         cur_resid += model_sinusoid_r
-        const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-        resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
+        const, slope = tms.linear_pars(time, resid, i_chunks)  # redetermine const and slope
+        resid = cur_resid - tms.linear_curve(time, const, slope, i_chunks)
 
         # calculate the new harmonic
         f_i = n / p_orb  # fixed f
         a_i, ph_i = pdg.scargle_ampl_phase_single(time, resid, f_i)
 
         # make a model of the new sinusoid and add it to the full sinusoid residual
-        model_sinusoid_n = mdl.sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
+        model_sinusoid_n = tms.sum_sines(time, np.array([f_i]), np.array([a_i]), np.array([ph_i]))
         cur_resid -= model_sinusoid_n
 
         # add to freq list and removal list
@@ -768,10 +768,10 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     remove_non_harm = np.zeros(0, dtype=np.int_)
     for i in non_harm:
         # make a model of the removed sinusoid and subtract it from the full sinusoid residual
-        model_sinusoid_r = mdl.sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
+        model_sinusoid_r = tms.sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
         cur_resid += model_sinusoid_r
-        const, slope = mdl.linear_pars(time, cur_resid, i_chunks)  # redetermine const and slope
-        resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
+        const, slope = tms.linear_pars(time, cur_resid, i_chunks)  # redetermine const and slope
+        resid = cur_resid - tms.linear_curve(time, const, slope, i_chunks)
 
         # extract the updated frequency
         fl, fr = f_n[i] - freq_res, f_n[i] + freq_res
@@ -780,7 +780,7 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
             remove_non_harm = np.append(remove_non_harm, [i])
 
         # make a model of the new sinusoid and add it to the full sinusoid residual
-        model_sinusoid_n = mdl.sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
+        model_sinusoid_n = tms.sum_sines(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
         cur_resid -= model_sinusoid_n
 
     # finally, remove all the designated sinusoids from the lists and add the new ones
@@ -789,12 +789,12 @@ def fix_harmonic_frequency(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_ch
     ph_n = np.delete(ph_n, non_harm[remove_non_harm])
 
     # re-establish cur_resid
-    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
+    model_sinusoid = tms.sum_sines(time, f_n, a_n, ph_n)
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    const, slope = mdl.linear_pars(time, cur_resid, i_chunks)  # lastly re-determine slope and const
+    const, slope = tms.linear_pars(time, cur_resid, i_chunks)  # lastly re-determine slope and const
 
     if logger is not None:
-        resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
+        resid = cur_resid - tms.linear_curve(time, const, slope, i_chunks)
         n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
         bic = gof.calc_bic(resid, n_param)
         logger.extra(f"Candidate harmonics replaced: {n_harm_init} ({n_harm} left). "
@@ -859,9 +859,9 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     remove_single = np.zeros(0, dtype=np.int_)
 
     # determine initial bic
-    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
+    model_sinusoid = tms.sum_sines(time, f_n, a_n, ph_n)
     cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
+    resid = cur_resid - tms.linear_curve(time, const, slope, i_chunks)
     n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
     bic_prev = gof.calc_bic(resid, n_param)
     bic_init = bic_prev
@@ -875,10 +875,10 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 continue
 
             # make a model of the removed sinusoids and subtract it from the full sinusoid model
-            model_sinusoid_r = mdl.sum_sines_st(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
+            model_sinusoid_r = tms.sum_sines_st(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
             resid = cur_resid + model_sinusoid_r
-            const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-            resid -= mdl.linear_curve(time, const, slope, i_chunks)
+            const, slope = tms.linear_pars(time, resid, i_chunks)  # redetermine const and slope
+            resid -= tms.linear_curve(time, const, slope, i_chunks)
 
             # number of parameters and bic
             n_harm_i = n_harm - len([h for h in remove_single if h in harmonics]) - 1 * (i in harmonics)
@@ -893,7 +893,7 @@ def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 bic_prev = bic
 
     # lastly re-determine slope and const
-    const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
+    const, slope = tms.linear_pars(time, cur_resid, i_chunks)
 
     # finally, remove all the designated sinusoids from the lists
     f_n = np.delete(f_n, remove_single)
@@ -985,9 +985,9 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
     f_new, a_new, ph_new = np.zeros((3, 0))
 
     # determine initial bic
-    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
+    model_sinusoid = tms.sum_sines(time, f_n, a_n, ph_n)
     best_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    resid = best_resid - mdl.linear_curve(time, const, slope, i_chunks)
+    resid = best_resid - tms.linear_curve(time, const, slope, i_chunks)
     n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
     bic_prev = gof.calc_bic(resid, n_param)
     bic_init = bic_prev
@@ -1001,10 +1001,10 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 continue
 
             # make a model of the removed and new sinusoids and subtract/add it from/to the full sinusoid model
-            model_sinusoid_r = mdl.sum_sines(time, f_n[set_i], a_n[set_i], ph_n[set_i])
+            model_sinusoid_r = tms.sum_sines(time, f_n[set_i], a_n[set_i], ph_n[set_i])
             resid = best_resid + model_sinusoid_r
-            const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-            resid -= mdl.linear_curve(time, const, slope, i_chunks)
+            const, slope = tms.linear_pars(time, resid, i_chunks)  # redetermine const and slope
+            resid -= tms.linear_curve(time, const, slope, i_chunks)
 
             # extract a single freq to try replacing the set
             if i in harm_sets:
@@ -1017,10 +1017,10 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 f_i, a_i, ph_i = np.array([out[0]]), np.array([out[1]]), np.array([out[2]])
 
             # make a model including the new freq
-            model_sinusoid_n = mdl.sum_sines(time, f_i, a_i, ph_i)
+            model_sinusoid_n = tms.sum_sines(time, f_i, a_i, ph_i)
             resid -= model_sinusoid_n
-            const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-            resid -= mdl.linear_curve(time, const, slope, i_chunks)
+            const, slope = tms.linear_pars(time, resid, i_chunks)  # redetermine const and slope
+            resid -= tms.linear_curve(time, const, slope, i_chunks)
 
             # number of parameters and bic
             n_sin_i = n_sin - sum([len(f_sets[j]) for j in remove_sets]) - len(set_i) + len(f_new) + len(f_i) - n_harm
@@ -1040,7 +1040,7 @@ def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_c
                 bic_prev = bic
 
     # lastly re-determine slope and const
-    const, slope = mdl.linear_pars(time, best_resid, i_chunks)
+    const, slope = tms.linear_pars(time, best_resid, i_chunks)
 
     # finally, remove all the designated sinusoids from the lists and add the new ones
     i_to_remove = [k for i in remove_sets for k in f_sets[i]]
@@ -1169,10 +1169,10 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     freq_res = 1.5 / t_tot  # Rayleigh criterion
 
     # obtain the errors on the sine waves (depends on residual and thus model)
-    model_lin = mdl.linear_curve(time, const, slope, i_chunks)
-    model_sin = mdl.sum_sines(time, f_n, a_n, ph_n)
+    model_lin = tms.linear_curve(time, const, slope, i_chunks)
+    model_sin = tms.sum_sines(time, f_n, a_n, ph_n)
     residuals = flux - (model_lin + model_sin)
-    errors = ts.formal_uncertainties(time, residuals, flux_err, a_n, i_chunks)
+    errors = ut.formal_uncertainties(time, residuals, flux_err, a_n, i_chunks)
     c_err, sl_err, f_n_err, a_n_err, ph_n_err = errors
 
     # find the insignificant frequencies
@@ -1206,3 +1206,176 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
                      f"of which {np.sum(passed_both[harmonics])} passed.")
 
     return passed_sigma, passed_snr, passed_both, passed_harmonic
+
+
+def refine_orbital_period(p_orb, time, f_n):
+    """Find the most likely eclipse period from a sinusoid model
+
+    Parameters
+    ----------
+    p_orb: float
+        Orbital period of the eclipsing binary in days
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+
+    Returns
+    -------
+    float
+        Orbital period of the eclipsing binary in days
+
+    Notes
+    -----
+    Uses the sum of distances between the harmonics and their
+    theoretical positions to refine the orbital period.
+
+    Period precision is 0.00001, but accuracy is a bit lower.
+
+    Same refine algorithm as used in find_orbital_period
+    """
+    freq_res = 1.5 / np.ptp(time)  # Rayleigh criterion
+    f_nyquist = 1 / (2 * np.min(np.diff(time)))  # nyquist frequency
+
+    # refine by using a dense sampling and the harmonic distances
+    f_refine = np.arange(0.99 / p_orb, 1.01 / p_orb, 0.00001 / p_orb)
+    n_harm_r, completeness_r, distance_r = frs.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
+    h_measure = n_harm_r * completeness_r  # compute h_measure for constraining a domain
+    mask_peak = (h_measure > np.max(h_measure) / 1.5)  # constrain the domain of the search
+    i_min_dist = np.argmin(distance_r[mask_peak])
+    p_orb = 1 / f_refine[mask_peak][i_min_dist]
+
+    return p_orb
+
+
+def find_orbital_period(time, flux, f_n):
+    """Find the most likely eclipse period from a sinusoid model
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    flux: numpy.ndarray[Any, dtype[float]]
+        Measurement values of the time series
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        p_orb: float
+            Orbital period of the eclipsing binary in days
+        multiple: float
+            Multiple of the initial period that was chosen
+
+    Notes
+    -----
+    Uses a combination of phase dispersion minimisation and
+    Lomb-Scargle periodogram (see Saha & Vivas 2017), and some
+    refining steps to get the best period.
+
+    Also tests various multiples of the period.
+    Precision is 0.00001 (one part in one-hundred-thousand).
+    (accuracy might be slightly lower)
+    """
+    freq_res = 1.5 / np.ptp(time)  # Rayleigh criterion
+    f_nyquist = 1 / (2 * np.min(np.diff(time)))  # nyquist frequency
+
+    # first to get a global minimum do combined PDM and LS, at select frequencies
+    periods, phase_disp = pdg.phase_dispersion_minimisation(time, flux, f_n, local=False)
+    ampls, _ = pdg.scargle_ampl_phase(time, flux, 1 / periods)
+    psi_measure = ampls / phase_disp
+
+    # also check the number of harmonics at each period and include into best f
+    n_harm, completeness, distance = frs.harmonic_series_length(1 / periods, f_n, freq_res, f_nyquist)
+    psi_h_measure = psi_measure * n_harm * completeness
+
+    # select the best period, refine it and check double P
+    p_orb = periods[np.argmax(psi_h_measure)]
+
+    # refine by using a dense sampling and the harmonic distances
+    f_refine = np.arange(0.99 / p_orb, 1.01 / p_orb, 0.00001 / p_orb)
+    n_harm_r, completeness_r, distance_r = frs.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
+    h_measure = n_harm_r * completeness_r  # compute h_measure for constraining a domain
+    mask_peak = (h_measure > np.max(h_measure) / 1.5)  # constrain the domain of the search
+    i_min_dist = np.argmin(distance_r[mask_peak])
+    p_orb = 1 / f_refine[mask_peak][i_min_dist]
+
+    # reduce the search space by taking limits in the distance metric
+    f_left = f_refine[mask_peak][:i_min_dist]
+    f_right = f_refine[mask_peak][i_min_dist:]
+    d_left = distance_r[mask_peak][:i_min_dist]
+    d_right = distance_r[mask_peak][i_min_dist:]
+    d_max = np.max(distance_r)
+    if np.any(d_left > d_max / 2):
+        f_l_bound = f_left[d_left > d_max / 2][-1]
+    else:
+        f_l_bound = f_refine[mask_peak][0]
+    if np.any(d_right > d_max / 2):
+        f_r_bound = f_right[d_right > d_max / 2][0]
+    else:
+        f_r_bound = f_refine[mask_peak][-1]
+    bound_interval = f_r_bound - f_l_bound
+
+    # decide on the multiple of the period
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=freq_res / 2)
+    completeness_p = (len(harmonics) / (f_nyquist // (1 / p_orb)))
+    completeness_p_l = (len(harmonics[harmonic_n <= 15]) / (f_nyquist // (1 / p_orb)))
+
+    # check these (commonly missed) multiples
+    n_multiply = np.array([1/2, 2, 3, 4, 5])
+    p_multiples = p_orb * n_multiply
+    n_harm_r_m, completeness_r_m, distance_r_m = frs.harmonic_series_length(1 / p_multiples, f_n, freq_res, f_nyquist)
+    h_measure_m = n_harm_r_m * completeness_r_m  # compute h_measure for constraining a domain
+
+    # if there are very high numbers, add double that fraction for testing
+    test_frac = h_measure_m / h_measure[mask_peak][i_min_dist]
+    if np.any(test_frac[2:] > 3):
+        n_multiply = np.append(n_multiply, [2 * n_multiply[2:][test_frac[2:] > 3]])
+        p_multiples = p_orb * n_multiply
+        n_harm_r_m, completeness_r_m, distance_r_m = frs.harmonic_series_length(1 / p_multiples, f_n, freq_res,
+                                                                                f_nyquist)
+        h_measure_m = n_harm_r_m * completeness_r_m  # compute h_measure for constraining a domain
+
+    # compute diagnostic fractions that need to meet some threshold
+    test_frac = h_measure_m / h_measure[mask_peak][i_min_dist]
+    compl_frac = completeness_r_m / completeness_p
+
+    # doubling the period may be done if the harmonic filling factor below f_16 is very high
+    f_cut = np.max(f_n[harmonics][harmonic_n <= 15])
+    f_n_c = f_n[f_n <= f_cut]
+    n_harm_r_2, completeness_r_2, distance_r_2 = frs.harmonic_series_length(1 / p_multiples, f_n_c, freq_res, f_nyquist)
+    compl_frac_2 = completeness_r_2[1] / completeness_p_l
+
+    # empirically determined thresholds for the various measures
+    minimal_frac = 1.1
+    minimal_compl_frac = 0.85
+    minimal_frac_low = 0.95
+    minimal_compl_frac_low = 0.95
+
+    # test conditions
+    test_condition = (test_frac > minimal_frac)
+    compl_condition = (compl_frac > minimal_compl_frac)
+    test_condition_2 = (test_frac[1] > minimal_frac_low)
+    compl_condition_2 = (compl_frac_2 > minimal_compl_frac_low)
+    if np.any(test_condition & compl_condition) | (test_condition_2 & compl_condition_2):
+        if np.any(test_condition & compl_condition):
+            i_best = np.argmax(test_frac[compl_condition])
+            p_orb = p_multiples[compl_condition][i_best]
+        else:
+            p_orb = 2 * p_orb
+
+        # make new bounds for refining
+        f_left_b = 1 / p_orb - (bound_interval / 2)
+        f_right_b = 1 / p_orb + (bound_interval / 2)
+
+        # refine by using a dense sampling and the harmonic distances
+        f_refine_2 = np.arange(f_left_b, f_right_b, 0.00001 / p_orb)
+        n_harm_r2, completeness_r2, distance_r2 = frs.harmonic_series_length(f_refine_2, f_n, freq_res, f_nyquist)
+        h_measure_2 = n_harm_r2 * completeness_r2  # compute h_measure for constraining a domain
+        mask_peak = (h_measure_2 > np.max(h_measure_2) / 1.5)  # constrain the domain of the search
+        i_min_dist = np.argmin(distance_r2[mask_peak])
+        p_orb = 1 / f_refine_2[mask_peak][i_min_dist]
+
+    return p_orb
