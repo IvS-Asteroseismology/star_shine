@@ -49,8 +49,7 @@ class Config:
     stop_criterion: str = 'bic'
     bic_thr: float = 2.
     snr_thr: float = -1.
-    nyquist_method: str = 'simple'
-    nyquist_value: float = -1.
+    nyquist_factor: float = 1.
     resolution_factor: float = 1.5
 
     # Optimisation settings

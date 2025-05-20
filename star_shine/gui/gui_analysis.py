@@ -5,7 +5,6 @@ This Python module contains the analysis functions for the graphical user interf
 
 Code written by: Luc IJspeert
 """
-
 from PySide6.QtCore import QThread, Signal
 
 
@@ -44,4 +43,4 @@ class PipelineThread(QThread):
 
     def stop(self):
         """Stop the thread."""
-        self.quit()
+        pass

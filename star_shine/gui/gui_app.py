@@ -383,17 +383,16 @@ class MainWindow(QMainWindow):
         lower_plot_data = {}
 
         # upper plot area - time series
-        upper_plot_data['scatter_xs'] = [self.pipeline.data.time]
-        upper_plot_data['scatter_ys'] = [self.pipeline.data.flux]
+        upper_plot_data['scatter_xs'] = [self.pipeline.data.time_series.time]
+        upper_plot_data['scatter_ys'] = [self.pipeline.data.time_series.flux]
         # lower plot area - periodogram
-        freqs, ampls = self.pipeline.data.periodogram()
-        lower_plot_data['plot_xs'] = [freqs]
-        lower_plot_data['plot_ys'] = [ampls]
+        lower_plot_data['plot_xs'] = [self.pipeline.data.time_series.pd_freqs]
+        lower_plot_data['plot_ys'] = [self.pipeline.data.time_series.pd_ampls]
 
         # include result attributes if present
         if self.pipeline.result.target_id != '' and not self.show_residual_action.isChecked():
             # upper plot area - time series
-            upper_plot_data['plot_xs'] = [self.pipeline.data.time]
+            upper_plot_data['plot_xs'] = [self.pipeline.data.time_series.time]
             upper_plot_data['plot_ys'] = [self.pipeline.model()]
             upper_plot_data['plot_colors'] = ['grey']
             # lower plot area - periodogram
@@ -407,8 +406,8 @@ class MainWindow(QMainWindow):
         # only show residual if toggle checked
         if self.pipeline.result.target_id != '' and self.show_residual_action.isChecked():
             # upper plot area - time series
-            residual = self.pipeline.data.flux - self.pipeline.model()
-            upper_plot_data['scatter_xs'] = [self.pipeline.data.time]
+            residual = self.pipeline.data.time_series.flux - self.pipeline.model()
+            upper_plot_data['scatter_xs'] = [self.pipeline.data.time_series.time]
             upper_plot_data['scatter_ys'] = [residual]
             # lower plot area - periodogram
             freqs, ampls = self.pipeline.periodogram(subtract_model=True)

@@ -77,7 +77,7 @@ class Pipeline:
         # check the input data
         if not isinstance(data, Data):
             self.logger.warning("Input `data` should be a Data object.")
-        elif len(data.time) == 0:
+        elif len(data.time_series.time) == 0:
             self.logger.warning("Data object does not contain time series data.")
 
         return
@@ -90,7 +90,7 @@ class Pipeline:
         numpy.ndarray[Any, dtype[float]]
             The model time series of a (set of) straight line(s)
         """
-        curve = self.result.model_linear(self.data.time, self.data.i_chunks)
+        curve = self.result.model_linear(self.data.time_series.time, self.data.time_series.i_chunks)
 
         return curve
 
@@ -102,7 +102,7 @@ class Pipeline:
         numpy.ndarray[Any, dtype[float]]
             Model time series of a sum of sine waves. Varies around 0.
         """
-        curve = self.result.model_sinusoid(self.data.time)
+        curve = self.result.model_sinusoid(self.data.time_series.time)
 
         return curve
 
@@ -126,7 +126,7 @@ class Pipeline:
         numpy.ndarray[Any, dtype[float]]
             Residual of the time series.
         """
-        resid = self.data.flux - self.model()
+        resid = self.data.time_series.flux - self.model()
 
         return resid
 
@@ -145,8 +145,8 @@ class Pipeline:
             and the spectrum numpy.ndarray[Any, dtype[float]]
         """
         if subtract_model:
-            resid = self.data.flux - self.model()
-            f, a = pdg.scargle_parallel(self.data.time, resid, f0=-1, fn=-1, df=-1, norm='amplitude')
+            resid = self.data.time_series.flux - self.model()
+            f, a = pdg.scargle_parallel(self.data.time_series.time, resid, f0=-1, fn=-1, df=-1, norm='amplitude')
         else:
             f, a = self.data.periodogram()
 
@@ -155,9 +155,10 @@ class Pipeline:
     def reduce_sinusoids(self):
         """Remove any frequencies that end up not making the statistical cut"""
         # remove any frequencies that end up not making the statistical cut
-        out = ana.reduce_sinusoids(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
+        out = ana.reduce_sinusoids(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb,
+                                   self.result.const,
                                    self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                   self.data.i_chunks, logger=self.logger)
+                                   self.data.time_series.i_chunks, logger=self.logger)
 
         self.result.setter(const=out[0], slope=out[1], f_n=out[2], a_n=out[3], ph_n=out[4])
 
@@ -165,9 +166,10 @@ class Pipeline:
 
     def select_sinusoids(self):
         """Select frequencies based on some significance criteria."""
-        out = ana.select_sinusoids(self.data.time, self.data.flux, self.data.flux_err, self.result.p_orb,
+        out = ana.select_sinusoids(self.data.time_series.time, self.data.time_series.flux,
+                                   self.data.time_series.flux_err, self.result.p_orb,
                                    self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
-                                   self.result.ph_n, self.data.i_chunks, logger=self.logger)
+                                   self.result.ph_n, self.data.time_series.i_chunks, logger=self.logger)
 
         self.result.setter(passed_sigma=out[0], passed_snr=out[1], passed_both=out[2], passed_harmonic=out[3])
 
@@ -183,17 +185,18 @@ class Pipeline:
 
         # set number of parameters, BIC and noise level
         bic = gof.calc_bic(resid, self.result.n_param)
-        noise_level = ut.std_unb(resid, len(self.data.time) - self.result.n_param)
+        noise_level = ut.std_unb(resid, len(self.data.time_series.time) - self.result.n_param)
         self.result.setter(bic=bic, noise_level=noise_level)
 
         # calculate formal uncertainties
-        out = ut.formal_uncertainties(self.data.time, resid, self.data.flux_err, self.result.a_n, self.data.i_chunks)
+        out = ut.formal_uncertainties(self.data.time_series.time, resid, self.data.time_series.flux_err,
+                                      self.result.a_n, self.data.time_series.i_chunks)
         self.result.setter(c_err=out[0], sl_err=out[1], f_n_err=out[2], a_n_err=out[3], ph_n_err=out[4])
 
         # period uncertainty
         if self.result.p_orb > 0:
-            p_err, _, _ = ut.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
-                                                                                      sigma_t=self.data.t_step / 2)
+            p_err, _, _ = ut.linear_regression_uncertainty_ephem(self.data.time_series.time, self.result.p_orb,
+                                                                 sigma_t=self.data.time_series.t_step / 2)
             self.result.setter(p_err=p_err)
 
         return None
@@ -206,10 +209,10 @@ class Pipeline:
         f_approx: float
             Approximate location of the frequency of maximum amplitude.
         """
-        f, a, ph = ana.extract_approx(self.data.time, self.residual(), f_approx)
+        f, a, ph = ana.extract_approx(self.data.time_series.time, self.residual(), f_approx)
 
         # if identical frequency exists, assume this was unintentional
-        if len(self.result.f_n) > 0 and np.min(np.abs(f - self.result.f_n)) < self.data.pd_df:
+        if len(self.result.f_n) > 0 and np.min(np.abs(f - self.result.f_n)) < self.data.time_series.pd_df:
             self.logger.warning("Existing identical frequency found.")
             return None
 
@@ -292,18 +295,20 @@ class Pipeline:
 
         # start by looking for more harmonics
         if self.result.p_orb != 0:
-            out_a = ana.extract_harmonics(self.data.time, self.data.flux, self.result.p_orb, self.data.i_chunks,
+            out_a = ana.extract_harmonics(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb,
+                                          self.data.time_series.i_chunks,
                                           config.bic_thr, self.result.f_n, self.result.a_n, self.result.ph_n,
                                           logger=self.logger)
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         # extract all frequencies with the iterative scheme
-        ts_model = tms.TimeSeriesModel(self.data.time, self.data.flux, self.data.i_chunks)
+        ts_model = tms.TimeSeriesModel(self.data.time_series.time, self.data.time_series.flux,
+                                       self.data.time_series.flux_err, self.data.time_series.i_chunks)
         ts_model.set_sinusoids(self.result.f_n, self.result.a_n, self.result.ph_n)
         ts_model.update_linear_model()
         ts_model = ana.extract_sinusoids(ts_model, bic_thr=config.bic_thr, snr_thr=config.snr_thr,
                                          stop_crit=config.stop_criterion, select=config.select_next,
-                                         n_extract=n_extract, f0=-1, fn=self.data.f_nyquist,
+                                         n_extract=n_extract, fn=self.data.f_nyquist,
                                          fit_each_step=config.optimise_step, replace_each_step=config.replace_step,
                                          logger=self.logger)
         out_b = ts_model.get_parameters()
@@ -337,19 +342,21 @@ class Pipeline:
 
         # use the chosen optimisation method
         if config.optimise_method == 'fitter':
-            par_mean = fit.fit_multi_sinusoid_per_group(self.data.time, self.data.flux, self.result.const,
+            par_mean = fit.fit_multi_sinusoid_per_group(self.data.time_series.time, self.data.time_series.flux,
+                                                        self.result.const,
                                                         self.result.slope, self.result.f_n, self.result.a_n,
-                                                        self.result.ph_n, self.data.i_chunks, logger=self.logger)
+                                                        self.result.ph_n, self.data.time_series.i_chunks,
+                                                        logger=self.logger)
         else:
             # make model including everything to calculate noise level
-            resid = self.data.flux - self.model_linear() - self.model_sinusoid()
+            resid = self.data.time_series.flux - self.model_linear() - self.model_sinusoid()
             n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
-            noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
+            noise_level = ut.std_unb(resid, len(self.data.time_series.time) - n_param)
 
             # formal linear and sinusoid parameter errors
-            c_err, sl_err, f_n_err, a_n_err, ph_n_err = ut.formal_uncertainties(self.data.time, resid,
-                                                                                                     self.data.flux_err, self.result.a_n,
-                                                                                                     self.data.i_chunks)
+            out_a = ut.formal_uncertainties(self.data.time_series.time, resid, self.data.time_series.flux_err,
+                                            self.result.a_n, self.data.time_series.i_chunks)
+            c_err, sl_err, f_n_err, a_n_err, ph_n_err = out_a
 
             # do not include those frequencies that have too big uncertainty
             include = (ph_n_err < 1 / np.sqrt(6))  # circular distribution for ph_n cannot handle these
@@ -357,10 +364,11 @@ class Pipeline:
             f_n_err, a_n_err, ph_n_err = f_n_err[include], a_n_err[include], ph_n_err[include]
 
             # Monte Carlo sampling of the model
-            output = mcf.sample_sinusoid(self.data.time, self.data.flux, self.result.const, self.result.slope,
-                                         f_n, a_n, ph_n,  self.result.c_err, self.result.sl_err, f_n_err, a_n_err,
-                                         ph_n_err, noise_level, self.data.i_chunks, logger=self.logger)
-            inf_data, par_mean, par_hdi = output
+            out_b = mcf.sample_sinusoid(self.data.time_series.time, self.data.time_series.flux, self.result.const,
+                                        self.result.slope, f_n, a_n, ph_n, self.result.c_err, self.result.sl_err,
+                                        f_n_err, a_n_err, ph_n_err, noise_level, self.data.time_series.i_chunks,
+                                        logger=self.logger)
+            inf_data, par_mean, par_hdi = out_b
             self.result.setter(c_hdi=par_hdi[0], sl_hdi=par_hdi[1], f_n_hdi=par_hdi[2], a_n_hdi=par_hdi[3],
                                ph_n_hdi=par_hdi[4])
 
@@ -404,9 +412,9 @@ class Pipeline:
 
         # if given, the input p_orb is refined locally, otherwise the period is searched for globally
         if self.data.p_orb == 0:
-            p_orb = ana.find_orbital_period(self.data.time, self.data.flux, self.result.f_n)
+            p_orb = ana.find_orbital_period(self.data.time_series.time, self.data.time_series.flux, self.result.f_n)
         else:
-            p_orb = ana.refine_orbital_period(self.data.p_orb, self.data.time, self.result.f_n)
+            p_orb = ana.refine_orbital_period(self.data.p_orb, self.data.time_series.time, self.result.f_n)
         self.result.setter(p_orb=p_orb)
 
         # if time series too short, or no harmonics found, log and warn and maybe cut off the analysis
@@ -415,7 +423,8 @@ class Pipeline:
 
         if (self.data.t_tot / self.result.p_orb > 1.1) & (len(harmonics) > 1):
             # couple the harmonics to the period. likely removes more frequencies that need re-extracting
-            out_a = ana.fix_harmonic_frequency(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
+            out_a = ana.fix_harmonic_frequency(self.data.time_series.time, self.data.time_series.flux,
+                                               self.result.p_orb, self.result.const,
                                                self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
                                                self.data.i_chunks, logger=self.logger)
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
@@ -458,22 +467,22 @@ class Pipeline:
 
         # use the chosen optimisation method
         if config.optimise_method == 'fitter':
-            par_mean = fit.fit_multi_sinusoid_harmonics_per_group(self.data.time, self.data.flux, self.result.p_orb,
+            par_mean = fit.fit_multi_sinusoid_harmonics_per_group(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb,
                                                                   self.result.const, self.result.slope,
                                                                   self.result.f_n, self.result.a_n, self.result.ph_n,
                                                                   self.data.i_chunks, logger=self.logger)
         else:
             # make model including everything to calculate noise level
-            resid = self.data.flux - self.model_linear() - self.model_sinusoid()
+            resid = self.data.time_series.flux - self.model_linear() - self.model_sinusoid()
             harmonics, harmonic_n = frs.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
             n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
-            noise_level = ut.std_unb(resid, len(self.data.time) - n_param)
+            noise_level = ut.std_unb(resid, len(self.data.time_series.time) - n_param)
 
             # formal linear and sinusoid parameter errors
-            c_err, sl_err, f_n_err, a_n_err, ph_n_err = ut.formal_uncertainties(self.data.time, resid,
-                                                                                                     self.data.flux_err, self.result.a_n,
-                                                                                                     self.data.i_chunks)
-            p_err, _, _ = ut.linear_regression_uncertainty_ephem(self.data.time, self.result.p_orb,
+            c_err, sl_err, f_n_err, a_n_err, ph_n_err = ut.formal_uncertainties(self.data.time.time_series, resid,
+                                                                                self.data.time_series.flux_err, self.result.a_n,
+                                                                                self.data.i_chunks)
+            p_err, _, _ = ut.linear_regression_uncertainty_ephem(self.data.time.time_series, self.result.p_orb,
                                                                                       sigma_t=self.data.t_step / 2)
 
             # do not include those frequencies that have too big uncertainty
@@ -482,7 +491,7 @@ class Pipeline:
             f_n_err, a_n_err, ph_n_err = f_n_err[include], a_n_err[include], ph_n_err[include]
 
             # Monte Carlo sampling of the model
-            output = mcf.sample_sinusoid_h(self.data.time, self.data.flux, self.result.p_orb, self.result.const,
+            output = mcf.sample_sinusoid_h(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb, self.result.const,
                                            self.result.slope, f_n, a_n, ph_n, self.result.p_err, self.result.c_err,
                                            self.result.sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
                                            self.data.i_chunks, logger=self.logger)

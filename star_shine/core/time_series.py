@@ -12,6 +12,7 @@ import numpy as np
 import numba as nb
 
 from star_shine.core import goodness_of_fit as gof, frequency_sets as frs, periodogram as pdg
+from star_shine.config import data_properties as dp
 from star_shine.config.helpers import get_config
 
 
@@ -642,7 +643,7 @@ class SinusoidModel:
         return None
 
 
-class TimeSeriesBase:
+class TimeSeries:
     """This class handles the time series.
 
     Attributes
@@ -674,7 +675,7 @@ class TimeSeriesBase:
         The periodogram amplitudes.
     """
 
-    def __init__(self, time, flux, i_chunks):
+    def __init__(self, time, flux, flux_err, i_chunks):
         """Initialises the Result object.
 
         Parameters
@@ -683,6 +684,8 @@ class TimeSeriesBase:
             Timestamps of the time series.
         flux: numpy.ndarray[Any, dtype[float]]
             Measurement values of the time series.
+        flux_err: numpy.ndarray[Any, dtype[float]]
+            Errors in the measurement values
         i_chunks: numpy.ndarray[Any, dtype[int]]
             Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
             the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
@@ -690,6 +693,7 @@ class TimeSeriesBase:
         # time series
         self.time = time
         self.flux = flux
+        self.flux_err = flux_err
         self.i_chunks = i_chunks
 
         # some numbers
@@ -702,7 +706,13 @@ class TimeSeriesBase:
         self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
         self.t_step = np.median(np.diff(self.time))
 
-        # defaults for periodograms
+        # other properties that rely on config
+        self.snr_threshold = 0.
+        self.f_resolution = 0.
+        self.f_nyquist = 0.
+        self.update_properties()  # update these with a function
+
+        # settings for periodograms
         self.pd_f0 = 0.01 / self.t_tot  # lower than T/100 no good
         self.pd_df = 0.1 / self.t_tot  # default frequency sampling is about 1/10 of frequency resolution
         self.pd_fn = 1 / (2 * np.min(self.time[1:] - self.time[:-1]))
@@ -712,8 +722,20 @@ class TimeSeriesBase:
         self.pd_freqs = out[0]
         self.pd_ampls = out[1]
 
+    def update_properties(self):
+        """Calculate the properties of the data and fill them in.
 
-class TimeSeriesModel(TimeSeriesBase):
+        Running this function again will re-evaluate some properties, for if the configuration changed.
+        """
+        # set data properties relying on config
+        self.snr_threshold = dp.signal_to_noise_threshold(self.time)
+        self.f_nyquist = dp.nyquist_frequency(self.time)
+        self.f_resolution = dp.frequency_resolution(self.time)
+
+        return None
+
+
+class TimeSeriesModel(TimeSeries):
     """This class handles the full time series model.
 
     Attributes
@@ -724,7 +746,7 @@ class TimeSeriesModel(TimeSeriesBase):
         Model of the sinusoids.
     """
 
-    def __init__(self, time, flux, i_chunks):
+    def __init__(self, time, flux, flux_err, i_chunks):
         """Initialises the Result object.
 
         Parameters
@@ -733,12 +755,14 @@ class TimeSeriesModel(TimeSeriesBase):
             Timestamps of the time series.
         flux: numpy.ndarray[Any, dtype[float]]
             Measurement values of the time series.
+        flux_err: numpy.ndarray[Any, dtype[float]]
+            Errors in the measurement values
         i_chunks: numpy.ndarray[Any, dtype[int]]
             Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
             the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
         """
         # instantiate time series
-        super().__init__(time, flux, i_chunks)
+        super().__init__(time, flux, flux_err, i_chunks)
 
         # time series models making up the full model
         self.linear = LinearModel(self.n_t, self.n_chunks)

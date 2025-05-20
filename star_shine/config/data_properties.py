@@ -88,6 +88,29 @@ def nyquist_sum_koen_2006(n, time, delta_t_min):
     -------
     int
         Result of the sum of squares calculation.
+
+    Examples
+    --------
+    # Iterate n until this sum returns zero to get to the true Nyquist frequency.
+    >>> delta_t_min = np.min(time[1:] - time[:-1])
+    >>> precision = 1e-10
+    >>> ss_nu = 1e-9
+    >>> n = 0
+    >>> while (ss_nu > precision):
+    >>>     n += 1
+    >>>     ss_nu = nyquist_sum_koen_2006(n, time, delta_t_min)
+    >>>
+    >>> f_nyquist = n / (2 * delta_t_min)
+    # Note that this may go on for a while.
+
+    Notes
+    -----
+    The principle exploited by Koen (2006) is that the real Nyquist frequency of a time series with uneven sampling,
+    where the sampling is also not a simple multiple of some small value, is a multiple of the simple approximation
+    of the Nyquist frequency:
+    f = 1 / (2 * delta_t_min)
+    Since this function is computationally intensive, it is recommended to simply pick a multiple of the
+    simple approximation in case a higher value is desired.
     """
     factor = n * np.pi / delta_t_min
 
@@ -119,25 +142,7 @@ def nyquist_frequency(time):
     float
         Nyquist frequency of the time series
     """
-    # smallest time interval
-    delta_t_min = np.min(time[1:] - time[:-1])
-
-    # calculate the Nyquist frequency with the specified approach
-    if config.nyquist_method == 'rigorous':
-        # iterate n until sum returns zero
-        precision = 1e-10
-        ss_nu = 1e-9
-        n = 0
-        while (ss_nu > precision) & (n < 20):
-            n += 1
-            ss_nu = nyquist_sum_koen_2006(n, time, delta_t_min)
-
-        f_nyquist = n / (2 * delta_t_min)
-    elif config.nyquist_method == 'custom':
-        # take user defined value if it is higher than simple est.
-        f_nyquist = max(1 / (2 * delta_t_min), config.nyquist_value)
-    else:
-        # config.nyquist == 'simple'
-        f_nyquist = 1 / (2 * delta_t_min)
+    # calculate the Nyquist frequency
+    f_nyquist = config.nyquist_factor / (2 * np.min(time[1:] - time[:-1]))
 
     return f_nyquist
