@@ -303,7 +303,7 @@ class Pipeline:
         ts_model.update_linear_model()
         ts_model = ana.extract_sinusoids(ts_model, bic_thr=config.bic_thr, snr_thr=config.snr_thr,
                                          stop_crit=config.stop_criterion, select=config.select_next,
-                                         n_extract=n_extract, f0=0, fn=self.data.f_nyquist,
+                                         n_extract=n_extract, f0=-1, fn=self.data.f_nyquist,
                                          fit_each_step=config.optimise_step, replace_each_step=config.replace_step,
                                          logger=self.logger)
         out_b = ts_model.get_parameters()
