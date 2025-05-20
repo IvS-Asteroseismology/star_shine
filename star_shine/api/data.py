@@ -60,6 +60,12 @@ class Data:
         Nyquist frequency (max f) for extraction and periodograms.
     f_resolution: float
         Frequency resolution for extraction and periodograms.
+    pd_f0: float
+        Starting frequency of the periodogram.
+    pd_fn: float
+        Last frequency of the periodogram.
+    pd_df: float
+        Frequency sampling space of the periodogram
     """
 
     def __init__(self, target_id='', data_id=''):
@@ -106,8 +112,8 @@ class Data:
 
         # defaults for periodograms
         self.pd_f0 = 0.
-        self.pd_df = 0.
         self.pd_fn = 0.
+        self.pd_df = 0.
 
         # cache
         self._periodogram_f = np.zeros((0,))
