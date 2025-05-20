@@ -677,7 +677,7 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
     the fits per group of 15-20 frequencies, leaving the other frequencies
     as fixed parameters.
     Contrary to multi_sine_NL_LS_fit_per_group, the groups don't have to be provided
-    as they are made with the default parameters of ut.group_frequencies_for_fit.
+    as they are made with the default parameters of frs.group_frequencies_for_fit.
     The orbital harmonics are always the first group.
     """
     # get harmonics and group the remaining frequencies

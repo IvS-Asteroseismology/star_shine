@@ -479,7 +479,7 @@ def formal_uncertainties_linear(time, residuals, i_chunks):
         n_dof = n_data - n_param  # degrees of freedom
 
         # standard deviation of the residuals but per sector
-        std = ut.std_unb(residuals[s[0]:s[1]], n_dof)
+        std = std_unb(residuals[s[0]:s[1]], n_dof)
 
         # some sums for the uncertainty formulae
         sum_t = 0
@@ -539,11 +539,11 @@ def formal_uncertainties(time, residuals, flux_err, a_n, i_chunks):
     https://pages.mtu.edu/~fmorriso/cm3215/UncertaintySlopeInterceptOfLeastSquaresFit.pdf
     """
     n_data = len(residuals)
-    n_param = ut.n_parameters(len(i_chunks), len(a_n), 0)  # number of parameters in the model
+    n_param = n_parameters(len(i_chunks), len(a_n), 0)  # number of parameters in the model
     n_dof = max(n_data - n_param, 1)  # degrees of freedom
 
     # calculate the standard deviation of the residuals
-    std = ut.std_unb(residuals, n_dof)
+    std = std_unb(residuals, n_dof)
 
     # calculate the standard error based on the smallest data error
     ste = np.median(flux_err) / np.sqrt(n_data)
@@ -611,8 +611,8 @@ def linear_regression_uncertainty_ephem(time, p_orb, sigma_t=1):
     y = np.ones(n, dtype=int)  # 'positive measurement'
 
     # remove points in gaps
-    gaps = ut.mark_gaps(time, min_gap=1.)
-    mask = ut.mask_between(x * p_orb, gaps)  # convert x to time domain
+    gaps = mark_gaps(time, min_gap=1.)
+    mask = mask_between(x * p_orb, gaps)  # convert x to time domain
     x = x[~mask] - n//2  # also centre the time for minimal correlation
     y = y[~mask]
 
