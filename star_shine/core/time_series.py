@@ -706,16 +706,15 @@ class TimeSeries:
         self.t_mean_chunk = np.array([np.mean(self.time[ch[0]:ch[1]]) for ch in self.i_chunks])
         self.t_step = np.median(np.diff(self.time))
 
-        # other properties that rely on config
-        self.snr_threshold = 0.
-        self.f_resolution = 0.
-        self.f_nyquist = 0.
-        self.update_properties()  # update these with a function
-
         # settings for periodograms
         self.pd_f0 = 0.01 / self.t_tot  # lower than T/100 no good
         self.pd_df = 0.1 / self.t_tot  # default frequency sampling is about 1/10 of frequency resolution
-        self.pd_fn = 1 / (2 * np.min(self.time[1:] - self.time[:-1]))
+        self.pd_fn = 0.  # set by update_properties
+
+        # other properties that rely on config
+        self.f_resolution = 0.
+        self.snr_threshold = 0.
+        self.update_properties()  # update these with a function
 
         # periodogram
         out = pdg.scargle_parallel(self.time, self.flux, f0=self.pd_f0, fn=self.pd_fn, df=self.pd_df, norm='amplitude')
@@ -728,9 +727,9 @@ class TimeSeries:
         Running this function again will re-evaluate some properties, for if the configuration changed.
         """
         # set data properties relying on config
-        self.snr_threshold = dp.signal_to_noise_threshold(self.time)
-        self.f_nyquist = dp.nyquist_frequency(self.time)
+        self.pd_fn = dp.nyquist_frequency(self.time)
         self.f_resolution = dp.frequency_resolution(self.time)
+        self.snr_threshold = dp.signal_to_noise_threshold(self.time)
 
         return None
 

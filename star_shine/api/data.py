@@ -69,11 +69,6 @@ class Data:
         # additional time series properties not in time_series
         self.flux_counts_medians = np.zeros((0,))
 
-        # data properties relying on config
-        self.snr_threshold = 0.
-        self.f_nyquist = 0.
-        self.f_resolution = 0.
-
         # Orbital period
         self.p_orb = 0.
 
@@ -220,9 +215,6 @@ class Data:
         instance.time_series = tms.TimeSeries(lc_data[0], lc_data[1], lc_data[2], lc_data[3])
         instance.flux_counts_medians = lc_data[4]
 
-        # calculate properties of the data
-        instance.update_properties()
-
         # check for overlapping time stamps
         if np.any(np.diff(instance.time_series.time) <= 0) & (logger is not None):
             logger.warning("The time array chunks include overlap.")
@@ -280,9 +272,6 @@ class Data:
         instance.flux_counts_medians = data_dict['flux_counts_medians']
         instance.p_orb = data_dict['p_orb']
 
-        # calculate properties of the data
-        instance.update_properties()
-
         if logger is not None:
             logger.info(f"Loaded data file with target identifier: {data_dict['target_id']}, "
                         f"created on {data_dict['date_time']}. Data identifier: {data_dict['data_id']}.")
@@ -305,8 +294,8 @@ class Data:
 
         return None
 
-    def plot_light_curve(self, file_name=None, show=True):
-        """Plot the light curve data.
+    def plot_time_series(self, file_name=None, show=True):
+        """Plot the time series data.
 
         Parameters
         ----------
@@ -321,12 +310,12 @@ class Data:
         return None
 
     def plot_periodogram(self, plot_per_chunk=False, file_name=None, show=True):
-        """Plot the light curve data.
+        """Plot the periodogram of the time series.
 
         Parameters
         ----------
         plot_per_chunk: bool
-            If True, plot the periodogram of all time chunks in one plot.
+            If True, plot the periodogram of each separate time chunk in one plot.
         file_name: str, optional
             File path to save the plot
         show: bool, optional

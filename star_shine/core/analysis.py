@@ -83,7 +83,6 @@ def extract_single(time, flux, f0=-1, fn=-1, select='a'):
     return f_final, a_final, ph_final
 
 
-@nb.njit(cache=True)
 def extract_local(time, flux, f0, fn):
     """Extract a single sinusoid from a time series at a predefined frequency interval.
 
@@ -145,7 +144,6 @@ def extract_local(time, flux, f0, fn):
     return f_final, a_final, ph_final
 
 
-@nb.njit(cache=True)
 def extract_approx(time, flux, f_approx):
     """Extract a single sinusoid from a time series at an approximate location.
 
