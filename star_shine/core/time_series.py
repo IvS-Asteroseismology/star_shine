@@ -372,6 +372,8 @@ class SinusoidModel:
         The amplitudes of a number of sine waves.
     _ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves.
+    _include: numpy.ndarray[Any, dtype[bool]]
+        Include state of the sinusoids in the model.
     _p_orb: float
         Orbital period.
     _sinusoid_model: numpy.ndarray[Any, dtype[float]]
@@ -414,7 +416,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The frequencies of a number of sine waves.
         """
-        return self._f_n[self._include].copy()
+        return self._f_n.copy()
 
     @property
     def a_n(self):
@@ -425,7 +427,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The amplitudes of a number of sine waves.
         """
-        return self._a_n[self._include].copy()
+        return self._a_n.copy()
 
     @property
     def ph_n(self):
@@ -436,7 +438,23 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The phases of a number of sine waves.
         """
-        return self._ph_n[self._include].copy()
+        return self._ph_n.copy()
+
+    @property
+    def include(self):
+        """Get a copy of the current include state of the sinusoids.
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[bool]]
+            Include state of the sinusoids in the model.
+        """
+        return self._include.copy()
+
+    @property
+    def has_excludes(self):
+        """Check if there are any not included sinusoids."""
+        return np.any(~self._include)
 
     @property
     def p_orb(self):

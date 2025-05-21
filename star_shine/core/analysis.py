@@ -5,7 +5,6 @@ This Python module contains algorithms for data analysis.
 
 Code written by: Luc IJspeert
 """
-import numba as nb
 import numpy as np
 
 from star_shine.core import time_series as tms, periodogram as pdg, fitting as fit
@@ -229,9 +228,6 @@ def refine_subset(ts_model, close_f, logger=None):
     # stop the loop when the BIC increases
     condition_1 = True
     while condition_1:
-        # make a deep copy of the current model
-        ts_model_i = ts_model.copy()
-
         # remove each frequency one at a time to then re-extract them
         for j in close_f:
             # remember the frequency and remove the sinusoid
@@ -478,7 +474,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         ts_model_i.add_sinusoids(f_i, a_i, ph_i)
 
         # imporve frequencies with some strategy
-        if fit_each_step:
+        if False:#fit_each_step:
             # fit all frequencies for best improvement
             out = fit.fit_multi_sinusoid_per_group(ts_model_i.time, ts_model_i.flux, *ts_model_i.get_parameters(),
                                                    ts_model_i.i_chunks, logger=logger)
