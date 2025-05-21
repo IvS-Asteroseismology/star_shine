@@ -391,6 +391,9 @@ class SinusoidModel:
         self._a_n = np.zeros((0,))  # amplitudes
         self._ph_n = np.zeros((0,))  # phases
 
+        # for consistency of indices in the removal of sinusoids
+        self._include = np.zeros((0,), dtype=bool)
+
         # harmonic model parameters
         self._p_orb = 0.
 
@@ -411,7 +414,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The frequencies of a number of sine waves.
         """
-        return self._f_n.copy()
+        return self._f_n[self._include].copy()
 
     @property
     def a_n(self):
@@ -422,7 +425,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The amplitudes of a number of sine waves.
         """
-        return self._a_n.copy()
+        return self._a_n[self._include].copy()
 
     @property
     def ph_n(self):
@@ -433,7 +436,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The phases of a number of sine waves.
         """
-        return self._ph_n.copy()
+        return self._ph_n[self._include].copy()
 
     @property
     def p_orb(self):
@@ -472,9 +475,20 @@ class SinusoidModel:
         """
         return self.f_n, self.a_n, self.ph_n
 
-    def get_harmonics(self):
-        """Get a list of indices of the harmonics in the model"""
-        harmonics, harmonic_n = frs.find_harmonics_from_pattern(self._f_n, self._p_orb, f_tol=1e-9)
+    def get_harmonics(self, exclude=True):
+        """Get a list of indices of the harmonics in the model.
+
+        Parameters
+        ----------
+        exclude: bool
+            Exclude the sinusoids intended for removal.
+        """
+        if exclude:
+            f_n = self._f_n[self._include]
+        else:
+            f_n = self._f_n
+
+        harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, self._p_orb, f_tol=1e-9)
 
         return harmonics, harmonic_n
 
@@ -492,6 +506,8 @@ class SinusoidModel:
         ph_n_new: numpy.ndarray[Any, dtype[float]]
             The phases of a number of sine waves.
         """
+        n_new = len(f_n_new)
+
         # make the new model
         self._sinusoid_model = sum_sines(time, f_n_new, a_n_new, ph_n_new)
 
@@ -499,7 +515,8 @@ class SinusoidModel:
         self._f_n = f_n_new
         self._a_n = a_n_new
         self._ph_n = ph_n_new
-        self.n_sin = len(self._f_n)
+        self._include = np.ones(n_new, dtype=bool)
+        self.n_sin = n_new
 
         return None
 
@@ -524,6 +541,8 @@ class SinusoidModel:
         a_n_new = np.atleast_1d(a_n_new)
         ph_n_new = np.atleast_1d(ph_n_new)
 
+        n_new = len(f_n_new)
+
         # get the current model at the indices
         new_model = sum_sines_st(time, f_n_new, a_n_new, ph_n_new)
 
@@ -534,7 +553,8 @@ class SinusoidModel:
         self._f_n = np.append(self._f_n, f_n_new)
         self._a_n = np.append(self._a_n, a_n_new)
         self._ph_n = np.append(self._ph_n, ph_n_new)
-        self.n_sin = len(self._f_n)
+        self._include = np.append(self._include, np.ones(n_new, dtype=bool))
+        self.n_sin += n_new
 
         return None
 
@@ -562,6 +582,8 @@ class SinusoidModel:
         ph_n_new = np.atleast_1d(ph_n_new)
         indices = np.atleast_1d(indices)
 
+        n_new = len(f_n_new)
+
         # get the current model at the indices
         new_model = sum_sines_st(time, f_n_new, a_n_new, ph_n_new)
 
@@ -572,7 +594,8 @@ class SinusoidModel:
         self._f_n = np.insert(self._f_n, indices, f_n_new)
         self._a_n = np.insert(self._a_n, indices, a_n_new)
         self._ph_n = np.insert(self._ph_n, indices, ph_n_new)
-        self.n_sin = len(self._f_n)
+        self._include = np.insert(self._include, indices, np.ones(n_new, dtype=bool))
+        self.n_sin += n_new
 
         return None
 
@@ -597,11 +620,14 @@ class SinusoidModel:
         """
         indices = np.atleast_1d(indices)
 
+        # get a list of indices that are currently included in the model
+        i_include = indices[self._include[indices]]
+
         # get the current model at the indices
-        cur_model_i = sum_sines_st(time, self._f_n[indices], self._a_n[indices], self._ph_n[indices])
+        cur_model_i = sum_sines_st(time, self._f_n[i_include], self._a_n[i_include], self._ph_n[i_include])
 
         # make the new model at the indices
-        new_model = sum_sines_st(time, f_n_new[indices], a_n_new[indices], ph_n_new[indices])
+        new_model = sum_sines_st(time, f_n_new[i_include], a_n_new[i_include], ph_n_new[i_include])
 
         # update the model
         self._sinusoid_model = self._sinusoid_model - cur_model_i + new_model
@@ -610,6 +636,9 @@ class SinusoidModel:
         self._f_n[indices] = f_n_new[indices]
         self._a_n[indices] = a_n_new[indices]
         self._ph_n[indices] = ph_n_new[indices]
+        # we assume that the changed sinusoids need to be included
+        self._include[indices] = True
+        self.n_sin += (len(indices) - len(i_include))
 
         return None
 
@@ -638,7 +667,87 @@ class SinusoidModel:
         self._f_n = np.delete(self._f_n, indices)
         self._a_n = np.delete(self._a_n, indices)
         self._ph_n = np.delete(self._ph_n, indices)
-        self.n_sin = len(self._f_n)
+        self._include = np.delete(self._include, indices)
+        self.n_sin -= len(indices)
+
+        return None
+
+    def include_sinusoids(self, time, indices):
+        """Add back the sinusoids at the provided indices to the model.
+
+        Meant for updating a limited number of sinusoids, less efficient for large numbers.
+        For that case, see set_sinusoids.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series
+        indices: numpy.ndarray[Any, dtype[int]]
+            Indices of the sinusoids to include.
+        """
+        indices = np.atleast_1d(indices)
+
+        # get a list of indices that are currently excluded from the model
+        i_exclude = indices[~self._include[indices]]
+
+        # get the current model at the indices
+        cur_model_i = sum_sines_st(time, self._f_n[i_exclude], self._a_n[i_exclude], self._ph_n[i_exclude])
+
+        # update the model
+        self._sinusoid_model = self._sinusoid_model + cur_model_i
+
+        # set their include parameter to False
+        self._include[i_exclude] = True
+        self.n_sin += len(i_exclude)
+
+        return None
+
+    def exclude_sinusoids(self, time, indices):
+        """Remove the sinusoids at the provided indices from the model.
+
+        Does not remove the sinusoids from the list yet, for index consistency.
+        Meant for updating a limited number of sinusoids, less efficient for large numbers.
+        For that case, see set_sinusoids.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series
+        indices: numpy.ndarray[Any, dtype[int]]
+            Indices of the sinusoids to exclude.
+        """
+        indices = np.atleast_1d(indices)
+
+        # get a list of indices that are currently included in the model
+        i_include = indices[self._include[indices]]
+
+        # get the current model at the indices
+        cur_model_i = sum_sines_st(time, self._f_n[i_include], self._a_n[i_include], self._ph_n[i_include])
+
+        # update the model
+        self._sinusoid_model = self._sinusoid_model - cur_model_i
+
+        # set their include parameter to False
+        self._include[i_include] = False
+        self.n_sin -= len(i_include)
+
+        return None
+
+    def remove_excluded(self):
+        """Remove the sinusoids that are currently not included from the list.
+
+        Meant for updating a limited number of sinusoids, less efficient for large numbers.
+        For that case, see set_sinusoids.
+        """
+        # the model already doesn't include these sinusoids
+        n_remove = np.sum(~self._include)
+
+        # remove the sinusoid properties
+        self._f_n = self._f_n[self._include]
+        self._a_n = self._a_n[self._include]
+        self._ph_n = self._ph_n[self._include]
+        self._include = self._include[self._include]
+        self.n_sin -= n_remove
 
         return None
 

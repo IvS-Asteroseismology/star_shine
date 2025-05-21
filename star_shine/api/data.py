@@ -36,12 +36,6 @@ class Data:
         The orbital period. Set to 0 to search for the best period.
         If the orbital period is known with certainty beforehand, it can
         be provided as initial value and no new period will be searched.
-    snr_threshold: float
-        Signal-to-noise threshold for the acceptance of sinusoids.
-    f_nyquist: float
-        Nyquist frequency (max f) for extraction and periodograms.
-    f_resolution: float
-        Frequency resolution for extraction and periodograms.
     """
 
     def __init__(self, target_id='', data_id=''):

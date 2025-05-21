@@ -374,7 +374,7 @@ def replace_subset(ts_model, close_f, logger=None):
     return ts_model
 
 
-def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='hybrid', n_extract=0, fn=-1,
+def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='hybrid', n_extract=0,
                       fit_each_step=False, replace_each_step=True, logger=None):
     """Extract all the frequencies from a periodic flux.
 
@@ -393,9 +393,6 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         signal-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).
     n_extract: int, optional
         Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.
-    fn: float
-        Highest allowed frequency for extraction.
-        If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency
     fit_each_step: bool
         If set to True, a non-linear least-squares fit of all extracted sinusoids in groups is performed at each
         iteration. While this increases the quality of the extracted signals, it drastically slows down the code.
@@ -445,6 +442,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
 
     # setup
     f0 = ts_model.pd_f0
+    fn = ts_model.pd_fn
     freq_res = config.resolution_factor / ts_model.t_tot  # frequency resolution
     n_sin_init = ts_model.sinusoid.n_sin
 
