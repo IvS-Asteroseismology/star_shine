@@ -291,8 +291,7 @@ class Pipeline:
             Instance of the Result class containing the analysis results
         """
         t_a = systime.time()
-        n_f_init = len(self.result.f_n)
-        self.logger.info(f"{n_f_init} frequencies. Looking for more...")
+        self.logger.info(f"Iterative prewhitening starting.")
 
         # start by looking for more harmonics
         if self.result.p_orb != 0:
@@ -325,8 +324,8 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        self.logger.info(f"Extraction of sinusoids complete. Time taken: {t_b - t_a:1.1f}.")
-        self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
+        self.logger.info(f"Iterative prewhitening complete. Time taken: {t_b - t_a:1.1f}.")
+        self.logger.extra(f"N_f= {len(self.result.f_n)}, BIC= {self.result.bic:1.2f}, N_p= {self.result.n_param}.")
 
         return None
 

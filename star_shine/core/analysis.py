@@ -223,12 +223,6 @@ def refine_subset(ts_model, close_f, logger=None):
 
     # determine initial bic
     bic_prev = ts_model.bic()
-    bic_init = bic_prev
-
-    # log a message
-    if logger is not None:
-        logger.info(f"Start refinement - N_refine= {len(close_f)}")
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_init:1.2f} (delta= N/A)")
 
     # stop the loop when the BIC increases
     condition_1 = True
@@ -273,13 +267,8 @@ def refine_subset(ts_model, close_f, logger=None):
             ts_model.update_sinusoids(f_c, a_c, ph_c, close_f)
             ts_model.update_linear_model()
 
-        if logger is not None:
-            logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} "
-                         f"(delta= {d_bic:1.2f}, total= {bic_init - bic_prev:1.2f})")
-
     if logger is not None:
-        logger.info(f"End refinement")
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} (total delta= {bic_init - bic_prev:1.2f})")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - Refined: {len(close_f)}")
 
     return ts_model
 
@@ -308,8 +297,7 @@ def replace_subset(ts_model, close_f, logger=None):
     extract_sinusoids
     """
     # setup
-    freq_res = 1 / ts_model.t_tot  # frequency resolution
-    n_sin_init = ts_model.sinusoid.n_sin
+    freq_res = 1 / ts_model.t_tot  # frequency resolution (not the user defined one)
     harmonics, harmonic_n = ts_model.sinusoid.get_harmonics(exclude=False)
 
     # make all combinations of consecutive frequencies in close_f (longer sets first)
@@ -317,12 +305,6 @@ def replace_subset(ts_model, close_f, logger=None):
 
     # determine initial bic
     bic_prev = ts_model.bic()
-    bic_init = bic_prev
-
-    # log a message
-    if logger is not None:
-        logger.info(f"Start replacement")
-        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_init:1.2f} (delta= N/A)")
 
     # loop over all subsets:
     removed = []
@@ -378,8 +360,7 @@ def replace_subset(ts_model, close_f, logger=None):
     ts_model.remove_excluded()
 
     if logger is not None:
-        logger.info(f"End replacement")
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f})")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - Replaced: {len(removed)}")
 
     return ts_model
 
@@ -450,10 +431,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
     if n_extract == 0:
         n_extract = 10**6  # 'a lot'
 
-    # setup
-    f0 = ts_model.pd_f0
-    fn = ts_model.pd_fn
-    freq_res = config.resolution_factor / ts_model.t_tot  # frequency resolution
+    # initial number of sinusoids
     n_sin_init = ts_model.sinusoid.n_sin
 
     # set up selection process
@@ -469,8 +447,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
 
     # log a message
     if logger is not None:
-        logger.info(f"Start extraction")
-        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_init:1.2f} (delta= N/A)")
+        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_init:1.2f}")
 
     # stop the loop when the BIC decreases by less than 2 (or increases)
     condition_1 = True
@@ -481,45 +458,47 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
             select = 'sn'
             switch = False
 
-        # make a deep copy of the current model
-        ts_model_i = ts_model.copy()
+        # remember the current sinusoids
+        f_c, a_c, ph_c = ts_model.sinusoid.get_sinusoid_parameters(exclude=False)
 
         # attempt to extract the next frequency
-        f_i, a_i, ph_i = extract_single(ts_model_i.time, ts_model_i.residual(), f0=f0, fn=fn, select=select)
-        ts_model_i.add_sinusoids(f_i, a_i, ph_i)
+        f_i, a_i, ph_i = extract_single(ts_model.time, ts_model.residual(), f0=ts_model.pd_f0, fn=ts_model.pd_fn,
+                                        select=select)
+        ts_model.add_sinusoids(f_i, a_i, ph_i)
 
         # imporve frequencies with some strategy
-        if False:#fit_each_step:
+        if fit_each_step:
             # fit all frequencies for best improvement
-            out = fit.fit_multi_sinusoid_per_group(ts_model_i.time, ts_model_i.flux, *ts_model_i.get_parameters(),
-                                                   ts_model_i.i_chunks, logger=logger)
+            out = fit.fit_multi_sinusoid_per_group(ts_model.time, ts_model.flux, *ts_model.get_parameters(),
+                                                   ts_model.i_chunks, logger=logger)
 
-            ts_model_i.set_linear_model(out[0], out[1])
-            ts_model_i.set_sinusoids(out[2], out[3], out[4])
+            ts_model.set_linear_model(out[0], out[1])
+            ts_model.set_sinusoids(out[2], out[3], out[4])
         else:
             # select only close frequencies for iteration
-            close_f = frs.f_within_rayleigh(ts_model_i.sinusoid.n_sin - 1, ts_model_i.sinusoid.f_n, freq_res)
+            close_f = frs.f_within_rayleigh(ts_model.sinusoid.n_sin - 1, ts_model.sinusoid.f_n, ts_model.f_resolution)
 
             if len(close_f) > 1:
                 # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
-                ts_model_i = refine_subset(ts_model_i, close_f, logger=None)
+                ts_model = refine_subset(ts_model, close_f, logger=logger)
             else:
                 # only update the linear pars
-                ts_model_i.update_linear_model()
+                ts_model.update_linear_model()
 
         # possibly replace close frequencies
         if replace_each_step:
-            close_f = frs.f_within_rayleigh(ts_model_i.sinusoid.n_sin - 1, ts_model_i.sinusoid.f_n, freq_res)
-            ts_model_i = replace_subset(ts_model_i, close_f, logger=None)
+            close_f = frs.f_within_rayleigh(ts_model.sinusoid.n_sin - 1, ts_model.sinusoid.f_n, ts_model.f_resolution)
+            if len(close_f) > 1:
+                ts_model = replace_subset(ts_model, close_f, logger=logger)
 
         # calculate BIC
-        bic = ts_model_i.bic()
+        bic = ts_model.bic()
         d_bic = bic_prev - bic
 
         # acceptance condition
         if stop_crit == 'snr':
             # calculate SNR in a 1 c/d window around the extracted frequency
-            noise = pdg.scargle_noise_at_freq(np.array([f_i]), ts_model_i.time, ts_model_i.residual(), window_width=1.0)
+            noise = pdg.scargle_noise_at_freq(np.array([f_i]), ts_model.time, ts_model.residual(), window_width=1.0)
             snr = a_i / noise
             # stop the loop if snr threshold not met
             condition_1 = snr > snr_thr
@@ -531,18 +510,19 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         if condition_1:
             # accept the new frequency
             bic_prev = bic
-            ts_model = ts_model_i.copy()
+        else:
+            ts_model.set_sinusoids(f_c, a_c, ph_c)
+            ts_model.update_linear_model()
 
         # stop the loop if n_sin reaches limit
         condition_2 = ts_model.sinusoid.n_sin - n_sin_init < n_extract
 
         if logger is not None:
-            logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} "
-                         f"(delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f}) - f= {f_i:1.6f}, a= {a_i:1.6f}")
+            logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - Extracted: f= {f_i:1.6f}, a= {a_i:1.6f}")
 
     if logger is not None:
-        logger.info(f"End extraction")
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} (total delta= {bic_init - bic_prev:1.2f}).")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - Extraction ended "
+                     f"(delta BIC= {bic_init - bic_prev:1.2f}).")
 
     return ts_model
 

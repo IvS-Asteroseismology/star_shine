@@ -6,8 +6,6 @@ sum of sinusoids, and harmonics.
 
 Code written by: Luc IJspeert
 """
-from copy import deepcopy
-
 import numpy as np
 import numba as nb
 
@@ -920,10 +918,6 @@ class TimeSeriesModel(TimeSeries):
             Number of free parameters in the model.
         """
         return self.linear.n_param + self.sinusoid.n_param
-
-    def copy(self):
-        """Creates a copy of the TimeSeriesModel object."""
-        return deepcopy(self)
 
     def get_parameters(self):
         """Get the current model parameters.

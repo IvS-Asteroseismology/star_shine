@@ -551,7 +551,6 @@ class MainWindow(QMainWindow):
             return None
 
         # start a new thread for the analysis
-        self.append_text(func_name + str(*args))
         self.pipeline_thread.start_function(func_name, *args, **kwargs)
 
         return None
