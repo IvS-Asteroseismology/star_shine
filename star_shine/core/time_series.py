@@ -409,7 +409,7 @@ class SinusoidModel:
 
     @property
     def f_n(self):
-        """Get a copy of the current model frequencies.
+        """Get a copy of the current model frequencies (disregarding include).
 
         Returns
         -------
@@ -420,7 +420,7 @@ class SinusoidModel:
 
     @property
     def a_n(self):
-        """Get a copy of the current model amplitudes.
+        """Get a copy of the current model amplitudes (disregarding include).
 
         Returns
         -------
@@ -431,7 +431,7 @@ class SinusoidModel:
 
     @property
     def ph_n(self):
-        """Get a copy of the current model phases.
+        """Get a copy of the current model phases (disregarding include).
 
         Returns
         -------
@@ -483,15 +483,25 @@ class SinusoidModel:
         """Get the number of parameters of the model."""
         return int(self.n_harm > 0) + 2 * self.n_harm + 3 * self.n_sin
 
-    def get_sinusoid_parameters(self):
+    def get_sinusoid_parameters(self, exclude=True):
         """Get a copy of the current sinusoid parameters.
+
+        Parameters
+        ----------
+        exclude: bool
+            Exclude the sinusoids intended for removal.
 
         Returns
         -------
         tuple
             Consisting of three numpy.ndarray[Any, dtype[float]] for f_n, a_n, ph_n.
         """
-        return self.f_n, self.a_n, self.ph_n
+        if exclude:
+            f_n, a_n, ph_n = self._f_n[self._include], self._a_n[self._include], self._ph_n[self._include]
+        else:
+            f_n, a_n, ph_n = self._f_n, self._a_n, self._ph_n
+
+        return f_n, a_n, ph_n
 
     def get_harmonics(self, exclude=True):
         """Get a list of indices of the harmonics in the model.
@@ -636,7 +646,14 @@ class SinusoidModel:
         indices: numpy.ndarray[Any, dtype[int]]
             Indices for the sinusoids to update.
         """
+        f_n_new = np.atleast_1d(f_n_new)
+        a_n_new = np.atleast_1d(a_n_new)
+        ph_n_new = np.atleast_1d(ph_n_new)
         indices = np.atleast_1d(indices)
+
+        # if a full list of sinusoid parameters is given, pick out the ones at the indices
+        if len(f_n_new) == len(self._f_n):
+            f_n_new, a_n_new, ph_n_new = f_n_new[indices], a_n_new[indices], ph_n_new[indices]
 
         # get a list of indices that are currently included in the model
         i_include = indices[self._include[indices]]
@@ -645,15 +662,15 @@ class SinusoidModel:
         cur_model_i = sum_sines_st(time, self._f_n[i_include], self._a_n[i_include], self._ph_n[i_include])
 
         # make the new model at the indices
-        new_model = sum_sines_st(time, f_n_new[i_include], a_n_new[i_include], ph_n_new[i_include])
+        new_model = sum_sines_st(time, f_n_new, a_n_new, ph_n_new)
 
         # update the model
         self._sinusoid_model = self._sinusoid_model - cur_model_i + new_model
 
         # change the sinusoid properties
-        self._f_n[indices] = f_n_new[indices]
-        self._a_n[indices] = a_n_new[indices]
-        self._ph_n[indices] = ph_n_new[indices]
+        self._f_n[indices] = f_n_new
+        self._a_n[indices] = a_n_new
+        self._ph_n[indices] = ph_n_new
         # we assume that the changed sinusoids need to be included
         self._include[indices] = True
         self.n_sin += (len(indices) - len(i_include))
@@ -758,14 +775,13 @@ class SinusoidModel:
         For that case, see set_sinusoids.
         """
         # the model already doesn't include these sinusoids
-        n_remove = np.sum(~self._include)
 
         # remove the sinusoid properties
         self._f_n = self._f_n[self._include]
         self._a_n = self._a_n[self._include]
         self._ph_n = self._ph_n[self._include]
         self._include = self._include[self._include]
-        self.n_sin -= n_remove
+        # self.n_sin does not change here
 
         return None
 
@@ -976,3 +992,15 @@ class TimeSeriesModel(TimeSeries):
     def remove_sinusoids(self, indices):
         """Delegates to remove_sinusoids of SinusoidModel."""
         self.sinusoid.remove_sinusoids(self.time, indices)
+
+    def include_sinusoids(self, indices):
+        """Delegates to include_sinusoids of SinusoidModel."""
+        self.sinusoid.include_sinusoids(self.time, indices)
+
+    def exclude_sinusoids(self, indices):
+        """Delegates to exclude_sinusoids of SinusoidModel."""
+        self.sinusoid.exclude_sinusoids(self.time, indices)
+
+    def remove_excluded(self):
+        """Delegates to remove_excluded of SinusoidModel."""
+        self.sinusoid.remove_excluded()

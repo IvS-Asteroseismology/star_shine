@@ -219,39 +219,46 @@ def refine_subset(ts_model, close_f, logger=None):
     extract_sinusoids
     """
     # get the harmonics
-    harmonics, harmonic_n = ts_model.sinusoid.get_harmonics()
+    harmonics, harmonic_n = ts_model.sinusoid.get_harmonics(exclude=False)
 
     # determine initial bic
     bic_prev = ts_model.bic()
     bic_init = bic_prev
 
+    # log a message
+    if logger is not None:
+        logger.info(f"Start refinement - N_refine= {len(close_f)}")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_init:1.2f} (delta= N/A)")
+
     # stop the loop when the BIC increases
     condition_1 = True
     while condition_1:
+        # remember the current sinusoids
+        f_c, a_c, ph_c = ts_model.sinusoid.get_sinusoid_parameters(exclude=False)
+
         # remove each frequency one at a time to then re-extract them
         for j in close_f:
-            # remember the frequency and remove the sinusoid
-            f_j = ts_model_i.sinusoid.f_n[j]
-            ts_model_i.remove_sinusoids(j)
-
+            # exclude the sinusoid
+            ts_model.exclude_sinusoids(j)
             # update the linear model for good measure
-            ts_model_i.update_linear_model()
+            ts_model.update_linear_model()
 
             # improve sinusoid j by re-extracting its parameters
+            f_j = ts_model.sinusoid.f_n[j]
             if j in harmonics:
                 # if f is a harmonic, don't shift the frequency
-                a_j, ph_j = pdg.scargle_ampl_phase_single(ts_model_i.time, ts_model_i.residual(), f_j)
+                a_j, ph_j = pdg.scargle_ampl_phase_single(ts_model.time, ts_model.residual(), f_j)
             else:
-                f_j, a_j, ph_j = extract_approx(ts_model_i.time, ts_model_i.residual(), f_j)
+                f_j, a_j, ph_j = extract_approx(ts_model.time, ts_model.residual(), f_j)
 
             # update the model
-            ts_model_i.insert_sinusoids(f_j, a_j, ph_j, j)
+            ts_model.update_sinusoids(f_j, a_j, ph_j, j)
 
         # as a last model-refining step, redetermine the constant and slope
-        ts_model_i.update_linear_model()
+        ts_model.update_linear_model()
 
         # calculate BIC before moving to the next iteration
-        bic = ts_model_i.bic()
+        bic = ts_model.bic()
         d_bic = bic_prev - bic
 
         # stop the loop when the BIC increases
@@ -261,18 +268,20 @@ def refine_subset(ts_model, close_f, logger=None):
         if condition_1:
             # accept the new frequency
             bic_prev = bic
-            ts_model = ts_model_i.copy()
+        else:
+            # update the sinusoids back to their original values
+            ts_model.update_sinusoids(f_c, a_c, ph_c, close_f)
+            ts_model.update_linear_model()
 
         if logger is not None:
-            logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} "
-                         f"(delta= {d_bic:1.2f}, total= {bic_init - bic:1.2f})")
+            logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} "
+                         f"(delta= {d_bic:1.2f}, total= {bic_init - bic_prev:1.2f})")
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f}) "
-                     f"- N_refine= {len(close_f)} - end refinement")
+        logger.info(f"End refinement")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} (total delta= {bic_init - bic_prev:1.2f})")
 
     return ts_model
-
 
 def replace_subset(ts_model, close_f, logger=None):
     """Attempt the replacement of frequencies within the Rayleigh criterion of each other by a single one,
@@ -301,7 +310,7 @@ def replace_subset(ts_model, close_f, logger=None):
     # setup
     freq_res = 1 / ts_model.t_tot  # frequency resolution
     n_sin_init = ts_model.sinusoid.n_sin
-    harmonics, harmonic_n = ts_model.sinusoid.get_harmonics()
+    harmonics, harmonic_n = ts_model.sinusoid.get_harmonics(exclude=False)
 
     # make all combinations of consecutive frequencies in close_f (longer sets first)
     close_f_sets = ut.consecutive_subsets(close_f)
@@ -310,6 +319,11 @@ def replace_subset(ts_model, close_f, logger=None):
     bic_prev = ts_model.bic()
     bic_init = bic_prev
 
+    # log a message
+    if logger is not None:
+        logger.info(f"Start replacement")
+        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_init:1.2f} (delta= N/A)")
+
     # loop over all subsets:
     removed = []
     for set_i in close_f_sets:
@@ -317,40 +331,32 @@ def replace_subset(ts_model, close_f, logger=None):
         if np.any([i in removed for i in set_i]):
             continue
 
-        # convert the indices for removed fs
-        conv_set_i = ut.adjust_indices_removed(set_i, removed)
-
-        # make a deep copy of the current model
-        ts_model_i = ts_model.copy()
-
-        # copy current f_n and remove the next set
-        f_n_i = ts_model_i.sinusoid.f_n
-        ts_model_i.remove_sinusoids(conv_set_i)
+        # exclude the next set of sinusoids
+        ts_model.exclude_sinusoids(set_i)
         # update the linear model for good measure
-        ts_model_i.update_linear_model()
+        ts_model.update_linear_model()
 
         # check for harmonics
         harm_i = [h for h in set_i if h in harmonics]
 
         # remove all frequencies in the set and re-extract one
+        f_c = ts_model.sinusoid.f_n  # current frequencies
         if len(harm_i) > 0:
-            # convert harmonic indices
-            harm_i = ut.adjust_indices_removed(harm_i, removed)
             # if f is a harmonic, don't shift the frequency
-            f_i = f_n_i[harm_i]
-            a_i, ph_i = pdg.scargle_ampl_phase(ts_model_i.time, ts_model_i.residual(), f_i)
+            f_i = f_c[harm_i]  # can be more than one harmonic
+            a_i, ph_i = pdg.scargle_ampl_phase(ts_model.time, ts_model.residual(), f_i)
         else:
-            f0 = min(f_n_i[conv_set_i]) - freq_res
-            fn = max(f_n_i[conv_set_i]) + freq_res
-            f_i, a_i, ph_i = extract_local(ts_model_i.time, ts_model_i.residual(), f0=f0, fn=fn)
+            f0 = min(f_c[set_i]) - freq_res
+            fn = max(f_c[set_i]) + freq_res
+            f_i, a_i, ph_i = extract_local(ts_model.time, ts_model.residual(), f0=f0, fn=fn)
 
         # add sinusoid to the model
-        ts_model_i.add_sinusoids(f_i, a_i, ph_i)
+        ts_model.add_sinusoids(f_i, a_i, ph_i)
         # as a last model-refining step, redetermine the constant and slope
-        ts_model_i.update_linear_model()
+        ts_model.update_linear_model()
 
         # calculate BIC before moving to the next iteration
-        bic = ts_model_i.bic()
+        bic = ts_model.bic()
         d_bic = bic_prev - bic
 
         # acceptance condition for replacement
@@ -360,12 +366,20 @@ def replace_subset(ts_model, close_f, logger=None):
         if condition_1:
             # accept the changes
             bic_prev = bic
-            ts_model = ts_model_i.copy()
             removed.extend(set_i)
+        else:
+            # remove the added sinusoid(s)
+            ts_model.remove_sinusoids(np.arange(len(f_c), len(f_c) + len(np.atleast_1d(f_i))))
+
+            # include the excluded sinusoids
+            ts_model.include_sinusoids(set_i)
+            ts_model.update_linear_model()
+
+    ts_model.remove_excluded()
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f}) "
-                     f"- N_f_init= {n_sin_init} - end replacement")
+        logger.info(f"End replacement")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} (total= {bic_init - bic_prev:1.2f})")
 
     return ts_model
 
@@ -455,7 +469,8 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
 
     # log a message
     if logger is not None:
-        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_init:1.2f} (delta= N/A) - start extraction")
+        logger.info(f"Start extraction")
+        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_init:1.2f} (delta= N/A)")
 
     # stop the loop when the BIC decreases by less than 2 (or increases)
     condition_1 = True
