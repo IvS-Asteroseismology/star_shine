@@ -219,7 +219,7 @@ def refine_subset(ts_model, close_f, logger=None):
     extract_sinusoids
     """
     # get all the harmonics (regardless of base)
-    harmonics = np.concatenate(list(ts_model.sinusoid.harmonics.values()))
+    i_harmonics = np.arange(len(ts_model.sinusoid.harmonics))[ts_model.sinusoid.harmonics]
 
     # determine initial bic
     bic_prev = ts_model.bic()
@@ -239,7 +239,7 @@ def refine_subset(ts_model, close_f, logger=None):
 
             # improve sinusoid j by re-extracting its parameters
             f_j = ts_model.sinusoid.f_n[j]
-            if j in harmonics:
+            if j in i_harmonics:
                 # if f is a harmonic, don't shift the frequency
                 a_j, ph_j = pdg.scargle_ampl_phase_single(ts_model.time, ts_model.residual(), f_j)
             else:
@@ -299,7 +299,7 @@ def replace_subset(ts_model, close_f, logger=None):
     # standard frequency resolution (not the user defined one)
     freq_res = 1 / ts_model.t_tot
     # get all the harmonics (regardless of base)
-    harmonics = np.concatenate(list(ts_model.sinusoid.harmonics.values()))
+    i_harmonics = np.arange(len(ts_model.sinusoid.harmonics))[ts_model.sinusoid.harmonics]
 
     # make all combinations of consecutive frequencies in close_f (longer sets first)
     close_f_sets = ut.consecutive_subsets(close_f)
@@ -320,7 +320,7 @@ def replace_subset(ts_model, close_f, logger=None):
         ts_model.update_linear_model()
 
         # check for harmonics
-        harm_i = [h for h in set_i if h in harmonics]
+        harm_i = [h for h in set_i if h in i_harmonics]
 
         # remove all frequencies in the set and re-extract one
         f_c = ts_model.sinusoid.f_n  # current frequencies
@@ -554,13 +554,10 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
     Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).
     Assumes the harmonics are already fixed multiples of 1/p_orb as can be achieved with fix_harmonic_frequency.
     """
-    # extract additional harmonics using the base frequencies
-    harmonics_base = list(ts_model.sinusoid.harmonics.keys())
-
     # make lists of not-present possible harmonics
     f_base = []
     h_candidates_n = []
-    for key in ts_model.sinusoid.harmonics.keys():
+    for key in ts_model.sinusoid.harmonics.keys():  # todo: re-do this
         # the range of harmonic multipliers below the Nyquist frequency
         harmonics_i = np.arange(1, ts_model.pd_fn / ts_model.sinusoid.f_n[key], dtype=int)
 
