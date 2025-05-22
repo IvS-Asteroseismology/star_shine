@@ -107,28 +107,10 @@ class TestDataProperties(unittest.TestCase):
 
         self.assertGreater(nyquist_sum, expected)
 
-    def test_nyquist_frequency_simple_regular(self):
-        """Test the Nyquist frequency calculation for a regular time series."""
-        # Calculate Nyquist frequency for regular time series
-        method_nyquist = 'simple'
-        mock_config_instance = dp.config
-        mock_config_instance.nyquist_method = method_nyquist
-
-        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
-            f_nyquist = dp.nyquist_frequency(self.time_series_regular)
-
-        # Expected value using the given formula
-        delta_t_min = np.min(self.time_series_regular[1:] - self.time_series_regular[:-1])
-        expected = 0.5 / delta_t_min
-
-        self.assertAlmostEqual(f_nyquist, expected)
-
-    def test_nyquist_frequency_simple_noisy(self):
+    def test_nyquist_frequency_noisy(self):
         """Test the Nyquist frequency calculation for a noisy time series."""
         # Calculate Nyquist frequency for regular time series
-        method_nyquist = 'simple'
         mock_config_instance = dp.config
-        mock_config_instance.nyquist_method = method_nyquist
 
         with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             f_nyquist = dp.nyquist_frequency(self.time_series_noisy)
@@ -139,15 +121,13 @@ class TestDataProperties(unittest.TestCase):
 
         self.assertAlmostEqual(f_nyquist, expected)
 
-    def test_nyquist_frequency_rigorous_regular(self):
+    def test_nyquist_frequency_adjusted(self):
         """Test the Nyquist frequency calculation for a regular time series."""
         # Calculate Nyquist frequency for regular time series
-        method_nyquist = 'rigorous'
         mock_config_instance = dp.config
-        mock_config_instance.nyquist_method = method_nyquist
 
         with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
-            f_nyquist = dp.nyquist_frequency(self.time_series_regular)
+            f_nyquist = dp.nyquist_frequency(self.adjusted_time)
 
         # Expected value using the given formula
         delta_t_min = np.min(self.time_series_regular[1:] - self.time_series_regular[:-1])
@@ -155,35 +135,21 @@ class TestDataProperties(unittest.TestCase):
 
         self.assertAlmostEqual(f_nyquist, expected)
 
-    def test_nyquist_frequency_rigorous_regular_adjusted(self):
-        """Test the Nyquist frequency calculation for a regular time series."""
-        # Calculate Nyquist frequency for regular time series
-        method_nyquist = 'rigorous'
-        mock_config_instance = dp.config
-        mock_config_instance.nyquist_method = method_nyquist
-
-        with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
-            f_nyquist = dp.nyquist_frequency(self.adjusted_time)
-
-        # Expected value using the given formula
-        delta_t_min = np.min(self.time_series_regular[1:] - self.time_series_regular[:-1])
-        expected = 10 * 0.5 / delta_t_min
-
-        self.assertAlmostEqual(f_nyquist, expected)
-
     def test_nyquist_frequency_custom(self):
         """Test the Nyquist frequency calculation for a noisy time series."""
         # Calculate Nyquist frequency for regular time series
-        method_nyquist = 'custom'
-        custom_nyquist = 50.
+        nyquist_factor = 50.
         mock_config_instance = dp.config
-        mock_config_instance.nyquist_method = method_nyquist
-        mock_config_instance.nyquist_value = custom_nyquist
+        mock_config_instance.nyquist_factor = nyquist_factor
 
         with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
             f_nyquist = dp.nyquist_frequency(self.time_series_noisy)
 
-        self.assertAlmostEqual(f_nyquist, custom_nyquist)
+        # Expected value using the given formula
+        delta_t_min = np.min(self.time_series_noisy[1:] - self.time_series_noisy[:-1])
+        expected = nyquist_factor * 0.5 / delta_t_min
+
+        self.assertAlmostEqual(f_nyquist, expected)
 
 
 if __name__ == '__main__':
