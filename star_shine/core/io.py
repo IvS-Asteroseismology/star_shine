@@ -144,7 +144,7 @@ def save_data_hdf5(file_name, data_dict):
     return None
 
 
-def load_result_hdf5(file_name, h5py_file_kwargs):
+def load_result_hdf5(file_name, h5py_file_kwargs=None):
     """Load results from an hdf5 file and return it in a dictionary.
 
     Primarily for the api class Result.

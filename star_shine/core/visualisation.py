@@ -18,8 +18,8 @@ except ImportError:
     az = None
     pass
 
-from star_shine.core import time_series as tms, periodogram as pdg, frequency_sets as frs
-from star_shine.core import utility as ut
+from star_shine.core import time_series as tms, model as mdl, frequency_sets as frs
+from star_shine.core import periodogram as pdg, utility as ut, io
 from star_shine.config.helpers import get_mpl_stylesheet_path
 
 
@@ -131,8 +131,8 @@ def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n,
     harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
 
     # make model
-    model_linear = tms.linear_curve(time, const, slope, i_chunks)
-    model_sinusoid = tms.sum_sines(time, f_n, a_n, ph_n)
+    model_linear = mdl.linear_curve(time, const, slope, i_chunks)
+    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
     model = model_linear + model_sinusoid
 
     # make periodograms
@@ -379,8 +379,8 @@ def plot_lc_sinusoids(time, flux, const, slope, f_n, a_n, ph_n, i_chunks, file_n
     t_mean = np.mean(time)
 
     # make models
-    model_linear = tms.linear_curve(time, const, slope, i_chunks)
-    model_sines = tms.sum_sines(time, f_n, a_n, ph_n)
+    model_linear = mdl.linear_curve(time, const, slope, i_chunks)
+    model_sines = mdl.sum_sines(time, f_n, a_n, ph_n)
     resid = flux - (model_linear + model_sines)
 
     # plot the full model light curve
@@ -447,10 +447,10 @@ def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_
     t_mean = np.mean(time)
 
     # make models
-    model_line = tms.linear_curve(time, const, slope, i_chunks)
+    model_line = mdl.linear_curve(time, const, slope, i_chunks)
     harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
-    model_h = tms.sum_sines(time, f_n[harmonics], a_n[harmonics], ph_n[harmonics])
-    model_nh = tms.sum_sines(time, np.delete(f_n, harmonics), np.delete(a_n, harmonics),
+    model_h = mdl.sum_sines(time, f_n[harmonics], a_n[harmonics], ph_n[harmonics])
+    model_nh = mdl.sum_sines(time, np.delete(f_n, harmonics), np.delete(a_n, harmonics),
                                                      np.delete(ph_n, harmonics))
     resid_nh = flux - model_nh
     resid_h = flux - model_h
@@ -650,10 +650,10 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
     # open all the data
     file_name = os.path.join(load_dir, f'{target_id}_analysis_1.hdf5')
     if os.path.isfile(file_name):
-        results = read_result_hdf5(file_name, verbose=False)
+        results = io.load_result_hdf5(file_name)
         const_1, slope_1, f_n_1, a_n_1, ph_n_1 = results['sin_mean']
-        model_linear = tms.linear_curve(time, const_1, slope_1, i_chunks)
-        model_sinusoid = tms.sum_sines(time, f_n_1, a_n_1, ph_n_1)
+        model_linear = mdl.linear_curve(time, const_1, slope_1, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_1, a_n_1, ph_n_1)
         model_1 = model_linear + model_sinusoid
     else:
         const_1, slope_1, f_n_1, a_n_1, ph_n_1 = np.array([[], [], [], [], []])
@@ -661,10 +661,10 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
 
     file_name = os.path.join(load_dir, f'{target_id}_analysis_2.hdf5')
     if os.path.isfile(file_name):
-        results = read_result_hdf5(file_name, verbose=False)
+        results = io.load_result_hdf5(file_name)
         const_2, slope_2, f_n_2, a_n_2, ph_n_2 = results['sin_mean']
-        model_linear = tms.linear_curve(time, const_2, slope_2, i_chunks)
-        model_sinusoid = tms.sum_sines(time, f_n_2, a_n_2, ph_n_2)
+        model_linear = mdl.linear_curve(time, const_2, slope_2, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_2, a_n_2, ph_n_2)
         model_2 = model_linear + model_sinusoid
     else:
         const_2, slope_2, f_n_2, a_n_2, ph_n_2 = np.array([[], [], [], [], []])
@@ -672,12 +672,12 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
 
     file_name = os.path.join(load_dir, f'{target_id}_analysis_3.hdf5')
     if os.path.isfile(file_name):
-        results = read_result_hdf5(file_name, verbose=False)
+        results = io.load_result_hdf5(file_name)
         const_3, slope_3, f_n_3, a_n_3, ph_n_3 = results['sin_mean']
         p_orb_3, _ = results['ephem']
         p_err_3, _ = results['ephem_err']
-        model_linear = tms.linear_curve(time, const_3, slope_3, i_chunks)
-        model_sinusoid = tms.sum_sines(time, f_n_3, a_n_3, ph_n_3)
+        model_linear = mdl.linear_curve(time, const_3, slope_3, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_3, a_n_3, ph_n_3)
         model_3 = model_linear + model_sinusoid
     else:
         const_3, slope_3, f_n_3, a_n_3, ph_n_3 = np.array([[], [], [], [], []])
@@ -686,10 +686,10 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
 
     file_name = os.path.join(load_dir, f'{target_id}_analysis_4.hdf5')
     if os.path.isfile(file_name):
-        results = read_result_hdf5(file_name, verbose=False)
+        results = io.load_result_hdf5(file_name)
         const_4, slope_4, f_n_4, a_n_4, ph_n_4 = results['sin_mean']
-        model_linear = tms.linear_curve(time, const_4, slope_4, i_chunks)
-        model_sinusoid = tms.sum_sines(time, f_n_4, a_n_4, ph_n_4)
+        model_linear = mdl.linear_curve(time, const_4, slope_4, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_4, a_n_4, ph_n_4)
         model_4 = model_linear + model_sinusoid
     else:
         const_4, slope_4, f_n_4, a_n_4, ph_n_4 = np.array([[], [], [], [], []])
@@ -697,13 +697,13 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
 
     file_name = os.path.join(load_dir, f'{target_id}_analysis_5.hdf5')
     if os.path.isfile(file_name):
-        results = read_result_hdf5(file_name, verbose=False)
+        results = io.load_result_hdf5(file_name)
         const_5, slope_5, f_n_5, a_n_5, ph_n_5 = results['sin_mean']
         p_orb_5, _ = results['ephem']
         p_err_5, _ = results['ephem_err']
         t_tot, t_mean, t_mean_s, t_int, n_param_5, bic_5, noise_level_5 = results['stats']
-        model_linear = tms.linear_curve(time, const_5, slope_5, i_chunks)
-        model_sinusoid = tms.sum_sines(time, f_n_5, a_n_5, ph_n_5)
+        model_linear = mdl.linear_curve(time, const_5, slope_5, i_chunks)
+        model_sinusoid = mdl.sum_sines(time, f_n_5, a_n_5, ph_n_5)
         model_5 = model_linear + model_sinusoid
         harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n_5, p_orb_5, f_tol=1e-9)
         f_h_5, a_h_5, ph_h_5 = f_n_5[harmonics], a_n_5[harmonics], ph_n_5[harmonics]
@@ -831,7 +831,7 @@ def plot_all_from_tic(tic, all_files, load_dir=None, save_dir=None, show=True):
         load_dir = os.path.dirname(all_files[0])
 
     # load the data
-    time, flux, flux_err, i_chunks, medians = ut.load_light_curve(all_files, apply_flags=True)
+    time, flux, flux_err, i_chunks, medians = io.load_light_curve(all_files, apply_flags=True)
 
     # do the plotting
     sequential_plotting(time, flux, flux_err, i_chunks, tic, load_dir, save_dir=save_dir, show=show)

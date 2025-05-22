@@ -293,24 +293,23 @@ class Pipeline:
         t_a = systime.time()
         self.logger.info(f"Iterative prewhitening starting.")
 
-        # start by looking for more harmonics
-        if self.result.p_orb != 0:
-            out_a = ana.extract_harmonics(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb,
-                                          self.data.time_series.i_chunks,
-                                          config.bic_thr, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                          logger=self.logger)
-            self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
-
-        # extract all frequencies with the iterative scheme
+        # make the TimeSeriesModel object
         ts_model = tms.TimeSeriesModel(self.data.time_series.time, self.data.time_series.flux,
                                        self.data.time_series.flux_err, self.data.time_series.i_chunks)
         ts_model.set_sinusoids(self.result.f_n, self.result.a_n, self.result.ph_n)
         ts_model.update_linear_model()
+
+        # start by looking for more harmonics
+        if self.result.p_orb != 0:
+            ts_model = ana.extract_harmonics(ts_model, config.bic_thr, logger=self.logger)
+            out_a = ts_model.get_parameters()
+            self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
+
+        # extract all frequencies with the iterative scheme
         ts_model = ana.extract_sinusoids(ts_model, bic_thr=config.bic_thr, snr_thr=config.snr_thr,
                                          stop_crit=config.stop_criterion, select=config.select_next,
                                          n_extract=n_extract, fit_each_step=config.optimise_step,
-                                         replace_each_step=config.replace_step,
-                                         logger=self.logger)
+                                         replace_each_step=config.replace_step, logger=self.logger)
         out_b = ts_model.get_parameters()
         self.result.setter(const=out_b[0], slope=out_b[1], f_n=out_b[2], a_n=out_b[3], ph_n=out_b[4])
 

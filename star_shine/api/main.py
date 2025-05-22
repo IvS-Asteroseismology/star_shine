@@ -12,6 +12,8 @@ from star_shine.config.helpers import get_config
 config = get_config()
 # todo: modelling red-noise with autoregressive model
 # todo: amplitude factor for each sector (linear model)
+# todo: consider twice nyquist for harmonics
+# todo: enforce_harmonics do linear fit
 
 
 def update_config(file_name='', settings=None):
