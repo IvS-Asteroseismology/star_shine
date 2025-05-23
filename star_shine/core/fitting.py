@@ -358,7 +358,8 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
             model_sinusoid = mdl.sum_sines(time, res_f_n, res_a_n, res_ph_n)
             resid = flux - model_linear - model_sinusoid
             bic = gof.calc_bic(resid, 2 * n_chunk + 3 * n_sin)
-            logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')
+            logger.extra(f'N_f= {len(f_n)}, BIC: {bic:1.2f} - Fit group {k + 1} of {n_groups}, '
+                         f'N_f(group)= {len(group)}')
 
     return res_const, res_slope, res_f_n, res_a_n, res_ph_n
 
@@ -743,6 +744,7 @@ def fit_multi_sinusoid_harmonics_per_group(time, flux, p_orb, const, slope, f_n,
             model_sinusoid = mdl.sum_sines(time, res_f_n, res_a_n, res_ph_n)
             resid_new = flux - (model_linear + model_sinusoid)
             bic = gof.calc_bic(resid_new, 1 + 2 * n_chunk + 3 * n_sin + 2 * n_harm)
-            logger.extra(f'Fit of group {k + 1} of {n_groups} - N_f(group)= {len(group)} - BIC: {bic:1.2f}')
+            logger.extra(f'N_f= {len(f_n)}, BIC: {bic:1.2f} - Fit group {k + 1} of {n_groups}, '
+                         f'N_f(group)= {len(group)}')
 
     return res_p_orb, res_const, res_slope, res_f_n, res_a_n, res_ph_n

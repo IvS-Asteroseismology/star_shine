@@ -600,10 +600,10 @@ class SinusoidModel:
 
         # ensure harmonic input ok
         if h_base_new is None:
-            h_base_new = -np.ones(n_new)
+            h_base_new = -np.ones(n_new, dtype=int)
         h_base_new = np.atleast_1d(h_base_new)
         if h_mult_new is None:
-            h_mult_new = np.zeros(n_new)
+            h_mult_new = np.zeros(n_new, dtype=int)
         h_mult_new = np.atleast_1d(h_mult_new)
         harmonics_new = h_base_new != -1
 
@@ -656,10 +656,10 @@ class SinusoidModel:
 
         # ensure harmonic input ok
         if h_base_new is None:
-            h_base_new = -np.ones(n_new)
+            h_base_new = -np.ones(n_new, dtype=int)
         h_base_new = np.atleast_1d(h_base_new)
         if h_mult_new is None:
-            h_mult_new = np.zeros(n_new)
+            h_mult_new = np.zeros(n_new, dtype=int)
         h_mult_new = np.atleast_1d(h_mult_new)
         harmonics_new = h_base_new != -1
 
@@ -718,10 +718,10 @@ class SinusoidModel:
 
         # ensure harmonic input ok
         if h_base_new is None:
-            h_base_new = -np.ones(n_new)
+            h_base_new = -np.ones(n_new, dtype=int)
         h_base_new = np.atleast_1d(h_base_new)
         if h_mult_new is None:
-            h_mult_new = np.zeros(n_new)
+            h_mult_new = np.zeros(n_new, dtype=int)
         h_mult_new = np.atleast_1d(h_mult_new)
         harmonics_new = h_base_new != -1
 
@@ -791,7 +791,7 @@ class SinusoidModel:
         self._h_mult = np.delete(self._h_mult, indices)
 
         # update indices for the removals
-        self._h_base = ut.adjust_indices_removed(self._h_base, indices)
+        self._h_base = np.array(ut.adjust_indices_removed(self._h_base, indices))
 
         # if we deleted a base harmonic, also delete the harmonic series
         self._removed_h_base(indices)

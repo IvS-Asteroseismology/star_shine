@@ -417,15 +417,15 @@ class Pipeline:
         self.result.setter(p_orb=p_orb)
 
         # if time series too short, or no harmonics found, log and warn and maybe cut off the analysis
-        freq_res = 1.5 / self.data.t_tot  # Rayleigh criterion
+        freq_res = 1.5 / self.data.time_series.t_tot  # Rayleigh criterion
         harmonics, harmonic_n = frs.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=freq_res / 2)
 
-        if (self.data.t_tot / self.result.p_orb > 1.1) & (len(harmonics) > 1):
+        if (self.data.time_series.t_tot / self.result.p_orb > 1.1) & (len(harmonics) > 1):
             # couple the harmonics to the period. likely removes more frequencies that need re-extracting
             out_a = ana.fix_harmonic_frequency(self.data.time_series.time, self.data.time_series.flux,
                                                self.result.p_orb, self.result.const,
                                                self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                               self.data.i_chunks, logger=self.logger)
+                                               self.data.time_series.i_chunks, logger=self.logger)
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         self.reduce_sinusoids()  # remove any frequencies that end up not making the statistical cut
@@ -444,12 +444,12 @@ class Pipeline:
         self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
 
         # log if short time span or few harmonics
-        if self.data.t_tot / self.result.p_orb < 1.1:
-            self.logger.warning(f"Period over time-base is less than two: {self.data.t_tot / self.result.p_orb}; "
-                                f"period (days): {self.result.p_orb}; time-base (days): {self.data.t_tot}")
+        if (t_over_p := self.data.time_series.t_tot / self.result.p_orb) < 1.1:
+            self.logger.warning(f"Period over time-base is less than two: {t_over_p}; "
+                                f"period (days): {self.result.p_orb}; time-base (days): {self.data.time_series.t_tot}")
         elif len(harmonics) < 2:
             self.logger.warning(f"Not enough harmonics found: {len(harmonics)}; "
-                                f"period (days): {self.result.p_orb}; time-base (days): {self.data.t_tot}")
+                                f"period (days): {self.result.p_orb}; time-base (days): {self.data.time_series.t_tot}")
 
         return None
 
@@ -469,7 +469,7 @@ class Pipeline:
             par_mean = fit.fit_multi_sinusoid_harmonics_per_group(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb,
                                                                   self.result.const, self.result.slope,
                                                                   self.result.f_n, self.result.a_n, self.result.ph_n,
-                                                                  self.data.i_chunks, logger=self.logger)
+                                                                  self.data.time_series.i_chunks, logger=self.logger)
         else:
             # make model including everything to calculate noise level
             resid = self.data.time_series.flux - self.model_linear() - self.model_sinusoid()
@@ -480,7 +480,7 @@ class Pipeline:
             # formal linear and sinusoid parameter errors
             c_err, sl_err, f_n_err, a_n_err, ph_n_err = ut.formal_uncertainties(self.data.time.time_series, resid,
                                                                                 self.data.time_series.flux_err, self.result.a_n,
-                                                                                self.data.i_chunks)
+                                                                                self.data.time_series.i_chunks)
             p_err, _, _ = ut.linear_regression_uncertainty_ephem(self.data.time.time_series, self.result.p_orb,
                                                                                       sigma_t=self.data.t_step / 2)
 
@@ -493,7 +493,7 @@ class Pipeline:
             output = mcf.sample_sinusoid_h(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb, self.result.const,
                                            self.result.slope, f_n, a_n, ph_n, self.result.p_err, self.result.c_err,
                                            self.result.sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
-                                           self.data.i_chunks, logger=self.logger)
+                                           self.data.time_series.i_chunks, logger=self.logger)
             inf_data, par_mean, par_hdi = output
             self.result.setter(p_hdi=par_hdi[0], c_hdi=par_hdi[1], sl_hdi=par_hdi[2], f_n_hdi=par_hdi[3],
                                a_n_hdi=par_hdi[4], ph_n_hdi=par_hdi[5])

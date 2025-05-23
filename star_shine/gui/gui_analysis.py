@@ -30,16 +30,16 @@ class PipelineThread(QThread):
     def run(self):
         """Run the function in a separate thread."""
         if self.func_name != '':
-            try:
-                # start a thread with the function
-                function_to_run = getattr(self.pipeline_instance, self.func_name)
-                function_to_run(*self.args, **self.kwargs)
+            # try:
+            # start a thread with the function
+            function_to_run = getattr(self.pipeline_instance, self.func_name)
+            function_to_run(*self.args, **self.kwargs)
 
-                # Emit the signal
-                self.result_signal.emit()
+            # Emit the signal
+            self.result_signal.emit()
 
-            except Exception as e:
-                self.pipeline_instance.logger.error(f"Error during analysis: {e}")
+            # except Exception as e:
+            #     self.pipeline_instance.logger.error(f"Error during analysis: {e}")
 
     def stop(self):
         """Stop the thread."""

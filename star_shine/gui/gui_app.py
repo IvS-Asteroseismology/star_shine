@@ -208,6 +208,17 @@ class MainWindow(QMainWindow):
         l_col_widget = QWidget()
         l_col_layout = QVBoxLayout(l_col_widget)
 
+        # create a horizontal layout with some buttons
+        extra_button_widget = QWidget()
+        extra_button_layout = QHBoxLayout(extra_button_widget)
+
+        # Button for adding base harmonic frequency
+        self.harmonic_button = QPushButton("Add base harmonic")
+        # self.harmonic_button.clicked.connect(self.add_base_harmonic)
+        extra_button_layout.addWidget(self.harmonic_button)
+
+        l_col_layout.addWidget(extra_button_widget)
+
         # create a horizontal layout with the buttons for each step
         steps_button_widget = QWidget()
         steps_button_layout = QHBoxLayout(steps_button_widget)
@@ -218,8 +229,8 @@ class MainWindow(QMainWindow):
         self.spin_box.setValue(0)
         # Button for starting analysis
         self.extract_button = QPushButton("Extract")
-        self.extract_button.clicked.connect(functools.partial(self.perform_analysis, 'iterative_prewhitening',
-                                                              n_extract=self.spin_box.value()))
+        self.extract_button.clicked.connect(lambda: self.perform_analysis('iterative_prewhitening',
+                                                                          n_extract=self.spin_box.value()))
         steps_button_layout.addWidget(self.extract_button)
         steps_button_layout.addWidget(self.spin_box)  # add the number field after the button
 

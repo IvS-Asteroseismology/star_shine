@@ -173,7 +173,7 @@ def consecutive_subsets(x):
 
     Parameters
     ----------
-    x: list[Any], ndarray[Any, dtype[Any]]
+    x: list[Any], numpy.ndarray[Any, dtype[Any]]
         A list of values.
 
     Returns
@@ -198,9 +198,9 @@ def adjust_indices_removed(x, removed):
 
     Parameters
     ----------
-    x: list[int], ndarray[Any, dtype[int]]
+    x: iterable[int], numpy.ndarray[Any, dtype[int]]
         A list of indices that slice another array, y.
-    removed: list[int], ndarray[Any, dtype[int]]
+    removed: iterable[int], numpy.ndarray[Any, dtype[int]]
         A second list of indices indicating removals from y.
 
     Returns
@@ -223,12 +223,12 @@ def find_local_max(y):
 
     Parameters
     ----------
-    y: ndarray[Any, dtype[float]]
+    y: numpy.ndarray[Any, dtype[float]]
         1D array of y-values corresponding to the x-values.
 
     Returns
     -------
-    ndarray[Any, dtype[int]]
+    numpy.ndarray[Any, dtype[int]]
         Indeces of the `x` values corresponding to the local maxima.
 
     Examples
@@ -261,16 +261,16 @@ def uphill_local_max(x, y, x_approx):
 
     Parameters
     ----------
-    x: ndarray[Any, dtype[float]]
+    x: numpy.ndarray[Any, dtype[float]]
         1D array of x-values, which must be sorted in ascending order.
-    y: ndarray[Any, dtype[float]]
+    y: numpy.ndarray[Any, dtype[float]]
         1D array of y-values corresponding to the x-values.
-    x_approx: ndarray[Any, dtype[float]]
+    x_approx: numpy.ndarray[Any, dtype[float]]
         The x-value(s) around which to find the nearest local maximum.
 
     Returns
     -------
-    ndarray[Any, dtype[int]]
+    numpy.ndarray[Any, dtype[int]]
         Index of the `x` value(s) corresponding to the nearest local maximum to `x_approx`.
 
     Examples

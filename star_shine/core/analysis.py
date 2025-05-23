@@ -554,19 +554,19 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
     Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).
     Assumes the harmonics are already fixed multiples of 1/p_orb as can be achieved with fix_harmonic_frequency.
     """
-    # make lists of not-present possible harmonics
+    # make lists of not-present possible harmonics paired with their base frequency
     f_base = []
     h_candidates_n = []
-    for key in ts_model.sinusoid.harmonics.keys():  # todo: re-do this
+    for i_base in np.unique(ts_model.sinusoid.h_base[ts_model.sinusoid.harmonics]):
         # the range of harmonic multipliers below the Nyquist frequency
-        harmonics_i = np.arange(1, ts_model.pd_fn / ts_model.sinusoid.f_n[key], dtype=int)
+        harmonics_i = np.arange(1, ts_model.pd_fn / ts_model.sinusoid.f_n[i_base], dtype=int)
 
         # harmonic_n minus one is the position for existing harmonics
-        harmonics_i = np.delete(harmonics_i, ts_model.sinusoid.harmonic_n[key] - 1)
+        harmonics_i = np.delete(harmonics_i, ts_model.sinusoid.harmonic_n[ts_model.sinusoid.h_base == i_base] - 1)
         h_candidates_n.extend(harmonics_i)
-        f_base.extend([ts_model.sinusoid.f_n[key] for _ in range(len(harmonics_i))])
+        f_base.extend([ts_model.sinusoid.f_n[i_base] for _ in range(len(harmonics_i))])
 
-        # determine the initial bic
+    # determine the initial bic
     bic_prev = ts_model.bic()  # initialise current BIC to the mean (and slope) subtracted flux
     bic_init = bic_prev
 
@@ -597,7 +597,7 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
             # h_c is rejected, revert to previous model
             ts_model.remove_sinusoids(ts_model.sinusoid.n_sin - 1)
             ts_model.update_linear_model()
-        # todo: test this
+
         if logger is not None and condition_1:
             logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - Extracted: "
                          f"f_base= {f_base[i]:1.2f}, h= {h_candidates_n[i]}, f= {f_i:1.6f}, a= {a_i:1.6f}")
