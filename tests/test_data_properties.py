@@ -16,8 +16,8 @@ class TestDataProperties(unittest.TestCase):
 
         # Regular time series without gaps
         self.time_series_regular = np.arange(0, 50, 0.1)
-        self.adjusted_time =np.copy(self.time_series_regular)
-        self.adjusted_time[250:] += 0.01
+        self.time_series_adjusted = np.copy(self.time_series_regular)
+        self.time_series_adjusted[250:] += 0.01
 
         # Time series with some random noise
         self.time_series_noisy = np.arange(0, 50, 0.1) + 0.001 * np.random.rand(500)
@@ -127,10 +127,10 @@ class TestDataProperties(unittest.TestCase):
         mock_config_instance = dp.config
 
         with patch('star_shine.config.data_properties.get_config', return_value=mock_config_instance):
-            f_nyquist = dp.nyquist_frequency(self.adjusted_time)
+            f_nyquist = dp.nyquist_frequency(self.time_series_adjusted)
 
         # Expected value using the given formula
-        delta_t_min = np.min(self.time_series_regular[1:] - self.time_series_regular[:-1])
+        delta_t_min = np.min(self.time_series_adjusted[1:] - self.time_series_adjusted[:-1])
         expected = 0.5 / delta_t_min
         print('test_nyquist_frequency_adjusted', f_nyquist, expected)
         self.assertAlmostEqual(f_nyquist, expected)
