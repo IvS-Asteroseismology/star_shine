@@ -118,7 +118,7 @@ class TestDataProperties(unittest.TestCase):
         # Expected value using the given formula
         delta_t_min = np.min(self.time_series_noisy[1:] - self.time_series_noisy[:-1])
         expected = 0.5 / delta_t_min
-        print(f_nyquist, expected)
+        print('test_nyquist_frequency_noisy', f_nyquist, expected)
         self.assertAlmostEqual(f_nyquist, expected)
 
     def test_nyquist_frequency_adjusted(self):
@@ -132,7 +132,7 @@ class TestDataProperties(unittest.TestCase):
         # Expected value using the given formula
         delta_t_min = np.min(self.time_series_regular[1:] - self.time_series_regular[:-1])
         expected = 0.5 / delta_t_min
-        print(f_nyquist, expected)
+        print('test_nyquist_frequency_adjusted', f_nyquist, expected)
         self.assertAlmostEqual(f_nyquist, expected)
 
     def test_nyquist_frequency_custom(self):
@@ -148,7 +148,7 @@ class TestDataProperties(unittest.TestCase):
         # Expected value using the given formula
         delta_t_min = np.min(self.time_series_noisy[1:] - self.time_series_noisy[:-1])
         expected = nyquist_factor * 0.5 / delta_t_min
-
+        print('test_nyquist_frequency_custom', f_nyquist, expected)
         self.assertAlmostEqual(f_nyquist, expected)
 
 
