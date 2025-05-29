@@ -9,8 +9,8 @@ import os
 import sys
 import functools
 
-from PySide6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QSplitter, QMenuBar
-from PySide6.QtWidgets import QLabel, QTextEdit, QLineEdit, QSpinBox, QFileDialog, QMessageBox, QPushButton
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter, QMenuBar
+from PySide6.QtWidgets import QWidget, QLabel, QTextEdit, QLineEdit, QSpinBox, QFileDialog, QMessageBox, QPushButton
 from PySide6.QtWidgets import QTableView, QHeaderView
 from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor, QIcon
 
@@ -48,6 +48,15 @@ class MainWindow(QMainWindow):
         icon_path = os.path.join(hlp.get_images_path(), 'Star_Shine_dark_simple_small_transparent.png')
         self.setWindowIcon(QIcon(icon_path))
 
+        # some things that need a default value
+        self.data_dir = config.data_dir
+        if self.data_dir == '':
+            self.data_dir = os.path.expanduser('~')
+        self.save_dir = config.save_dir
+        if self.save_dir == '':
+            self.save_dir = os.path.expanduser('~')
+        self.save_subdir = ''
+
         # Set font size for the entire application
         font = QFont()
         font.setPointSize(11)
@@ -69,15 +78,6 @@ class MainWindow(QMainWindow):
         # add the api classes for functionality
         self.pipeline = None
         self.pipeline_thread = None
-
-        # some things that need a default
-        self.data_dir = config.data_dir
-        if self.data_dir == '':
-            self.data_dir = os.path.expanduser('~')
-        self.save_dir = config.save_dir
-        if self.save_dir == '':
-            self.save_dir = os.path.expanduser('~')
-        self.save_subdir = ''
 
     def _setup_central_widget(self):
         """Set up the central widget and its layout."""
@@ -205,6 +205,10 @@ class MainWindow(QMainWindow):
         # create a vertical layout for in the left column of the main layout
         l_col_widget = QWidget()
         l_col_layout = QVBoxLayout(l_col_widget)
+
+        # create the info grid
+        info_widget = self._create_info_fields()
+        l_col_layout.addWidget(info_widget)
 
         # create a horizontal layout with some buttons
         run_button_widget = QWidget()
@@ -345,6 +349,54 @@ class MainWindow(QMainWindow):
 
         return r_col_widget
 
+    def _create_info_fields(self):
+        """Create and return the left column information grid widget.
+
+        Returns
+        -------
+        QWidget
+            The left column information grid widget.
+        """
+        # create a grid area for labels and read-only text fields
+        info_widget = QWidget()
+        info_layout = QGridLayout(info_widget)
+
+        # current directory
+        current_dir_label = QLabel("Current directory:")
+        self.current_dir_field = QLineEdit()
+        self.current_dir_field.setReadOnly(True)
+        self.current_dir_field.setText(self.save_dir)
+        info_layout.addWidget(current_dir_label, 0, 0)
+        info_layout.addWidget(self.current_dir_field, 0, 1)
+
+        # target id
+        target_id_label = QLabel("Target ID:")
+        self.target_id_field = QLineEdit()
+        self.target_id_field.setReadOnly(True)
+        info_layout.addWidget(target_id_label, 1, 0)
+        info_layout.addWidget(self.target_id_field, 1, 1)
+
+        # data id
+        data_id_label = QLabel("Data ID:")
+        self.data_id_field = QLineEdit()
+        self.data_id_field.setReadOnly(True)
+        info_layout.addWidget(data_id_label, 1, 2)
+        info_layout.addWidget(self.data_id_field, 1, 3)
+
+        return info_widget
+
+    def update_info_fields(self):
+        """Update the information field widget."""
+        # current directory
+        self.current_dir_field.setText(self.save_dir)
+
+        # if there is a pipeline we can fill in the data attributes
+        if self.pipeline is not None:
+            self.target_id_field.setText(self.pipeline.data.target_id)
+            self.data_id_field.setText(self.pipeline.data.data_id)
+
+        return None
+
     def append_text(self, text):
         """Append a line of text at the end of the plain text output box.
 
@@ -467,6 +519,9 @@ class MainWindow(QMainWindow):
         self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline)
         self.pipeline_thread.result_signal.connect(self.handle_result_signal)
 
+        # update the info fields
+        self.update_info_fields()
+
         # clear and update the plots
         self.update_plots(new_plot=True)
 
@@ -480,6 +535,9 @@ class MainWindow(QMainWindow):
         if new_dir:
             self.save_dir = new_dir
             self.append_text(f"Save location set to: {self.save_dir}")
+
+        # update the current directory info field
+        self.update_info_fields()
 
         return None
 
@@ -500,6 +558,9 @@ class MainWindow(QMainWindow):
         else:
             # any other files are loaded as external data
             data = Data.load_data(file_list=file_paths, data_dir='', target_id='', data_id='', logger=self.logger)
+
+        # set the save dir to the one where we opened the data
+        self.save_dir = os.path.dirname(file_paths[0])
 
         # set up some things
         self.new_dataset(data)
