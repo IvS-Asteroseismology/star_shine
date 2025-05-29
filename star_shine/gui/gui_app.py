@@ -185,14 +185,12 @@ class MainWindow(QMainWindow):
     def _setup_view_menu(self, view_menu):
         """Set up the view menu."""
         # Add a horizontal separator
-        view_menu.addSeparator()
+        # view_menu.addSeparator()
 
-        # Add "Load Data" button to "File" menu
-        self.show_residual_action = QAction("Show residual", self)
-        self.show_residual_action.setCheckable(True)
-        self.show_residual_action.setChecked(False)
-        self.show_residual_action.triggered.connect(self.update_plots)
-        view_menu.addAction(self.show_residual_action)
+        # Add "Save Layout" button to "View" menu
+        self.save_layout_action = QAction("Save Layout", self)
+        # self.save_layout_action.triggered.connect()
+        view_menu.addAction(self.save_layout_action)
 
         return None
 
@@ -209,15 +207,20 @@ class MainWindow(QMainWindow):
         l_col_layout = QVBoxLayout(l_col_widget)
 
         # create a horizontal layout with some buttons
-        extra_button_widget = QWidget()
-        extra_button_layout = QHBoxLayout(extra_button_widget)
+        run_button_widget = QWidget()
+        run_button_layout = QHBoxLayout(run_button_widget)
 
-        # Button for adding base harmonic frequency
-        self.harmonic_button = QPushButton("Add base harmonic")
-        # self.harmonic_button.clicked.connect(self.add_base_harmonic)
-        extra_button_layout.addWidget(self.harmonic_button)
+        # Button for starting analysis
+        self.analyze_button = QPushButton("Run Full Analyis")
+        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'run'))
+        run_button_layout.addWidget(self.analyze_button)
 
-        l_col_layout.addWidget(extra_button_widget)
+        # Button for starting analysis
+        self.stop_button = QPushButton("Stop [WIP]")
+        self.stop_button.clicked.connect(self.stop_analysis)
+        run_button_layout.addWidget(self.stop_button)
+
+        l_col_layout.addWidget(run_button_widget)
 
         # create a horizontal layout with the buttons for each step
         steps_button_widget = QWidget()
@@ -257,25 +260,22 @@ class MainWindow(QMainWindow):
         l_col_layout.addWidget(steps_button_widget)
 
         # create a horizontal layout with some buttons
-        run_button_widget = QWidget()
-        run_button_layout = QHBoxLayout(run_button_widget)
+        extra_button_widget = QWidget()
+        extra_button_layout = QHBoxLayout(extra_button_widget)
 
-        # Button for starting analysis
-        self.analyze_button = QPushButton("Run Full Analyis")
-        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'run'))
-        run_button_layout.addWidget(self.analyze_button)
+        # Button for adding base harmonic frequency
+        self.harmonic_button = QPushButton("Add base harmonic")
+        # self.harmonic_button.clicked.connect(self.add_base_harmonic)
+        extra_button_layout.addWidget(self.harmonic_button)
 
-        # Button for starting analysis
-        self.stop_button = QPushButton("Stop")
-        self.stop_button.clicked.connect(self.stop_analysis)
-        run_button_layout.addWidget(self.stop_button)
-
-        l_col_layout.addWidget(run_button_widget)
+        l_col_layout.addWidget(extra_button_widget)
 
         # Log area
+        log_label = QLabel("Log:")
+        l_col_layout.addWidget(log_label)
+
         self.text_field = QTextEdit()
         self.text_field.setReadOnly(True)  # Make the text edit read-only
-        self.text_field.setPlainText("Log\n")
         l_col_layout.addWidget(self.text_field)
 
         return l_col_widget
@@ -332,12 +332,16 @@ class MainWindow(QMainWindow):
         self.upper_plot_area = gui_plot.PlotWidget(title='Data', xlabel='time', ylabel='flux')
         r_col_layout.addWidget(self.upper_plot_area)
 
+        # connect the residual event
+        self.upper_plot_area.residual_signal.connect(functools.partial(self.update_plots, new_plot=True))
+
         # lower plot area for the periodogram
         self.lower_plot_area = gui_plot.PlotWidget(title='Periodogram', xlabel='frequency', ylabel='amplitude')
         r_col_layout.addWidget(self.lower_plot_area)
 
-        # connect the click event
+        # connect the click and residual event
         self.lower_plot_area.click_signal.connect(self.click_periodogram)
+        self.lower_plot_area.residual_signal.connect(functools.partial(self.update_plots, new_plot=True))
 
         return r_col_widget
 
@@ -401,11 +405,13 @@ class MainWindow(QMainWindow):
         lower_plot_data['plot_ys'] = [self.pipeline.data.time_series.pd_ampls]
 
         # include result attributes if present
-        if self.pipeline.result.target_id != '' and not self.show_residual_action.isChecked():
+        if self.pipeline.result.target_id != '' and not self.upper_plot_area.show_residual:
             # upper plot area - time series
             upper_plot_data['plot_xs'] = [self.pipeline.data.time_series.time]
             upper_plot_data['plot_ys'] = [self.pipeline.model()]
             upper_plot_data['plot_colors'] = ['grey']
+
+        if self.pipeline.result.target_id != '' and not self.lower_plot_area.show_residual:
             # lower plot area - periodogram
             freqs, ampls = self.pipeline.periodogram(subtract_model=True)
             lower_plot_data['plot_xs'].append(freqs)
@@ -415,11 +421,13 @@ class MainWindow(QMainWindow):
             lower_plot_data['vlines_colors'] = ['grey']
 
         # only show residual if toggle checked
-        if self.pipeline.result.target_id != '' and self.show_residual_action.isChecked():
+        if self.pipeline.result.target_id != '' and self.upper_plot_area.show_residual:
             # upper plot area - time series
             residual = self.pipeline.data.time_series.flux - self.pipeline.model()
             upper_plot_data['scatter_xs'] = [self.pipeline.data.time_series.time]
             upper_plot_data['scatter_ys'] = [residual]
+
+        if self.pipeline.result.target_id != '' and self.lower_plot_area.show_residual:
             # lower plot area - periodogram
             freqs, ampls = self.pipeline.periodogram(subtract_model=True)
             lower_plot_data['plot_xs'] = [freqs]
@@ -500,6 +508,11 @@ class MainWindow(QMainWindow):
 
     def save_data(self):
         """Save data to a file using a dialog window."""
+        # check whether data is present
+        if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
+            self.logger.error("Input Error: please load data first.")
+            return None
+
         suggested_path = os.path.join(self.save_dir, self.pipeline.data.target_id + '_data.hdf5')
         file_path, _ = QFileDialog.getSaveFileName(self, caption="Save Data", dir=suggested_path,
                                                    filter="HDF5 Files (*.hdf5);;All Files (*)")
@@ -514,6 +527,11 @@ class MainWindow(QMainWindow):
 
     def load_result(self):
         """Load result from a file using a dialog window."""
+        # check whether a pipeline is present
+        if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
+            self.logger.error("Input Error: please load data first.")
+            return None
+
         # get the path(s) from a standard file selection screen
         file_path, _ = QFileDialog.getOpenFileName(self, caption="Load Result", dir=self.save_dir,
                                                     filter="HDF5 Files (*.hdf5);;All Files (*)")
@@ -523,7 +541,10 @@ class MainWindow(QMainWindow):
             return None
 
         # load result into instance
-        self.pipeline.result = Result.load(file_name=file_path, logger=self.logger)
+        try:
+            self.pipeline.result = Result.load(file_name=file_path, logger=self.logger)
+        except KeyError as e:
+            self.logger.error(f"Incompatible file: {e}")
 
         # clear and update the plots
         self.update_plots(new_plot=False)
@@ -532,6 +553,11 @@ class MainWindow(QMainWindow):
 
     def save_result(self):
         """Save result to a file using a dialog window."""
+        # check whether a result is present
+        if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
+            self.logger.error("Input Error: please load data first.")
+            return None
+
         suggested_path = os.path.join(self.save_dir, self.pipeline.data.target_id + '_result.hdf5')
         file_path, _ = QFileDialog.getSaveFileName(self, caption="Save Data", dir=suggested_path,
                                                    filter="HDF5 Files (*.hdf5);;All Files (*)")

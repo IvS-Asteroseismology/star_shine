@@ -21,6 +21,7 @@ class PlotToolbar(NavigationToolbar2QT):
     """New plot toolbar"""
 
     click_icon_file = os.path.join(get_images_path(), 'click')
+    residual_icon_file = os.path.join(get_images_path(), 'residual')
 
     # list of toolitems to add to the toolbar, format is:
     # (
@@ -38,6 +39,7 @@ class PlotToolbar(NavigationToolbar2QT):
         ('Zoom', 'Zoom to rectangle\nx/y fixes axis', 'zoom_to_rect', 'zoom'),
         ('Click', 'Click on the plot to interact', click_icon_file, 'click'),
         (None, None, None, None),
+        ('Residual', 'Show residual plot', residual_icon_file, 'residual'),
         ('Subplots', 'Configure subplots', 'subplots', 'configure_subplots'),
         ('Customize', 'Edit axis, curve and image parameters', 'qt4_editor_options', 'edit_parameters'),
         (None, None, None, None),
@@ -47,6 +49,7 @@ class PlotToolbar(NavigationToolbar2QT):
     def __init__(self, canvas, parent):
         super().__init__(canvas, parent)
         self._setup_click_button()
+        self._setup_residual_button()
 
     def _setup_click_button(self):
         """Set up the click mode button."""
@@ -91,6 +94,27 @@ class PlotToolbar(NavigationToolbar2QT):
 
         super().zoom(*args)
 
+    def _setup_residual_button(self):
+        """Set up the residual mode button."""
+        for action in self.actions():
+            if action.text() == "Residual":
+                action.setCheckable(True)
+                self.residual_action = action
+                break
+
+        return None
+
+    def residual(self, *args):
+        """Toggle residual mode."""
+        if args and args[0]:
+            self.residual_action.setChecked(True)
+            return None
+        elif args and not args[0]:
+            self.residual_action.setChecked(False)
+            return None
+
+        return None
+
 
 class PlotWidget(QWidget):
     """A widget for displaying plots using Matplotlib in a Qt application.
@@ -100,6 +124,7 @@ class PlotWidget(QWidget):
     """
     # Define a signal that emits the plot ID and clicked coordinates
     click_signal = Signal(float, float, int)
+    residual_signal = Signal()
 
     def __init__(self, title='Plot', xlabel='x', ylabel='y'):
         """A widget for displaying plots using Matplotlib in a Qt application.
@@ -127,6 +152,7 @@ class PlotWidget(QWidget):
 
         # Add toolbar for interactivity
         self.toolbar = PlotToolbar(self.canvas, self)
+        self.show_residual = False
 
         # make an axis and set the labels
         self.ax = self.figure.add_subplot(111)
@@ -140,6 +166,9 @@ class PlotWidget(QWidget):
 
         # Connect the mouse click event to a custom method
         self.canvas.mpl_connect('button_press_event', self.on_click)
+
+        # Connect the residual action to the on_residual method
+        self.toolbar.residual_action.triggered.connect(self.on_residual)
 
         # plot types and properties supported
         self.plot_type_list = ['plot', 'scatter', 'vlines']
@@ -185,6 +214,13 @@ class PlotWidget(QWidget):
             # Ensure valid coordinates
             if x is not None and y is not None:
                 self.click_signal.emit(x, y, event.button)
+
+        return None
+
+    def on_residual(self, event):
+        """Residual event"""
+        self.show_residual = self.toolbar.residual_action.isChecked()
+        self.residual_signal.emit()
 
         return None
 
