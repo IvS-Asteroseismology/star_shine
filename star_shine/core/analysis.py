@@ -680,108 +680,66 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
     return ts_model
 
 
-def remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
-    """Attempt the removal of individual frequencies
+def remove_sinusoids_single(ts_model, logger=None):
+    """Attempt the removal of individual sinusoids.
+
+    Checks whether the BIC can be improved by removing a sinusoid. Harmonics are taken into account.
 
     Parameters
     ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    p_orb: float
-        Orbital period of the eclipsing binary in days (can be 0)
-    const: numpy.ndarray[Any, dtype[float]]
-        The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves
-    i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
     logger: logging.Logger, optional
         Instance of the logging library.
 
     Returns
     -------
-    tuple
-        A tuple containing the following elements:
-        const: numpy.ndarray[Any, dtype[float]]
-            (Updated) y-intercepts of a piece-wise linear curve
-        slope: numpy.ndarray[Any, dtype[float]]
-            (Updated) slopes of a piece-wise linear curve
-        f_n: numpy.ndarray[Any, dtype[float]]
-            (Updated) frequencies of a (lower) number of sine waves
-        a_n: numpy.ndarray[Any, dtype[float]]
-            (Updated) amplitudes of a (lower) number of sine waves
-        ph_n: numpy.ndarray[Any, dtype[float]]
-            (Updated) phases of a (lower) number of sine waves
-
-    Notes
-    -----
-    Checks whether the BIC can be improved by removing a frequency.
-    Harmonics are taken into account.
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
     """
-    n_chunks = len(i_chunks)
-    n_sin = len(f_n)
-    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
-    n_harm = len(harmonics)
-
-    # indices of single frequencies to remove
-    remove_single = np.zeros(0, dtype=np.int_)
+    n_sin_init = len(ts_model.sinusoid.f_n)
 
     # determine initial bic
-    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
-    cur_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    resid = cur_resid - mdl.linear_curve(time, const, slope, i_chunks)
-    n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
-    bic_prev = gof.calc_bic(resid, n_param)
+    bic_prev = ts_model.bic()
     bic_init = bic_prev
     n_prev = -1
 
-    # while frequencies are added to the remove list, continue loop
-    while len(remove_single) > n_prev:
-        n_prev = len(remove_single)
-        for i in range(n_sin):
-            if i in remove_single:
+    # while frequencies are added to the exclude list, continue loop
+    while (n_sin := np.sum(ts_model.sinusoid.include)) > n_prev:
+        n_prev = n_sin
+        for i in range(n_sin_init):
+            # continue if sinusoid is already excluded
+            if not ts_model.sinusoid.include[i]:
                 continue
 
-            # make a model of the removed sinusoids and subtract it from the full sinusoid model
-            model_sinusoid_r = mdl.sum_sines_st(time, np.array([f_n[i]]), np.array([a_n[i]]), np.array([ph_n[i]]))
-            resid = cur_resid + model_sinusoid_r
-            const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-            resid -= mdl.linear_curve(time, const, slope, i_chunks)
+            # exclude sinusoid and redetermine the constant and slope
+            ts_model.exclude_sinusoids(i)
+            ts_model.update_linear_model()
 
-            # number of parameters and bic
-            n_harm_i = n_harm - len([h for h in remove_single if h in harmonics]) - 1 * (i in harmonics)
-            n_sin_i = n_sin - len(remove_single) - 1 - n_harm_i
-            n_param = ut.n_parameters(n_chunks, n_sin_i, n_harm_i)
-            bic = gof.calc_bic(resid, n_param)
+            # determine new BIC and whether it improved
+            bic = ts_model.bic()
+            d_bic = bic_prev - bic
 
-            # if improvement, add to list of removed freqs
-            if np.round(bic_prev - bic, 2) > 0:
-                remove_single = np.append(remove_single, i)
-                cur_resid += model_sinusoid_r
+            # only remove sinusoid if it increases the BIC
+            condition_1 = np.round(d_bic, 2) > 0
+
+            # check acceptance condition before moving to the next iteration
+            if condition_1:
+                # accept the removal
                 bic_prev = bic
+            else:
+                # removal is rejected, revert to previous model
+                ts_model.include_sinusoids(i)
 
-    # lastly re-determine slope and const
-    const, slope = mdl.linear_pars(time, cur_resid, i_chunks)
-
-    # finally, remove all the designated sinusoids from the lists
-    f_n = np.delete(f_n, remove_single)
-    a_n = np.delete(a_n, remove_single)
-    ph_n = np.delete(ph_n, remove_single)
+    # lastly re-determine slope and const and remove the excluded frequencies
+    ts_model.remove_excluded()
+    ts_model.update_linear_model()
 
     if logger is not None:
-        logger.extra(f"Single frequencies removed: {n_sin - len(f_n)}, "
-                     f"N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f})")
+        logger.extra(f"Single frequencies removed: {n_sin_init - ts_model.sinusoid.n_sin}, "
+                     f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f})")
 
-    return const, slope, f_n, a_n, ph_n
+    return ts_model
 
 
 def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
@@ -980,9 +938,14 @@ def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, 
     is given to frequencies that are within the Rayleigh criterion of each other.
     It is attempted to replace these by a single frequency.
     """
+    # make the TimeSeriesModel object
+    ts_model = tms.TimeSeriesModel(time, flux, np.zeros_like(time), i_chunks)
+    ts_model.set_sinusoids(f_n, a_n, ph_n)
+    ts_model.set_linear_model(const, slope)
+
     # first check if any frequency can be left out (after the fit, this may be possible)
-    out_a = remove_sinusoids_single(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=logger)
-    const, slope, f_n, a_n, ph_n = out_a
+    ts_model = remove_sinusoids_single(ts_model, logger=logger)
+    const, slope, f_n, a_n, ph_n = ts_model.get_parameters()
 
     # Now go on to trying to replace sets of frequencies that are close together
     out_b = replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=logger)
