@@ -8,7 +8,7 @@ Code written by: Luc IJspeert
 import os
 import numpy as np
 
-from star_shine.core import model as mdl, frequency_sets as frs, utility as ut
+from star_shine.core import model as mdl, utility as ut
 from star_shine.core import io
 from star_shine.config.helpers import get_config
 
@@ -317,22 +317,6 @@ class Result:
             # save csv files if configured
             if config.save_ascii:
                 self.save_as_csv(file_name)
-
-        return None
-
-    def update_n_param(self):
-        """Evaluate and set the number of free parameters of the model."""
-        # check harmonics
-        n_harm = 0
-        if self.p_orb > 0:
-            harmonics, harmonic_n = frs.find_harmonics_from_pattern(self.f_n, self.p_orb, f_tol=1e-9)
-            n_harm = len(harmonics)
-
-        # equation for number of parameters
-        n_chunks = len(self.const)
-        n_sinusoids = len(self.f_n)
-        n_param = ut.n_parameters(n_chunks, n_sinusoids, n_harm)
-        self.setter(n_param=n_param)
 
         return None
 

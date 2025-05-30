@@ -65,7 +65,7 @@ class TimeSeries:
         self.i_chunks = i_chunks
 
         # some numbers
-        self.n_t = len(time)
+        self.n_time = len(time)
         self.n_chunks = len(i_chunks)
 
         # set time properties
@@ -132,8 +132,14 @@ class TimeSeriesModel(TimeSeries):
         super().__init__(time, flux, flux_err, i_chunks)
 
         # time series models making up the full model
-        self.linear = mdl.LinearModel(self.n_t, self.n_chunks)
-        self.sinusoid = mdl.SinusoidModel(self.n_t)
+        self.linear = mdl.LinearModel(self.n_time, self.n_chunks)
+        self.sinusoid = mdl.SinusoidModel(self.n_time)
+
+    @staticmethod
+    def from_time_series(time_series):
+        """Create a TimeSeriesModel instance from a TimeSeries instance."""
+        return TimeSeriesModel(time=time_series.time, flux=time_series.flux, flux_err=time_series.flux_err,
+                               i_chunks=time_series.i_chunks)
 
     @property
     def n_param(self):
@@ -185,6 +191,30 @@ class TimeSeriesModel(TimeSeries):
             BIC of the current time series model.
         """
         return gof.calc_bic(self.residual(), self.n_param)
+
+    def periodogram(self, subtract_model=True):
+        """Get the Lomb-Scargle periodogram of the time series.
+
+        Uses the cached values for the original data, if the model is subtracted the periodogram is always recomputed.
+
+        Parameters
+        ----------
+        subtract_model: bool
+            Subtract the time series model from the data.
+
+        Returns
+        -------
+        tuple
+            Contains the frequencies numpy.ndarray[Any, dtype[float]]
+            and the spectrum numpy.ndarray[Any, dtype[float]]
+        """
+        if subtract_model:
+            f0, fn, df = self.pd_f0, self.pd_fn, self.pd_df
+            f, a = pdg.scargle_parallel(self.time, self.residual(), f0=f0, fn=fn, df=df, norm='amplitude')
+        else:
+            f, a = self.pd_freqs, self.pd_ampls
+
+        return f, a
 
     def set_linear_model(self, const_new, slope_new):
         """Delegates to set_linear_model of LinearModel."""

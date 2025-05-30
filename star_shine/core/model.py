@@ -542,6 +542,21 @@ class SinusoidModel:
 
         return f_n, a_n, ph_n
 
+    def get_f_index(self, f):
+        """Get the index in f_n of a given frequency.
+
+        Parameters
+        ----------
+        f: float
+            Frequency to get the index of.
+
+        Returns
+        -------
+        int
+            Index of f in f_n.
+        """
+        return np.abs(self._f_n - f).argmin()
+
     def update_n(self):
         """Update the current numbers of sinusoids, harmonics, and base frequencies."""
         self.n_sin = len(self._f_n[self._include])

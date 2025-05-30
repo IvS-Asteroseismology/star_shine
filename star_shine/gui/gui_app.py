@@ -460,12 +460,12 @@ class MainWindow(QMainWindow):
         if self.pipeline.result.target_id != '' and not self.upper_plot_area.show_residual:
             # upper plot area - time series
             upper_plot_data['plot_xs'] = [self.pipeline.data.time_series.time]
-            upper_plot_data['plot_ys'] = [self.pipeline.model()]
+            upper_plot_data['plot_ys'] = [self.pipeline.ts_model.full_model()]
             upper_plot_data['plot_colors'] = ['grey']
 
         if self.pipeline.result.target_id != '' and not self.lower_plot_area.show_residual:
             # lower plot area - periodogram
-            freqs, ampls = self.pipeline.periodogram(subtract_model=True)
+            freqs, ampls = self.pipeline.ts_model.periodogram(subtract_model=True)
             lower_plot_data['plot_xs'].append(freqs)
             lower_plot_data['plot_ys'].append(ampls)
             lower_plot_data['vlines_xs'] = [self.pipeline.result.f_n]
@@ -475,13 +475,13 @@ class MainWindow(QMainWindow):
         # only show residual if toggle checked
         if self.pipeline.result.target_id != '' and self.upper_plot_area.show_residual:
             # upper plot area - time series
-            residual = self.pipeline.data.time_series.flux - self.pipeline.model()
+            residual = self.pipeline.data.time_series.flux - self.pipeline.ts_model.full_model()
             upper_plot_data['scatter_xs'] = [self.pipeline.data.time_series.time]
             upper_plot_data['scatter_ys'] = [residual]
 
         if self.pipeline.result.target_id != '' and self.lower_plot_area.show_residual:
             # lower plot area - periodogram
-            freqs, ampls = self.pipeline.periodogram(subtract_model=True)
+            freqs, ampls = self.pipeline.ts_model.periodogram(subtract_model=True)
             lower_plot_data['plot_xs'] = [freqs]
             lower_plot_data['plot_ys'] = [ampls]
 

@@ -116,7 +116,7 @@ def extract_local(time, flux, f0, fn):
     """
     df = 0.1 / np.ptp(time)  # default frequency sampling is about 1/10 of frequency resolution
 
-    # full LS periodogram (accurate version)
+    # partial LS periodogram
     freqs, ampls = pdg.scargle(time, flux, f0=f0, fn=fn, df=df)
 
     # cut off the ends of the frequency range if they are rising
@@ -554,7 +554,7 @@ def couple_harmonics(ts_model, f_base, logger=None):
         Instance of TimeSeriesModel containing the time series and model parameters.
     """
     # find the harmonic candidates using the period
-    harmonics, harmonic_n = frs.find_harmonics_tolerance(ts_model.sinusoid.f_n, 1/f_base, f_tol=ts_model.f_resolution / 2)
+    harmonics, harmonic_n = frs.find_harmonics_tolerance(ts_model.sinusoid.f_n, 1/f_base, f_tol=ts_model.f_resolution/2)
     if len(harmonics) == 0:
         if logger is not None:
             logger.warning("No harmonic frequencies found")
