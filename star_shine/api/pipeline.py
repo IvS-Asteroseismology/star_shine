@@ -421,11 +421,15 @@ class Pipeline:
         harmonics, harmonic_n = frs.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=freq_res / 2)
 
         if (self.data.time_series.t_tot / self.result.p_orb > 1.1) & (len(harmonics) > 1):
+            # make the TimeSeriesModel object
+            ts_model = tms.TimeSeriesModel(self.data.time_series.time, self.data.time_series.flux,
+                                           self.data.time_series.flux_err, self.data.time_series.i_chunks)
+            ts_model.set_sinusoids(self.result.f_n, self.result.a_n, self.result.ph_n)
+            ts_model.update_linear_model()
+
             # couple the harmonics to the period. likely removes more frequencies that need re-extracting
-            out_a = ana.fix_harmonic_frequency(self.data.time_series.time, self.data.time_series.flux,
-                                               self.result.p_orb, self.result.const,
-                                               self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                               self.data.time_series.i_chunks, logger=self.logger)
+            ts_model = ana.couple_harmonics(ts_model, 1/self.result.p_orb, logger=self.logger)
+            out_a = ts_model.get_parameters()
             self.result.setter(const=out_a[0], slope=out_a[1], f_n=out_a[2], a_n=out_a[3], ph_n=out_a[4])
 
         self.reduce_sinusoids()  # remove any frequencies that end up not making the statistical cut
