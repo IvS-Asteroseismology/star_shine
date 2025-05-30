@@ -268,11 +268,11 @@ def refine_subset(ts_model, close_f, logger=None):
             ts_model.update_linear_model()
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - Refined: {len(close_f)}")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - N_refined= {len(close_f)}")
 
     return ts_model
 
-def replace_subset(ts_model, close_f, logger=None):
+def replace_subset(ts_model, close_f, final_remove=True, logger=None):
     """Attempt the replacement of frequencies within the Rayleigh criterion of each other by a single one,
     taking into account (and not changing the frequencies of) harmonics if present.
 
@@ -284,6 +284,8 @@ def replace_subset(ts_model, close_f, logger=None):
         Instance of TimeSeriesModel containing the time series and model parameters.
     close_f: numpy.ndarray[Any, dtype[int]]
         Indices of the subset of frequencies to be (subdivided and) replaced.
+    final_remove: bool, optional
+        Remove the excluded frequencies at the end.
     logger: logging.Logger, optional
         Instance of the logging library.
 
@@ -304,14 +306,15 @@ def replace_subset(ts_model, close_f, logger=None):
     # make all combinations of consecutive frequencies in close_f (longer sets first)
     close_f_sets = ut.consecutive_subsets(close_f)
 
-    # determine initial bic
+    # determine initial quantities
+    n_sin_tot_init = len(ts_model.sinusoid.f_n)
+    n_excluded_init = np.sum(~ts_model.sinusoid.include)
     bic_prev = ts_model.bic()
 
     # loop over all subsets:
-    removed = []
     for set_i in close_f_sets:
         # if set_i contains removed sinusoids, skip (order of sets matters)
-        if np.any([i in removed for i in set_i]):
+        if np.any(~ts_model.sinusoid.include[set_i]):
             continue
 
         # exclude the next set of sinusoids
@@ -349,7 +352,6 @@ def replace_subset(ts_model, close_f, logger=None):
         if condition_1:
             # accept the changes
             bic_prev = bic
-            removed.extend(set_i)
         else:
             # remove the added sinusoid(s)
             ts_model.remove_sinusoids(np.arange(len(f_c), len(f_c) + len(np.atleast_1d(f_i))))
@@ -358,10 +360,15 @@ def replace_subset(ts_model, close_f, logger=None):
             ts_model.include_sinusoids(set_i)
             ts_model.update_linear_model()
 
-    ts_model.remove_excluded()
+    # determine number of excluded
+    n_excluded = np.sum(~ts_model.sinusoid.include[:n_sin_tot_init])
+    n_replaced = n_excluded - n_excluded_init
+
+    if final_remove:
+        ts_model.remove_excluded()
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - Replaced: {len(removed)}")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - N_replaced= {n_replaced}")
 
     return ts_model
 
@@ -522,8 +529,8 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
             logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - Extracted: f= {f_i:1.6f}, a= {a_i:1.6f}")
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - Extraction ended "
-                     f"(delta BIC= {bic_init - bic_prev:1.2f}).")
+        n_sin = ts_model.sinusoid.n_sin
+        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_extracted= {n_sin_init - n_sin}.")
 
     return ts_model
 
@@ -589,8 +596,8 @@ def couple_harmonics(ts_model, f_base, logger=None):
 
     if logger is not None:
         bic = ts_model.bic()
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - Coupling ended "
-                     f"(delta BIC= {bic_init - bic:1.2f}), N_h_init: {n_harm_init}, N_h: {ts_model.sinusoid.n_harm}")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - N_coupled= {ts_model.sinusoid.n_harm}, "
+                     f"N_harmonics_init= {n_harm_init}")
 
     return ts_model
 
@@ -637,7 +644,8 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
         i_base_all.extend([i_base for _ in range(len(harmonics_i))])
         f_base_all.extend([ts_model.sinusoid.f_n[i_base] for _ in range(len(harmonics_i))])
 
-    # determine the initial bic
+    # determine initial quantities
+    n_sin_init = ts_model.sinusoid.n_sin
     bic_prev = ts_model.bic()  # initialise current BIC to the mean (and slope) subtracted flux
     bic_init = bic_prev
 
@@ -674,8 +682,8 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
                          f"f_base= {f_base_all[i]:1.2f}, h= {h_candidates_n[i]}, f= {f_i:1.6f}, a= {a_i:1.6f}")
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - Extraction ended "
-                     f"(delta BIC= {bic_init - bic_prev:1.2f})")
+        n_sin = ts_model.sinusoid.n_sin
+        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_extracted= {n_sin_init - n_sin}")
 
     return ts_model
 
@@ -697,15 +705,15 @@ def remove_sinusoids_single(ts_model, logger=None):
     ts_model: tms.TimeSeriesModel
         Instance of TimeSeriesModel containing the time series and model parameters.
     """
+    # determine initial quantities
     n_sin_init = len(ts_model.sinusoid.f_n)
-
-    # determine initial bic
     bic_prev = ts_model.bic()
     bic_init = bic_prev
-    n_prev = -1
 
     # while frequencies are added to the exclude list, continue loop
-    while (n_sin := np.sum(ts_model.sinusoid.include)) > n_prev:
+    n_sin = np.sum(ts_model.sinusoid.include)
+    n_prev = n_sin + 1
+    while n_sin < n_prev:
         n_prev = n_sin
         for i in range(n_sin_init):
             # continue if sinusoid is already excluded
@@ -727,6 +735,7 @@ def remove_sinusoids_single(ts_model, logger=None):
             if condition_1:
                 # accept the removal
                 bic_prev = bic
+                n_sin = np.sum(ts_model.sinusoid.include)
             else:
                 # removal is rejected, revert to previous model
                 ts_model.include_sinusoids(i)
@@ -736,158 +745,68 @@ def remove_sinusoids_single(ts_model, logger=None):
     ts_model.update_linear_model()
 
     if logger is not None:
-        logger.extra(f"Single frequencies removed: {n_sin_init - ts_model.sinusoid.n_sin}, "
-                     f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f})")
+        n_sin = ts_model.sinusoid.n_sin
+        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_removed= {n_sin_init - n_sin}.")
 
     return ts_model
 
 
-def replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
-    """Attempt the replacement of groups of frequencies by a single one
+def replace_sinusoid_groups(ts_model, logger=None):
+    """Attempt the replacement of groups of frequencies by a single one.
+
+    Checks whether the BIC can be improved by replacing a group of frequencies by only one.
+    Harmonics are never removed.
 
     Parameters
     ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    p_orb: float
-        Orbital period of the eclipsing binary in days (can be 0)
-    const: numpy.ndarray[Any, dtype[float]]
-        The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves
-    i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
     logger: logging.Logger, optional
         Instance of the logging library.
 
     Returns
     -------
-    tuple
-        A tuple containing the following elements:
-        const: numpy.ndarray[Any, dtype[float]]
-            (Updated) y-intercepts of a piece-wise linear curve
-        slope: numpy.ndarray[Any, dtype[float]]
-            (Updated) slopes of a piece-wise linear curve
-        f_n: numpy.ndarray[Any, dtype[float]]
-            (Updated) frequencies of a (lower) number of sine waves
-        a_n: numpy.ndarray[Any, dtype[float]]
-            (Updated) amplitudes of a (lower) number of sine waves
-        ph_n: numpy.ndarray[Any, dtype[float]]
-            (Updated) phases of a (lower) number of sine waves
-
-    Notes
-    -----
-    Checks whether the BIC can be improved by replacing a group of
-    frequencies by only one. Harmonics are never removed.
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
     """
-    freq_res = 1 / np.ptp(time)  # frequency resolution
-    n_chunks = len(i_chunks)
-    n_sin = len(f_n)
-    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
-    non_harm = np.delete(np.arange(n_sin), harmonics)
-    n_harm = len(harmonics)
+    # make an array of sets of frequencies to be investigated for replacement
+    close_f_groups = frs.chains_within_rayleigh(ts_model.sinusoid.f_n, ts_model.f_resolution)
 
-    # make an array of sets of frequencies (non-harmonic) to be investigated for replacement
-    close_f_groups = frs.chains_within_rayleigh(f_n[non_harm], freq_res)
-    close_f_groups = [non_harm[group] for group in close_f_groups]  # convert to the right indices
-    f_sets = [g[np.arange(p1, p2 + 1)]
-              for g in close_f_groups
-              for p1 in range(len(g) - 1)
-              for p2 in range(p1 + 1, len(g))]
+    # determine initial quantities
+    n_sin_tot_init = len(ts_model.sinusoid.f_n)
+    n_excluded_init = np.sum(~ts_model.sinusoid.include)
 
-    # make an array of sets of frequencies (now with harmonics) to be investigated for replacement
-    close_f_groups = frs.chains_within_rayleigh(f_n, freq_res)
-    f_sets_h = [g[np.arange(p1, p2 + 1)]
-                for g in close_f_groups
-                for p1 in range(len(g) - 1)
-                for p2 in range(p1 + 1, len(g))
-                if np.any(np.array([g_f in harmonics for g_f in g[np.arange(p1, p2 + 1)]]))]
-
-    # join the two lists, and remember which is which
-    harm_sets = np.arange(len(f_sets), len(f_sets) + len(f_sets_h))
-    f_sets.extend(f_sets_h)
-    remove_sets = np.zeros(0, dtype=np.int_)  # sets of frequencies to replace (by 1 freq)
-    used_sets = np.zeros(0, dtype=np.int_)  # sets that are not to be examined anymore
-    f_new, a_new, ph_new = np.zeros((3, 0))
-
-    # determine initial bic
-    model_sinusoid = mdl.sum_sines(time, f_n, a_n, ph_n)
-    best_resid = flux - model_sinusoid  # the residual after subtracting the model of sinusoids
-    resid = best_resid - mdl.linear_curve(time, const, slope, i_chunks)
-    n_param = ut.n_parameters(n_chunks, n_sin, n_harm)
-    bic_prev = gof.calc_bic(resid, n_param)
-    bic_init = bic_prev
-    n_prev = -1
-
-    # while frequencies are added to the remove list, continue loop
-    while len(remove_sets) > n_prev:
-        n_prev = len(remove_sets)
-        for i, set_i in enumerate(f_sets):
-            if i in used_sets:
+    # while frequencies are added to the exclude list, continue loop
+    n_sin = np.sum(ts_model.sinusoid.include)
+    n_prev = n_sin + 1
+    while n_sin < n_prev:
+        n_prev = n_sin
+        for i, close_f in enumerate(close_f_groups):
+            # continue if full sinusoid set is already excluded
+            if np.all(~ts_model.sinusoid.include[close_f]):
                 continue
 
-            # make a model of the removed and new sinusoids and subtract/add it from/to the full sinusoid model
-            model_sinusoid_r = mdl.sum_sines(time, f_n[set_i], a_n[set_i], ph_n[set_i])
-            resid = best_resid + model_sinusoid_r
-            const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-            resid -= mdl.linear_curve(time, const, slope, i_chunks)
+            # use the replace_subset function to handle the details
+            ts_model = replace_subset(ts_model, close_f, final_remove=False, logger=None)
 
-            # extract a single freq to try replacing the set
-            if i in harm_sets:
-                harm_i = np.array([h for h in set_i if h in harmonics])
-                f_i = f_n[harm_i]  # fixed f
-                a_i, ph_i = pdg.scargle_ampl_phase(time, resid, f_n[harm_i])
-            else:
-                edges = [min(f_n[set_i]) - freq_res, max(f_n[set_i]) + freq_res]
-                out = extract_local(time, resid, f0=edges[0], fn=edges[1])
-                f_i, a_i, ph_i = np.array([out[0]]), np.array([out[1]]), np.array([out[2]])
+            # update number of sinusoids after replacement
+            n_sin = np.sum(ts_model.sinusoid.include)
 
-            # make a model including the new freq
-            model_sinusoid_n = mdl.sum_sines(time, f_i, a_i, ph_i)
-            resid -= model_sinusoid_n
-            const, slope = mdl.linear_pars(time, resid, i_chunks)  # redetermine const and slope
-            resid -= mdl.linear_curve(time, const, slope, i_chunks)
+    # determine number of excluded and added
+    n_excluded = np.sum(~ts_model.sinusoid.include[:n_sin_tot_init])
+    n_replaced = n_excluded - n_excluded_init
+    n_new = len(ts_model.sinusoid.f_n) - n_sin_tot_init
 
-            # number of parameters and bic
-            n_sin_i = n_sin - sum([len(f_sets[j]) for j in remove_sets]) - len(set_i) + len(f_new) + len(f_i) - n_harm
-            n_param = ut.n_parameters(n_chunks, n_sin_i, n_harm)
-            bic = gof.calc_bic(resid, n_param)
-            if np.round(bic_prev - bic, 2) > 0:
-                # do not look at sets with the same freqs as the just removed set anymore
-                overlap = [j for j, subset in enumerate(f_sets) if np.any(np.array([k in set_i for k in subset]))]
-                used_sets = np.unique(np.append(used_sets, overlap))
-
-                # add to list of removed sets
-                remove_sets = np.append(remove_sets, i)
-
-                # remember the new frequency (or the current one if it is a harmonic)
-                f_new, a_new, ph_new = np.append(f_new, f_i), np.append(a_new, a_i), np.append(ph_new, ph_i)
-                best_resid += model_sinusoid_r - model_sinusoid_n
-                bic_prev = bic
-
-    # lastly re-determine slope and const
-    const, slope = mdl.linear_pars(time, best_resid, i_chunks)
-
-    # finally, remove all the designated sinusoids from the lists and add the new ones
-    i_to_remove = [k for i in remove_sets for k in f_sets[i]]
-    f_n = np.append(np.delete(f_n, i_to_remove), f_new)
-    a_n = np.append(np.delete(a_n, i_to_remove), a_new)
-    ph_n = np.append(np.delete(ph_n, i_to_remove), ph_new)
+    # lastly re-determine slope and const and remove the excluded frequencies
+    ts_model.remove_excluded()
+    ts_model.update_linear_model()
 
     if logger is not None:
-        logger.extra(f"Frequency sets replaced: {len(remove_sets)} ({len(i_to_remove)} frequencies). "
-                     f"N_f= {len(f_n)}, BIC= {bic_prev:1.2f} (delta= {bic_init - bic_prev:1.2f})")
+        bic = ts_model.bic()
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - N_replaced= {n_replaced}, "
+                     f"N_kept= {n_new}.")
 
-    return const, slope, f_n, a_n, ph_n
+    return ts_model
 
 
 def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
@@ -948,8 +867,12 @@ def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, 
     const, slope, f_n, a_n, ph_n = ts_model.get_parameters()
 
     # Now go on to trying to replace sets of frequencies that are close together
-    out_b = replace_sinusoid_groups(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=logger)
-    const, slope, f_n, a_n, ph_n = out_b
+    # out_b = replace_sinusoid_groups_(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=logger)
+    # const, slope, f_n, a_n, ph_n = out_b
+
+    # Now go on to trying to replace sets of frequencies that are close together
+    ts_model = replace_sinusoid_groups(ts_model, logger=logger)
+    const, slope, f_n, a_n, ph_n = ts_model.get_parameters()
 
     return const, slope, f_n, a_n, ph_n
 
