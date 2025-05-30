@@ -194,17 +194,17 @@ class TimeSeriesModel(TimeSeries):
         """Delegates to update_linear_model of LinearModel."""
         self.linear.update_linear_model(self.time, self.flux - self.sinusoid.sinusoid_model, self.i_chunks)
 
-    def set_sinusoids(self, f_n_new, a_n_new, ph_n_new):
+    def set_sinusoids(self, *args, **kwargs):
         """Delegates to set_sinusoids of SinusoidModel."""
-        self.sinusoid.set_sinusoids(self.time, f_n_new, a_n_new, ph_n_new)
+        self.sinusoid.set_sinusoids(self.time, *args, **kwargs)
 
-    def add_sinusoids(self, f_n_new, a_n_new, ph_n_new):
+    def add_sinusoids(self, *args, **kwargs):
         """Delegates to add_sinusoids of SinusoidModel."""
-        self.sinusoid.add_sinusoids(self.time, f_n_new, a_n_new, ph_n_new)
+        self.sinusoid.add_sinusoids(self.time, *args, **kwargs)
 
-    def update_sinusoids(self, f_n_new, a_n_new, ph_n_new, indices):
+    def update_sinusoids(self, *args, **kwargs):
         """Delegates to update_sinusoids of SinusoidModel."""
-        self.sinusoid.update_sinusoids(self.time, f_n_new, a_n_new, ph_n_new, indices)
+        self.sinusoid.update_sinusoids(self.time, *args, **kwargs)
 
     def remove_sinusoids(self, indices):
         """Delegates to remove_sinusoids of SinusoidModel."""

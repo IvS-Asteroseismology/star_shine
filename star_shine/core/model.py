@@ -550,7 +550,7 @@ class SinusoidModel:
 
         return None
 
-    def _removed_h_base(self, indices):
+    def _check_removed_h_base(self, indices):
         """If a harmonic base frequency was removed, remove the whole harmonic series."""
         if np.any(self._harmonics):
             for i in np.unique(self._h_base[self._harmonics]):
@@ -773,8 +773,11 @@ class SinusoidModel:
         """
         indices = np.atleast_1d(indices)
 
+        # get a list of indices that are currently included in the model
+        i_include = indices[self._include[indices]]
+
         # get the current model at the indices
-        cur_model_i = sum_sines_st(time, self._f_n[indices], self._a_n[indices], self._ph_n[indices])
+        cur_model_i = sum_sines_st(time, self._f_n[i_include], self._a_n[i_include], self._ph_n[i_include])
 
         # update the model
         self._sinusoid_model = self._sinusoid_model - cur_model_i
@@ -794,7 +797,7 @@ class SinusoidModel:
         self._h_base = np.array(ut.adjust_indices_removed(self._h_base, indices))
 
         # if we deleted a base harmonic, also delete the harmonic series
-        self._removed_h_base(indices)
+        self._check_removed_h_base(indices)
 
         # update numbers
         self.update_n()
@@ -887,7 +890,7 @@ class SinusoidModel:
         self._include = self._include[self._include]
 
         # check for base frequency removal
-        self._removed_h_base(indices)
+        self._check_removed_h_base(indices)
 
         # numbers do not change here, except if we removed a base frequency
         self.update_n()  # n_sin won't change but n_harm and n_base might
