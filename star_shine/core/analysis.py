@@ -451,11 +451,10 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
 
     # determine the initial bic
     bic_prev = ts_model.bic()  # initialise current BIC to the mean (and slope) subtracted flux
-    bic_init = bic_prev
 
     # log a message
     if logger is not None:
-        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_init:1.2f}")
+        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_prev:1.2f}")
 
     # stop the loop when the BIC decreases by less than 2 (or increases)
     condition_1 = True
@@ -571,7 +570,6 @@ def couple_harmonics(ts_model, f_base, logger=None):
 
     # determine initial quantities
     n_harm_init = len(harmonics)
-    bic_init = ts_model.bic()
 
     # go through the harmonics by harmonic number and re-extract them (n==1 must come first, if present)
     for n in np.unique(harmonic_n):
@@ -647,10 +645,9 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
     # determine initial quantities
     n_sin_init = ts_model.sinusoid.n_sin
     bic_prev = ts_model.bic()  # initialise current BIC to the mean (and slope) subtracted flux
-    bic_init = bic_prev
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_init:1.2f}")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f}")
 
     # loop over candidates and try to extract (BIC decreases by 2 or more)
     for i in range(len(i_base_all)):
@@ -708,7 +705,6 @@ def remove_sinusoids_single(ts_model, logger=None):
     # determine initial quantities
     n_sin_init = len(ts_model.sinusoid.f_n)
     bic_prev = ts_model.bic()
-    bic_init = bic_prev
 
     # while frequencies are added to the exclude list, continue loop
     n_sin = np.sum(ts_model.sinusoid.include)
@@ -803,109 +799,47 @@ def replace_sinusoid_groups(ts_model, logger=None):
 
     if logger is not None:
         bic = ts_model.bic()
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - N_replaced= {n_replaced}, "
-                     f"N_kept= {n_new}.")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - N_replaced= {n_replaced}, N_kept= {n_new}.")
 
     return ts_model
 
 
-def reduce_sinusoids(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
+def reduce_sinusoids(ts_model, logger=None):
     """Attempt to reduce the number of frequencies taking into account any harmonics if present.
 
     Parameters
     ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    p_orb: float
-        Orbital period of the eclipsing binary in days (can be 0)
-    const: numpy.ndarray[Any, dtype[float]]
-        The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves
-    i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
     logger: logging.Logger, optional
         Instance of the logging library.
 
     Returns
     -------
-    tuple
-        A tuple containing the following elements:
-        const: numpy.ndarray[Any, dtype[float]]
-            (Updated) y-intercepts of a piece-wise linear curve
-        slope: numpy.ndarray[Any, dtype[float]]
-            (Updated) slopes of a piece-wise linear curve
-        f_n: numpy.ndarray[Any, dtype[float]]
-            (Updated) frequencies of a (lower) number of sine waves
-        a_n: numpy.ndarray[Any, dtype[float]]
-            (Updated) amplitudes of a (lower) number of sine waves
-        ph_n: numpy.ndarray[Any, dtype[float]]
-            (Updated) phases of a (lower) number of sine waves
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
 
     Notes
     -----
-    Checks whether the BIC can be improved by removing a frequency. Special attention
-    is given to frequencies that are within the Rayleigh criterion of each other.
-    It is attempted to replace these by a single frequency.
+    Checks whether the BIC can be improved by removing a frequency. Special attention is given to frequencies
+    that are within the Rayleigh criterion of each other. It is attempted to replace these by a single frequency.
     """
-    # make the TimeSeriesModel object
-    ts_model = tms.TimeSeriesModel(time, flux, np.zeros_like(time), i_chunks)
-    ts_model.set_sinusoids(f_n, a_n, ph_n)
-    ts_model.set_linear_model(const, slope)
-
     # first check if any frequency can be left out (after the fit, this may be possible)
     ts_model = remove_sinusoids_single(ts_model, logger=logger)
-    const, slope, f_n, a_n, ph_n = ts_model.get_parameters()
-
-    # Now go on to trying to replace sets of frequencies that are close together
-    # out_b = replace_sinusoid_groups_(time, flux, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=logger)
-    # const, slope, f_n, a_n, ph_n = out_b
 
     # Now go on to trying to replace sets of frequencies that are close together
     ts_model = replace_sinusoid_groups(ts_model, logger=logger)
-    const, slope, f_n, a_n, ph_n = ts_model.get_parameters()
 
-    return const, slope, f_n, a_n, ph_n
+    return ts_model
 
 
-def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, i_chunks, logger=None):
+def select_sinusoids(ts_model, logger=None):
     """Selects the credible frequencies from the given set
 
     Parameters
     ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-        If the sinusoids exclude the eclipse model,
-        this should be the residuals of the eclipse model
-    flux_err: numpy.ndarray[Any, dtype[float]]
-        Errors in the measurement values
-    p_orb: float
-        Orbital period of the eclipsing binary in days.
-        May be zero.
-    const: numpy.ndarray[Any, dtype[float]]
-        The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        The slopes of a piece-wise linear curve
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
-    a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves
-    i_chunks: numpy.ndarray[Any, dtype[int]]
-        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
     logger: logging.Logger, optional
         Instance of the logging library.
 
@@ -928,45 +862,46 @@ def select_sinusoids(time, flux, flux_err, p_orb, const, slope, f_n, a_n, ph_n, 
     are in fact passing the criteria for individual frequencies,
     not those for a set of harmonics (which would be a looser constraint).
     """
-    t_tot = np.ptp(time)
-    freq_res = 1.5 / t_tot  # Rayleigh criterion
+    n_sin = ts_model.sinusoid.n_sin
 
     # obtain the errors on the sine waves (depends on residual and thus model)
-    model_lin = mdl.linear_curve(time, const, slope, i_chunks)
-    model_sin = mdl.sum_sines(time, f_n, a_n, ph_n)
-    residuals = flux - (model_lin + model_sin)
-    errors = ut.formal_uncertainties(time, residuals, flux_err, a_n, i_chunks)
+    residual = ts_model.residual()
+    errors = ut.formal_uncertainties(ts_model.time, residual, ts_model.flux_err, ts_model.sinusoid.a_n,
+                                     ts_model.i_chunks)
     c_err, sl_err, f_n_err, a_n_err, ph_n_err = errors
 
     # find the insignificant frequencies
-    remove_sigma = frs.remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3, sigma_f=3)
+    remove_sigma = frs.remove_insignificant_sigma(ts_model.sinusoid.f_n, f_n_err, ts_model.sinusoid.a_n, a_n_err,
+                                                  sigma_a=3, sigma_f=3)
 
     # apply the signal-to-noise threshold
-    noise_at_f = pdg.scargle_noise_at_freq(f_n, time, residuals, window_width=1.0)
-    remove_snr = frs.remove_insignificant_snr(time, a_n, noise_at_f)
+    noise_at_f = pdg.scargle_noise_at_freq(ts_model.sinusoid.f_n, ts_model.time, residual, window_width=1.0)
+    remove_snr = frs.remove_insignificant_snr(ts_model.time, ts_model.sinusoid.a_n, noise_at_f)
 
     # frequencies that pass sigma criteria
-    passed_sigma = np.ones(len(f_n), dtype=bool)
+    passed_sigma = np.ones(n_sin, dtype=bool)
     passed_sigma[remove_sigma] = False
 
     # frequencies that pass S/N criteria
-    passed_snr = np.ones(len(f_n), dtype=bool)
+    passed_snr = np.ones(n_sin, dtype=bool)
     passed_snr[remove_snr] = False
 
     # passing both
     passed_both = (passed_sigma & passed_snr)
 
     # candidate harmonic frequencies
-    passed_harmonic = np.zeros(len(f_n), dtype=bool)
-    if p_orb != 0:
-        harmonics, harmonic_n = frs.select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol=freq_res / 2, sigma_f=3)
+    passed_harmonic = np.zeros(n_sin, dtype=bool)
+    for f_base in ts_model.sinusoid.f_base:
+        harmonics, harmonic_n = frs.select_harmonics_sigma(ts_model.sinusoid.f_n, f_n_err, 1/f_base,
+                                                           f_tol=ts_model.f_resolution/2, sigma_f=3)
         passed_harmonic[harmonics] = True
     else:
         harmonics = np.array([], dtype=int)
+
     if logger is not None:
-        logger.extra(f"Number of frequencies passed criteria: {np.sum(passed_both)} of {len(f_n)}. "
-                     f"Candidate harmonics: {np.sum(passed_harmonic)}, "
-                     f"of which {np.sum(passed_both[harmonics])} passed.")
+        logger.extra(f"Number of sinusoids passed criteria: {np.sum(passed_both)} of {n_sin}. "
+                     f"Number of harmonics passed criteria: "
+                     f"{np.sum(passed_both[harmonics])} of {np.sum(passed_harmonic)}.")
 
     return passed_sigma, passed_snr, passed_both, passed_harmonic
 

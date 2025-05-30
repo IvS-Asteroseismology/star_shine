@@ -155,11 +155,15 @@ class Pipeline:
 
     def reduce_sinusoids(self):
         """Remove any frequencies that end up not making the statistical cut"""
+        # make the TimeSeriesModel object
+        ts_model = tms.TimeSeriesModel(self.data.time_series.time, self.data.time_series.flux,
+                                       self.data.time_series.flux_err, self.data.time_series.i_chunks)
+        ts_model.set_sinusoids(self.result.f_n, self.result.a_n, self.result.ph_n)
+        ts_model.update_linear_model()
+
         # remove any frequencies that end up not making the statistical cut
-        out = ana.reduce_sinusoids(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb,
-                                   self.result.const,
-                                   self.result.slope, self.result.f_n, self.result.a_n, self.result.ph_n,
-                                   self.data.time_series.i_chunks, logger=self.logger)
+        ts_model = ana.reduce_sinusoids(ts_model, logger=self.logger)
+        out = ts_model.get_parameters()
 
         self.result.setter(const=out[0], slope=out[1], f_n=out[2], a_n=out[3], ph_n=out[4])
 
@@ -167,10 +171,13 @@ class Pipeline:
 
     def select_sinusoids(self):
         """Select frequencies based on some significance criteria."""
-        out = ana.select_sinusoids(self.data.time_series.time, self.data.time_series.flux,
-                                   self.data.time_series.flux_err, self.result.p_orb,
-                                   self.result.const, self.result.slope, self.result.f_n, self.result.a_n,
-                                   self.result.ph_n, self.data.time_series.i_chunks, logger=self.logger)
+        # make the TimeSeriesModel object
+        ts_model = tms.TimeSeriesModel(self.data.time_series.time, self.data.time_series.flux,
+                                       self.data.time_series.flux_err, self.data.time_series.i_chunks)
+        ts_model.set_sinusoids(self.result.f_n, self.result.a_n, self.result.ph_n)
+        ts_model.update_linear_model()
+
+        out = ana.select_sinusoids(ts_model, logger=self.logger)
 
         self.result.setter(passed_sigma=out[0], passed_snr=out[1], passed_both=out[2], passed_harmonic=out[3])
 
