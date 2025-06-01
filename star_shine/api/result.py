@@ -8,7 +8,7 @@ Code written by: Luc IJspeert
 import os
 import numpy as np
 
-from star_shine.core import model as mdl, utility as ut
+from star_shine.core import utility as ut
 from star_shine.core import io
 from star_shine.config.helpers import get_config
 
@@ -319,64 +319,3 @@ class Result:
                 self.save_as_csv(file_name)
 
         return None
-
-    def remove_sinusoids(self, indices):
-        """Remove the sinusoids at the provided indices from the list.
-
-        Parameters
-        ----------
-        indices: numpy.ndarray[Any, dtype[int]]
-            Indices of the sinusoids to remove.
-        """
-        # loop through frequencies, amplitudes, and phases and remove the index values
-        for sinusoid_property in self.sinusoid_property_list:
-            for property_type in self.property_type_list:
-                key = sinusoid_property + property_type
-                property_value = getattr(self, key)
-                if np.max(indices) < len(property_value):
-                    setattr(self, key, np.delete(property_value, indices))
-
-        # passing criteria
-        if np.max(indices) < len(self.passed_both):
-            self.passed_sigma = np.delete(self.passed_sigma, indices)
-            self.passed_snr = np.delete(self.passed_snr, indices)
-            self.passed_both = np.delete(self.passed_both, indices)
-
-        return None
-
-    def model_linear(self, time, i_chunks):
-        """Returns a piece-wise linear curve for the time series with the current parameters.
-
-        Parameters
-        ----------
-        time: numpy.ndarray[Any, dtype[float]]
-            Timestamps of the time series.
-        i_chunks: numpy.ndarray[Any, dtype[int]]
-            Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-            the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-
-        Returns
-        -------
-        numpy.ndarray[Any, dtype[float]]
-            The model time series of a (set of) straight line(s)
-        """
-        curve = mdl.linear_curve(time, self.const, self.slope, i_chunks)
-
-        return curve
-
-    def model_sinusoid(self, time):
-        """Returns a sum of sine waves for the time series with the current parameters.
-
-        Parameters
-        ----------
-        time: numpy.ndarray[Any, dtype[float]]
-            Timestamps of the time series.
-
-        Returns
-        -------
-        numpy.ndarray[Any, dtype[float]]
-            Model time series of a sum of sine waves. Varies around 0.
-        """
-        curve = mdl.sum_sines(time, self.f_n, self.a_n, self.ph_n)
-
-        return curve
