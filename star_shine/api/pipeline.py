@@ -58,9 +58,16 @@ class Pipeline:
         -----
         Creates a directory where all the analysis result files will be stored.
         """
+        # check the input data
+        if not isinstance(data, Data):
+            raise ValueError("Input `data` should be a Data object.")
+
         # set the data and result objects
         self.data = data  # the data to be analysed
         self.result = Result()  # an empty result instance
+
+        # set the time series object with the time series from data
+        self.ts_model = tms.TimeSeriesModel.from_time_series(self.data.time_series)
 
         # the files will be stored here
         if save_dir == '':
@@ -75,15 +82,6 @@ class Pipeline:
 
         # initialise custom logger
         self.logger = logger or get_custom_logger(self.data.target_id, full_dir, config.verbose)
-
-        # check the input data
-        if not isinstance(data, Data):
-            self.logger.warning("Input `data` should be a Data object.")
-        elif len(data.time_series.time) == 0:
-            self.logger.warning("Data object does not contain time series data.")
-
-        # set the time series object with the time series from data
-        self.ts_model = tms.TimeSeriesModel.from_time_series(self.data.time_series)
 
         return
 

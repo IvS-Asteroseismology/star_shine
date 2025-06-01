@@ -495,6 +495,74 @@ def formal_uncertainties_linear(time, residuals, i_chunks):
 
 
 @nb.njit(cache=True)
+def formal_uncertainties_sinusoid(time, residuals, flux_err, a_n, i_chunks):
+    """Calculates the corrected uncorrelated (formal) uncertainties for the frequencies, amplitudes, and phases.
+
+    Harmonics are not taken into account.
+
+    Parameters
+    ----------
+    time: numpy.ndarray[Any, dtype[float]]
+        Timestamps of the time series
+    residuals: numpy.ndarray[Any, dtype[float]]
+        Residual is flux - model
+    flux_err: numpy.ndarray[Any, dtype[float]]
+        Errors in the measurement values
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sine waves
+    i_chunks: numpy.ndarray[Any, dtype[int]]
+        Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+        the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following elements:
+        sigma_f: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the frequency for each sine wave
+        sigma_a: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the amplitude for each sine wave (these are identical)
+        sigma_ph: numpy.ndarray[Any, dtype[float]]
+            Uncertainty in the phase for each sine wave
+
+    Notes
+    -----
+    As in Aerts 2021, https://ui.adsabs.harvard.edu/abs/2021RvMP...93a5001A/abstract
+    The sigma value in the formulae is approximated by taking the maximum of the
+    standard deviation of the residuals and the standard error of the minimum data error.
+    """
+    n_data = len(residuals)
+    n_param = n_parameters(len(i_chunks), len(a_n), 0)  # number of parameters in the model
+    n_dof = max(n_data - n_param, 1)  # degrees of freedom
+
+    # calculate the standard deviation of the residuals
+    std = std_unb(residuals, n_dof)
+
+    # calculate the standard error based on the smallest data error
+    ste = np.median(flux_err) / np.sqrt(n_data)
+
+    # take the maximum of the standard deviation and standard error as sigma N
+    sigma_n = max(std, ste)
+
+    # calculate the D factor (square root of the average number of consecutive data points of the same sign)
+    positive = (residuals > 0).astype(np.int_)
+    indices = np.arange(n_data)
+    zero_crossings = indices[1:][np.abs(positive[1:] - positive[:-1]).astype(np.bool_)]
+    sss_i = np.concatenate((np.array([0]), zero_crossings, np.array([n_data])))  # same-sign sequence indices
+    d_factor = np.sqrt(np.mean(np.diff(sss_i)))
+
+    # uncertainty formulae for sinusoids
+    sigma_f = d_factor * sigma_n * np.sqrt(6 / n_data) / (np.pi * a_n * np.ptp(time))
+    sigma_a = d_factor * sigma_n * np.sqrt(2 / n_data)
+    sigma_ph = d_factor * sigma_n * np.sqrt(2 / n_data) / a_n  # times 2 pi w.r.t. the paper
+
+    # make an array of sigma_a (these are the same)
+    sigma_a = np.full(len(a_n), sigma_a)
+
+    return sigma_f, sigma_a, sigma_ph
+
+
+@nb.njit(cache=True)
 def formal_uncertainties(time, residuals, flux_err, a_n, i_chunks):
     """Calculates the corrected uncorrelated (formal) uncertainties for the extracted
     parameters (constant, slope, frequencies, amplitudes and phases).

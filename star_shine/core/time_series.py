@@ -53,7 +53,7 @@ class TimeSeries:
         flux: numpy.ndarray[Any, dtype[float]]
             Measurement values of the time series.
         flux_err: numpy.ndarray[Any, dtype[float]]
-            Errors in the measurement values
+            Errors in the measurement values.
         i_chunks: numpy.ndarray[Any, dtype[int]]
             Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
             the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
@@ -123,7 +123,7 @@ class TimeSeriesModel(TimeSeries):
         flux: numpy.ndarray[Any, dtype[float]]
             Measurement values of the time series.
         flux_err: numpy.ndarray[Any, dtype[float]]
-            Errors in the measurement values
+            Errors in the measurement values.
         i_chunks: numpy.ndarray[Any, dtype[int]]
             Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
             the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
@@ -224,6 +224,10 @@ class TimeSeriesModel(TimeSeries):
         """Delegates to update_linear_model of LinearModel."""
         self.linear.update_linear_model(self.time, self.flux - self.sinusoid.sinusoid_model, self.i_chunks)
 
+    def update_linear_uncertainties(self):
+        """Delegates to update_linear_model_err of LinearModel."""
+        self.linear.update_linear_uncertainties(self.time, self.residual(), self.i_chunks)
+
     def set_sinusoids(self, *args, **kwargs):
         """Delegates to set_sinusoids of SinusoidModel."""
         self.sinusoid.set_sinusoids(self.time, *args, **kwargs)
@@ -251,3 +255,7 @@ class TimeSeriesModel(TimeSeries):
     def remove_excluded(self):
         """Delegates to remove_excluded of SinusoidModel."""
         self.sinusoid.remove_excluded()
+
+    def update_sinusoid_uncertainties(self):
+        """Delegates to update_sinusoid_uncertainties of SinusoidModel."""
+        self.sinusoid.update_sinusoid_uncertainties(self.time, self.residual(), self.flux_err, self.i_chunks)

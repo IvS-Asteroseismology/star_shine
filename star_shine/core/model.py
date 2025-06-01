@@ -257,6 +257,10 @@ class LinearModel:
         self._const = np.zeros((n_chunks,))  # y-intercepts
         self._slope = np.zeros((n_chunks,))  # slopes
 
+        # linear parameter uncertainties
+        self._const_err = np.zeros((n_chunks,))
+        self._slope_err = np.zeros((n_chunks,))
+
         # number of time chunks
         self.n_chunks = n_chunks  # does not change
         # number of parameters
@@ -288,6 +292,28 @@ class LinearModel:
         return self._slope.copy()
 
     @property
+    def const_err(self):
+        """Get the current model constants.
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            The y-intercepts of a piece-wise linear curve.
+        """
+        return self._const_err.copy()
+
+    @property
+    def slope_err(self):
+        """Get the current model slopes.
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            The slopes of a piece-wise linear curve.
+        """
+        return self._slope_err.copy()
+
+    @property
     def linear_model(self):
         """Get the current linear model.
 
@@ -313,11 +339,11 @@ class LinearModel:
 
         Parameters
         ----------
-        time: np.ndarray
+        time: numpy.ndarray[Any, dtype[float]]
             Timestamps of the time series.
-        const_new: np.ndarray
+        const_new: numpy.ndarray[Any, dtype[float]]
             New y-intercepts.
-        slope_new: np.ndarray
+        slope_new: numpy.ndarray[Any, dtype[float]]
             New slopes.
         i_chunks: numpy.ndarray[Any, dtype[int]]
             Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
@@ -337,10 +363,10 @@ class LinearModel:
 
         Parameters
         ----------
-        time: np.ndarray
+        time: numpy.ndarray[Any, dtype[float]]
             Timestamps of the time series.
-        residual: np.ndarray
-            Residual flux.
+        residual: numpy.ndarray[Any, dtype[float]]
+            Residual flux (flux minus model).
         i_chunks: numpy.ndarray[Any, dtype[int]]
             Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
             the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
@@ -350,6 +376,24 @@ class LinearModel:
 
         # set the new parameters and model
         self.set_linear_model(time, const_new, slope_new, i_chunks)
+
+        return
+
+    def update_linear_uncertainties(self, time, residual, i_chunks):
+        """Update the linear model parameter errors using the residual flux.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series.
+        residual: numpy.ndarray[Any, dtype[float]]
+            Residual flux (flux minus model).
+        i_chunks: numpy.ndarray[Any, dtype[int]]
+            Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+            the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+        """
+        self._const_err, self._slope_err = ut.formal_uncertainties_linear(time, residual, i_chunks)
+
         return
 
 
@@ -393,6 +437,11 @@ class SinusoidModel:
         self._a_n = np.zeros((0,))  # amplitudes
         self._ph_n = np.zeros((0,))  # phases
 
+        # sinusoid parameter uncertainties
+        self._f_n_err = np.zeros((0,))
+        self._a_n_err = np.zeros((0,))
+        self._ph_n_err = np.zeros((0,))
+
         # for consistency of indices in the removal of sinusoids
         self._include = np.zeros((0,), dtype=bool)
 
@@ -400,6 +449,9 @@ class SinusoidModel:
         self._harmonics = np.zeros((0,), dtype=bool)
         self._h_base = -np.ones((0,), dtype=int)
         self._h_mult = np.zeros((0,), dtype=int)
+
+        # harmonic parameter uncertainties
+        self._f_h_err = np.zeros((0,))
 
         # combination model parameters [wip: logic not implemented yet]
         self._combinations = dict()
@@ -475,7 +527,7 @@ class SinusoidModel:
 
     @property
     def h_base(self):
-        """Get a copy of the current model harmonic base frequencies (disregarding include).
+        """Get a copy of the current model harmonic base frequency indices (disregarding include).
 
         Returns
         -------
@@ -486,7 +538,7 @@ class SinusoidModel:
 
     @property
     def h_mult(self):
-        """Get a copy of the current model harmonic numbers (disregarding include).
+        """Get a copy of the current model harmonic multiplier numbers (disregarding include).
 
         Returns
         -------
@@ -504,7 +556,7 @@ class SinusoidModel:
         numpy.ndarray[Any, dtype[float]]
             The base frequencies of the harmonic model.
         """
-        return self._f_n[np.unique(self._h_base[self._harmonics])]
+        return self._f_n[self._h_mult == 1]
 
     @property
     def sinusoid_model(self):
@@ -561,14 +613,14 @@ class SinusoidModel:
         """Update the current numbers of sinusoids, harmonics, and base frequencies."""
         self.n_sin = len(self._f_n[self._include])
         self.n_harm = len(self._f_n[self._include][self._harmonics[self._include]])
-        self.n_base = len(np.unique(self._h_base[self._harmonics]))
+        self.n_base = len(self._f_n[self._h_mult == 1])
 
         return None
 
     def _check_removed_h_base(self, indices):
         """If a harmonic base frequency was removed, remove the whole harmonic series."""
         if np.any(self._harmonics):
-            for i in np.unique(self._h_base[self._harmonics]):
+            for i in np.arange(len(self._f_n))[self._h_mult == 1]:
                 if i in indices:
                     series_mask = self._h_base == i
                     self._harmonics[series_mask] = False
@@ -911,3 +963,26 @@ class SinusoidModel:
         self.update_n()  # n_sin won't change but n_harm and n_base might
 
         return None
+
+    def update_sinusoid_uncertainties(self, time, residual, flux_err, i_chunks):
+        """Update the sinusoid model parameter errors using the residual flux.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series.
+        residual: numpy.ndarray[Any, dtype[float]]
+            Residual flux (flux minus model).
+        flux_err: numpy.ndarray[Any, dtype[float]]
+            Errors in the measurement values.
+        i_chunks: numpy.ndarray[Any, dtype[int]]
+            Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+            the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+        """
+        out = ut.formal_uncertainties_sinusoid(time, residual, flux_err, self.a_n, i_chunks)
+
+        self._f_n_err = out[0]
+        self._a_n_err = out[1]
+        self._ph_n_err = out[2]
+
+        return
