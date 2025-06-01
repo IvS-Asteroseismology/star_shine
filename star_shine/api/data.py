@@ -32,10 +32,6 @@ class Data:
         User defined identification for the dataset used.
     flux_counts_medians: numpy.ndarray[Any, dtype[float]]
         Median flux counts per chunk.
-    p_orb: float
-        The orbital period. Set to 0 to search for the best period.
-        If the orbital period is known with certainty beforehand, it can
-        be provided as initial value and no new period will be searched.
     """
 
     def __init__(self, target_id='', data_id=''):
@@ -62,9 +58,6 @@ class Data:
 
         # additional time series properties not in time_series
         self.flux_counts_medians = np.zeros((0,))
-
-        # Orbital period
-        self.p_orb = 0.
 
         return
 
@@ -123,9 +116,6 @@ class Data:
         # original list of files
         data_dict['data_dir'] = self.data_dir
         data_dict['file_list'] = self.file_list
-
-        # Orbital period
-        data_dict['p_orb'] = self.p_orb
 
         # summary statistics
         data_dict['t_tot'] = self.time_series.t_tot
@@ -264,7 +254,6 @@ class Data:
         instance.time_series = tms.TimeSeries(data_dict['time'], data_dict['flux'], data_dict['flux'],
                                               data_dict['i_chunks'])
         instance.flux_counts_medians = data_dict['flux_counts_medians']
-        instance.p_orb = data_dict['p_orb']
 
         if logger is not None:
             logger.info(f"Loaded data file with target identifier: {data_dict['target_id']}, "
