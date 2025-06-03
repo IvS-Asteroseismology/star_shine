@@ -51,6 +51,7 @@ class Config:
     snr_thr: float = -1.
     nyquist_factor: float = 1.
     resolution_factor: float = 1.5
+    window_width: float = 1.
 
     # Optimisation settings
     optimise_method: str = 'fitter'

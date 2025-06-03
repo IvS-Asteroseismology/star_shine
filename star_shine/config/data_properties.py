@@ -31,7 +31,7 @@ def signal_to_noise_threshold(time):
     Returns
     -------
     float
-        signal-to-noise threshold for this data set.
+        Signal-to-noise threshold for this data set.
     """
     # if user defined (unequal to -1), return the configured number
     if config.snr_thr != -1:

@@ -85,16 +85,6 @@ class Pipeline:
 
         return
 
-    def reduce_sinusoids(self):
-        """Remove any frequencies that end up not making the statistical cut"""
-        # remove any frequencies that end up not making the statistical cut
-        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
-        out = self.ts_model.get_parameters()
-
-        self.result.setter(const=out[0], slope=out[1], f_n=out[2], a_n=out[3], ph_n=out[4])
-
-        return None
-
     def update_result(self):
         """Updates the model statistics and formal uncertainties."""
         # update the model parameters
@@ -230,7 +220,7 @@ class Pipeline:
                                               replace_each_step=config.replace_step, logger=self.logger)
 
         # remove any frequencies that end up not making the statistical cut
-        self.reduce_sinusoids()
+        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
         # update the result instance
         self.update_result()
 
@@ -341,7 +331,7 @@ class Pipeline:
             self.ts_model = ana.couple_harmonics(self.ts_model, f_base, logger=self.logger)
 
         # remove any frequencies that end up not making the statistical cut
-        self.reduce_sinusoids()
+        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
         # update the result instance
         self.update_result()
 

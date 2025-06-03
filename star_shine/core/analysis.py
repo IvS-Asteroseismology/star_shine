@@ -864,19 +864,14 @@ def select_sinusoids(ts_model, logger=None):
     """
     n_sin = ts_model.sinusoid.n_sin
 
-    # obtain the errors on the sine waves (depends on residual and thus model)
-    residual = ts_model.residual()
-    errors = ut.formal_uncertainties(ts_model.time, residual, ts_model.flux_err, ts_model.sinusoid.a_n,
-                                     ts_model.i_chunks)
-    c_err, sl_err, f_n_err, a_n_err, ph_n_err = errors
+    # update the sinusoid errors in the model
+    ts_model.update_sinusoid_uncertainties()
 
     # find the insignificant frequencies
-    remove_sigma = frs.remove_insignificant_sigma(ts_model.sinusoid.f_n, f_n_err, ts_model.sinusoid.a_n, a_n_err,
-                                                  sigma_a=3, sigma_f=3)
+    ts_model.update_sinusoid_passing_sigma()
 
     # apply the signal-to-noise threshold
-    noise_at_f = pdg.scargle_noise_at_freq(ts_model.sinusoid.f_n, ts_model.time, residual, window_width=1.0)
-    remove_snr = frs.remove_insignificant_snr(ts_model.time, ts_model.sinusoid.a_n, noise_at_f)
+    ts_model.update_sinusoid_passing_snr(window_width=config.window_width)
 
     # frequencies that pass sigma criteria
     passed_sigma = np.ones(n_sin, dtype=bool)
@@ -890,13 +885,12 @@ def select_sinusoids(ts_model, logger=None):
     passed_both = (passed_sigma & passed_snr)
 
     # candidate harmonic frequencies
+    harmonics = np.array([], dtype=int)
     passed_harmonic = np.zeros(n_sin, dtype=bool)
     for f_base in ts_model.sinusoid.f_base:
-        harmonics, harmonic_n = frs.select_harmonics_sigma(ts_model.sinusoid.f_n, f_n_err, 1/f_base,
+        harmonics, harmonic_n = frs.select_harmonics_sigma(ts_model.sinusoid.f_n, ts_model.sinusoid.f_n_err, 1/f_base,
                                                            f_tol=ts_model.f_resolution/2, sigma_f=3)
         passed_harmonic[harmonics] = True
-    else:
-        harmonics = np.array([], dtype=int)
 
     if logger is not None:
         logger.extra(f"Number of sinusoids passed criteria: {np.sum(passed_both)} of {n_sin}. "

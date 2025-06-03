@@ -45,9 +45,9 @@ class Result:
     ph_n: numpy.ndarray[Any, dtype[float]]
         The phases of a number of sine waves.
     c_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the constant for each sector.
+        Uncertainty in the constant for each time chunk.
     sl_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the slope for each sector.
+        Uncertainty in the slope for each time chunk.
     f_n_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the frequency for each sine wave.
     a_n_err: numpy.ndarray[Any, dtype[float]]
@@ -55,20 +55,20 @@ class Result:
     ph_n_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the phase for each sine wave.
     c_hdi: numpy.ndarray[Any, dtype[float]]
-        HDI bounds for the constant for each sector.
+        HDI bounds for the constant for each time chunk.
     sl_hdi: numpy.ndarray[Any, dtype[float]]
-        HDI bounds for the slope for each sector.
+        HDI bounds for the slope for each time chunk.
     f_n_hdi: numpy.ndarray[Any, dtype[float]]
         HDI bounds for the frequency for each sine wave.
     a_n_hdi: numpy.ndarray[Any, dtype[float]]
         HDI bounds for the amplitude for each sine wave (these are identical).
     ph_n_hdi: numpy.ndarray[Any, dtype[float]]
         HDI bounds for the phase for each sine wave.
-    passed_sigma: numpy.ndarray[bool]
+    passed_sigma: numpy.ndarray[Any, dtype[bool]]
         Sinusoids that passed the sigma check.
-    passed_snr: numpy.ndarray[bool]
+    passed_snr: numpy.ndarray[Any, dtype[bool]]
         Sinusoids that passed the signal-to-noise check.
-    passed_both: numpy.ndarray[bool]
+    passed_both: numpy.ndarray[Any, dtype[bool]]
         Sinusoids that passed both checks.
     p_orb: float
         Orbital period.

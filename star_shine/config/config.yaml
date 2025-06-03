@@ -45,6 +45,10 @@ nyquist_factor: 1.
 # The frequency resolution (1/T) is multiplied by this factor
 resolution_factor: 1.5
 
+# window_width description:
+# Periodogram spectral noise is calculated over this window width
+window_width: 1.
+
 # ---------------------------------------------- Optimisation settings -------------------------------------------------
 # optimise_method description:
 # 'fitter' or 'sampler' method is used for model optimisation

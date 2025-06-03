@@ -9,7 +9,7 @@ Code written by: Luc IJspeert
 import numpy as np
 import numba as nb
 
-from star_shine.core import utility as ut
+from star_shine.core import frequency_sets as frs, periodogram as pdg, utility as ut
 
 
 @nb.njit(cache=True, parallel=True)
@@ -239,6 +239,10 @@ class LinearModel:
         The y-intercepts of a piece-wise linear curve.
     _slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve.
+    _const_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the constant for each time chunk.
+    _slope_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the slope for each time chunk.
     _linear_model: numpy.ndarray[Any, dtype[float]]
         Time series model of the piece-wise linear curve.
     """
@@ -420,8 +424,22 @@ class SinusoidModel:
         Indices of the child frequencies in _f_n, and the corresponding parents.
     _combination_n: dict[int, numpy.ndarray[Any, dtype[int]]]
         Indices of the child frequencies in _f_n, and the corresponding parent multiplier.
+    _f_n_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the frequency for each sine wave.
+    _a_n_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the amplitude for each sine wave (these are identical).
+    _ph_n_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the phase for each sine wave.
+    _f_h_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the frequency for each harmonic sine wave.
+    _passing_sigma: numpy.ndarray[Any, dtype[bool]]
+        Sinusoids that passed the sigma check.
+    _passing_snr: numpy.ndarray[Any, dtype[bool]]
+        Sinusoids that passed the signal-to-noise check.
+    _passing_harmonic: numpy.ndarray[Any, dtype[bool]]
+        Sinusoids that passed the harmonic check.
     _sinusoid_model: numpy.ndarray[Any, dtype[float]]
-        Time series model of the sinusoids.
+        Current time series model of the sinusoids.
     """
 
     def __init__(self, n_time):
@@ -437,11 +455,6 @@ class SinusoidModel:
         self._a_n = np.zeros((0,))  # amplitudes
         self._ph_n = np.zeros((0,))  # phases
 
-        # sinusoid parameter uncertainties
-        self._f_n_err = np.zeros((0,))
-        self._a_n_err = np.zeros((0,))
-        self._ph_n_err = np.zeros((0,))
-
         # for consistency of indices in the removal of sinusoids
         self._include = np.zeros((0,), dtype=bool)
 
@@ -450,12 +463,22 @@ class SinusoidModel:
         self._h_base = -np.ones((0,), dtype=int)
         self._h_mult = np.zeros((0,), dtype=int)
 
-        # harmonic parameter uncertainties
-        self._f_h_err = np.zeros((0,))
-
         # combination model parameters [wip: logic not implemented yet]
         self._combinations = dict()
         self._combination_n = dict()
+
+        # sinusoid parameter uncertainties
+        self._f_n_err = np.zeros((0,))
+        self._a_n_err = np.zeros((0,))
+        self._ph_n_err = np.zeros((0,))
+
+        # harmonic parameter uncertainties
+        self._f_h_err = np.zeros((0,))
+
+        # passing criteria
+        self._passing_sigma = np.zeros((0,), dtype=bool)
+        self._passing_snr = np.zeros((0,), dtype=bool)
+        self._passing_harmonic = np.zeros((0,), dtype=bool)
 
         # number of sinusoids
         self.n_sin = 0  # number of sinusoids (including harm)
@@ -557,6 +580,88 @@ class SinusoidModel:
             The base frequencies of the harmonic model.
         """
         return self._f_n[self._h_mult == 1]
+
+    @property
+    def f_n_err(self):
+        """Get a copy of the model frequency errors (disregarding include).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            The errors in the frequencies of a number of sine waves.
+
+        Notes
+        -----
+        These need to be updated manually (with update_sinusoid_uncertainties).
+        """
+        return self._f_n_err.copy()
+
+    @property
+    def a_n_err(self):
+        """Get a copy of the model amplitude errors (disregarding include).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            The errors in the amplitudes of a number of sine waves.
+
+        Notes
+        -----
+        These need to be updated manually (with update_sinusoid_uncertainties).
+        """
+        return self._a_n_err.copy()
+
+    @property
+    def ph_n_err(self):
+        """Get a copy of the model phase errors (disregarding include).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            The errors in the phases of a number of sine waves.
+
+        Notes
+        -----
+        These need to be updated manually (with update_sinusoid_uncertainties).
+        """
+        return self._ph_n_err.copy()
+
+    @property
+    def passing_sigma(self):
+        """Get a copy of the passing sigma mask (disregarding include).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[bool]]
+            Sinusoids that passed the sigma check.
+
+        Notes
+        -----
+        These need to be updated manually (with update_sinusoid_passing_sigma).
+        """
+        return self._passing_sigma.copy()
+
+    @property
+    def passing_snr(self):
+        """Get a copy of the passing snr mask (disregarding include).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[bool]]
+            Sinusoids that passed the signal-to-noise check.
+        """
+        return self._passing_snr.copy()
+
+    @property
+    def passing_harmonic(self):
+        """Get a copy of the passing harmonic mask (disregarding include).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[bool]]
+            Sinusoids that passed the harmonic check.
+        """
+        return self._passing_harmonic.copy()
 
     @property
     def sinusoid_model(self):
@@ -979,10 +1084,63 @@ class SinusoidModel:
             Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
             the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
         """
-        out = ut.formal_uncertainties_sinusoid(time, residual, flux_err, self.a_n, i_chunks)
+        out = ut.formal_uncertainties_sinusoid(time, residual, flux_err, self._a_n, i_chunks)
 
         self._f_n_err = out[0]
         self._a_n_err = out[1]
         self._ph_n_err = out[2]
+
+        return
+
+    def update_sinusoid_passing_sigma(self):
+        """Update the passing status of the sinusoids for the sigma criterion.
+
+        Note: uses the sinusoid uncertainties. These should be updated first.
+        """
+        # find the insignificant frequencies
+        out = frs.remove_insignificant_sigma(self._f_n, self._f_n_err, self._a_n, self._a_n_err, sigma_f=3, sigma_a=3)
+
+        # invert removal mask
+        self._passing_sigma = ~out
+
+        return
+
+    def update_sinusoid_passing_snr(self, time, residual, window_width=1.):
+        """Update the passing status of the sinusoids for the sigma criterion.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series.
+        residual: numpy.ndarray[Any, dtype[float]]
+            Residual flux (flux minus model).
+        window_width: float
+            The width of the window used to compute the noise spectrum.
+        """
+        # calculate the noise at each frequency
+        noise_at_f = pdg.scargle_noise_at_freq(self._f_n, time, residual, window_width=window_width)
+
+        # determine the insignificant frequencies
+        out = frs.remove_insignificant_snr(time, self._a_n, noise_at_f)
+
+        # invert removal mask
+        self._passing_snr = ~out
+
+        return
+
+    def update_sinusoid_passing_harmonic(self, f_resolution):
+        """Update the passing status of the sinusoids for the sigma criterion.
+
+        Parameters
+        ----------
+        f_resolution: float
+            Frequency resolution of the time series
+        """
+        # select candidate harmonic frequencies meeting some criteria
+        self._passing_harmonic = np.zeros(self.n_sin, dtype=bool)
+        for f_base in self.f_base:
+            harmonics, _ = frs.select_harmonics_sigma(self._f_n, self._f_n_err, 1 / f_base, f_tol=f_resolution / 2,
+                                                      sigma_f=3)
+            self._passing_harmonic[harmonics] = True
 
         return

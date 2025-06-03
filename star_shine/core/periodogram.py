@@ -271,7 +271,7 @@ def scargle_noise_spectrum_redux(freqs, ampls, window_width=1.0):
     return noise
 
 
-def scargle_noise_at_freq(fs, time, resid, window_width=1.0):
+def scargle_noise_at_freq(fs, time, resid, window_width=1.):
     """Calculate the Lomb-Scargle noise at a given set of frequencies
 
     Parameters

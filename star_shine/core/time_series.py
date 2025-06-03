@@ -41,6 +41,10 @@ class TimeSeries:
         Frequencies at which the periodogram was calculated
     pd_ampls: numpy.ndarray[Any, dtype[float]]
         The periodogram amplitudes.
+    f_resolution: float
+        Frequency resolution of the time series
+    snr_threshold: float
+        Signal-to-noise threshold for this data set.
     """
 
     def __init__(self, time, flux, flux_err, i_chunks):
@@ -259,3 +263,15 @@ class TimeSeriesModel(TimeSeries):
     def update_sinusoid_uncertainties(self):
         """Delegates to update_sinusoid_uncertainties of SinusoidModel."""
         self.sinusoid.update_sinusoid_uncertainties(self.time, self.residual(), self.flux_err, self.i_chunks)
+
+    def update_sinusoid_passing_sigma(self):
+        """Delegates to update_sinusoid_passing_sigma of SinusoidModel."""
+        self.sinusoid.update_sinusoid_passing_sigma()
+
+    def update_sinusoid_passing_snr(self, window_width=1.):
+        """Delegates to update_sinusoid_passing_snr of SinusoidModel."""
+        self.sinusoid.update_sinusoid_passing_snr(self.time, self.residual(), window_width=window_width)
+
+    def update_sinusoid_passing_harmonic(self):
+        """Delegates to update_sinusoid_passing_harmonic of SinusoidModel."""
+        self.sinusoid.update_sinusoid_passing_harmonic(self.f_resolution)

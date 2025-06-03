@@ -101,8 +101,11 @@ def chains_within_rayleigh(f_n, rayleigh):
 
 
 @nb.njit(cache=True)
-def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3., sigma_f=1.):
+def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_f=1., sigma_a=3.):
     """Removes insufficiently significant frequencies in terms of error margins.
+
+    Frequencies with an amplitude less than sigma times the error are removed, as well as those that have
+    an overlapping frequency error and are lower amplitude than any of the overlapped frequencies.
 
     Parameters
     ----------
@@ -122,14 +125,8 @@ def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3., sigma_f=1
 
     Returns
     -------
-    numpy.ndarray[Any, dtype[int]]
-        Indices of frequencies deemed insignificant
-
-    Notes
-    -----
-    Frequencies with an amplitude less than sigma times the error are removed,
-    as well as those that have an overlapping frequency error and are lower amplitude
-    than any of the overlapped frequencies.
+    numpy.ndarray[Any, dtype[bool]]
+        Boolean mask of frequencies deemed insignificant
     """
     # amplitude not significant enough
     a_insig = (a_n / a_n_err < sigma_a)
@@ -143,7 +140,7 @@ def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_a=3., sigma_f=1
         if np.any((a_n[overlap] > a_n[i]) & (f_n[overlap] != f_n[i])):
             f_insig[i] = True
 
-    remove = np.arange(len(f_n))[a_insig | f_insig]
+    remove = a_insig | f_insig
 
     return remove
 
@@ -179,10 +176,9 @@ def remove_insignificant_snr(time, a_n, noise_at_f):
     snr_threshold = dp.signal_to_noise_threshold(time)
 
     # signal-to-noise below threshold
-    a_insig_1 = (a_n / noise_at_f < snr_threshold)
-    remove = np.arange(len(a_n))[a_insig_1]
+    a_insig = (a_n / noise_at_f < snr_threshold)
 
-    return remove
+    return a_insig
 
 
 def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
