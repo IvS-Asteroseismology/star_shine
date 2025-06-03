@@ -509,7 +509,7 @@ def formal_uncertainties_sinusoid(time, residuals, flux_err, a_n, i_chunks):
     flux_err: numpy.ndarray[Any, dtype[float]]
         Errors in the measurement values
     a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
+        The amplitudes of a number of sinusoids
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
@@ -519,11 +519,11 @@ def formal_uncertainties_sinusoid(time, residuals, flux_err, a_n, i_chunks):
     tuple
         A tuple containing the following elements:
         sigma_f: numpy.ndarray[Any, dtype[float]]
-            Uncertainty in the frequency for each sine wave
+            Uncertainty in the frequency for each sinusoid.
         sigma_a: numpy.ndarray[Any, dtype[float]]
-            Uncertainty in the amplitude for each sine wave (these are identical)
+            Uncertainty in the amplitude for each sinusoid (these are identical).
         sigma_ph: numpy.ndarray[Any, dtype[float]]
-            Uncertainty in the phase for each sine wave
+            Uncertainty in the phase for each sinusoid.
 
     Notes
     -----
@@ -560,6 +560,41 @@ def formal_uncertainties_sinusoid(time, residuals, flux_err, a_n, i_chunks):
     sigma_a = np.full(len(a_n), sigma_a)
 
     return sigma_f, sigma_a, sigma_ph
+
+
+def formal_uncertainties_harmonic(sigma_f, h_base, h_mult):
+    """Calculates the uncertainty in the harmonic frequencies based on the unconstrained frequency
+    uncertainties using a simple weighted average.
+
+    The base frequency's uncertainty is calculated as:
+    σ_h1 = (∑ n^2/σ_fn^2)^(-1/2)
+    The other uncertainties follow as:
+    σ_hn = n * σ_h1
+
+    Parameters
+    ----------
+    sigma_f: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the frequency for each sinusoid.
+    h_base: numpy.ndarray[Any, dtype[int]]
+        Indices of the base frequencies in f_n for each of f_n.
+    h_mult: numpy.ndarray[Any, dtype[int]]
+        Harmonic multiplier of the base frequency for each of f_n.
+
+    Returns
+    -------
+    numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the harmonic frequencies.
+    """
+    # calculate the base frequency uncertainty
+    sigma_h = np.zeros(len(sigma_f))
+    for i_base in h_base[h_mult == 1]:
+        h_series = h_base == i_base  # select one harmonic series at a time
+        sigma_h[h_series] = np.sum(h_mult[h_series] ** 2 / sigma_f[h_series] ** 2) ** (-1 / 2)
+
+    # multiply by the harmonic number
+    sigma_h *= h_mult
+
+    return sigma_h
 
 
 @nb.njit(cache=True)
