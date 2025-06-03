@@ -85,38 +85,6 @@ class Pipeline:
 
         return
 
-    def update_result(self):
-        """Updates the model statistics and formal uncertainties."""
-        # update the model parameters
-        out = self.ts_model.get_parameters()
-        self.result.setter(const=out[0], slope=out[1], f_n=out[2], a_n=out[3], ph_n=out[4])
-
-        # update the sinusoid selection
-        out = ana.select_sinusoids(self.ts_model, logger=self.logger)
-        self.result.setter(passed_sigma=out[0], passed_snr=out[1], passed_both=out[2], passed_harmonic=out[3])
-
-        # get the residual
-        resid = self.ts_model.residual()
-
-        # set number of parameters, BIC and noise level
-        n_param = self.ts_model.n_param
-        bic = self.ts_model.bic()
-        noise_level = ut.std_unb(resid, self.ts_model.n_time - n_param)
-        self.result.setter(n_param=n_param, bic=bic, noise_level=noise_level)
-
-        # calculate formal uncertainties
-        out = ut.formal_uncertainties(self.ts_model.time, resid, self.ts_model.flux_err,
-                                      self.ts_model.sinusoid.a_n, self.ts_model.i_chunks)
-        self.result.setter(c_err=out[0], sl_err=out[1], f_n_err=out[2], a_n_err=out[3], ph_n_err=out[4])
-
-        # f_base uncertainty
-        for f_base in self.ts_model.sinusoid.f_base:
-            p_err, _, _ = ut.linear_regression_uncertainty_ephem(self.ts_model.time, 1/f_base,
-                                                                 sigma_t=self.ts_model.t_step/2)
-            self.result.setter(p_orb=1/f_base, p_err=p_err)  # todo: adapt to multiple f_base
-
-        return None
-
     def extract_approx(self, f_approx):
         """Extract a sinusoid from the time series at an approximate frequency.
 
@@ -139,12 +107,9 @@ class Pipeline:
         # remove any frequencies that end up not making the statistical cut
         self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
 
-        # update the result instance
-        self.update_result()
-
-        # set the result identifiers and description
-        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
-        self.result.setter(description="Manual extraction.")
+        # update the result instance and set the identifiers and description
+        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
+                                           description="Manual extraction.")
 
         # print some useful info
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
@@ -175,12 +140,9 @@ class Pipeline:
         # remove the sinusoid
         self.ts_model.remove_sinusoids(index)
 
-        # update the result instance
-        self.update_result()
-
-        # set the result identifiers and description
-        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
-        self.result.setter(description='Manual extraction.')
+        # update the result instance and set the identifiers and description
+        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
+                                           description="Manual extraction.")
 
         # print some useful info
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
@@ -210,7 +172,7 @@ class Pipeline:
         self.logger.info(f"Iterative prewhitening starting.")
 
         # start by looking for more harmonics
-        if self.result.p_orb != 0:
+        if self.ts_model.sinusoid.n_base != 0:
             self.ts_model = ana.extract_harmonics(self.ts_model, config.bic_thr, logger=self.logger)
 
         # extract all frequencies with the iterative scheme
@@ -221,12 +183,10 @@ class Pipeline:
 
         # remove any frequencies that end up not making the statistical cut
         self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
-        # update the result instance
-        self.update_result()
 
-        # set the result identifiers and description
-        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
-        self.result.setter(description='Iterative prewhitening results.')
+        # update the result instance and set the identifiers and description
+        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
+                                           description="Iterative prewhitening results.")
 
         # print some useful info
         t_b = systime.time()
@@ -276,17 +236,14 @@ class Pipeline:
                                         f_n_err, a_n_err, ph_n_err, noise_level, self.data.time_series.i_chunks,
                                         logger=self.logger)
             inf_data, par_mean, par_hdi = out_b
-            self.result.setter(c_hdi=par_hdi[0], sl_hdi=par_hdi[1], f_n_hdi=par_hdi[2], a_n_hdi=par_hdi[3],
-                               ph_n_hdi=par_hdi[4])
+            self.result.from_dict(c_hdi=par_hdi[0], sl_hdi=par_hdi[1], f_n_hdi=par_hdi[2], a_n_hdi=par_hdi[3],
+                                  ph_n_hdi=par_hdi[4])
 
-        self.result.setter(const=par_mean[0], slope=par_mean[1], f_n=par_mean[2], a_n=par_mean[3], ph_n=par_mean[4])
+        self.result.from_dict(const=par_mean[0], slope=par_mean[1], f_n=par_mean[2], a_n=par_mean[3], ph_n=par_mean[4])
 
-        # update the result instance
-        self.update_result()
-
-        # set the result identifiers and description
-        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
-        self.result.setter(description='Multi-sinusoid NL-LS optimisation results.')
+        # update the result instance and set the identifiers and description
+        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
+                                           description="Multi-sinusoid NL-LS optimisation results.")
         # ut.save_inference_data(file_name, inf_data)  # currently not saved
 
         # print some useful info
@@ -317,8 +274,8 @@ class Pipeline:
         t_a = systime.time()
         self.logger.info("Coupling the harmonic frequencies to the orbital frequency...")
 
-        # if given, the input p_orb is refined locally, otherwise the period is searched for globally
-        if self.data.p_orb == 0:
+        # if given, the input f_base is refined locally, otherwise the f_base is searched for globally
+        if self.ts_model.sinusoid.n_base == 0:
             p_orb = ana.find_orbital_period(self.ts_model.time, self.ts_model.flux, self.ts_model.sinusoid.f_n)
         else:
             p_orb = ana.refine_orbital_period(self.data.p_orb, self.ts_model.time, self.ts_model.sinusoid.f_n)
@@ -332,16 +289,17 @@ class Pipeline:
 
         # remove any frequencies that end up not making the statistical cut
         self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
-        # update the result instance
-        self.update_result()
 
-        # set the result identifiers and description
-        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
-        self.result.setter(description='Harmonic frequencies coupled to the orbital period.')
+        # update the result instance and set the identifiers and description
+        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
+                                           description="Harmonic frequencies coupled to the orbital period.")
 
         # print some useful info
         t_b = systime.time()
-        p_orb_formatted = ut.float_to_str_scientific(p_orb, self.result.p_err, error=True, brackets=True)
+        i_base = 0  # todo: fix
+        self.ts_model.update_sinusoid_uncertainties_harmonic()
+        p_err = self.ts_model.sinusoid.f_h_err[i_base]
+        p_orb_formatted = ut.float_to_str_scientific(p_orb, p_err, error=True, brackets=True)
         self.logger.info(f"N_f: {self.ts_model.sinusoid.n_sin}, BIC: {self.ts_model.bic():1.2f}, "
                          f"N_p: {self.ts_model.n_param} - Harmonic frequencies coupled. P_orb= {p_orb_formatted}. "
                          f"Time taken: {t_b - t_a:1.1f}s")
@@ -397,18 +355,15 @@ class Pipeline:
                                            self.result.sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
                                            self.data.time_series.i_chunks, logger=self.logger)
             inf_data, par_mean, par_hdi = output
-            self.result.setter(p_hdi=par_hdi[0], c_hdi=par_hdi[1], sl_hdi=par_hdi[2], f_n_hdi=par_hdi[3],
-                               a_n_hdi=par_hdi[4], ph_n_hdi=par_hdi[5])
+            self.result.from_dict(p_hdi=par_hdi[0], c_hdi=par_hdi[1], sl_hdi=par_hdi[2], f_n_hdi=par_hdi[3],
+                                  a_n_hdi=par_hdi[4], ph_n_hdi=par_hdi[5])
 
-        self.result.setter(p_orb=par_mean[0], const=par_mean[1], slope=par_mean[2], f_n=par_mean[3], a_n=par_mean[4],
-                           ph_n=par_mean[5])
+        self.result.from_dict(p_orb=par_mean[0], const=par_mean[1], slope=par_mean[2], f_n=par_mean[3], a_n=par_mean[4],
+                              ph_n=par_mean[5])
 
-        # update the result instance
-        self.update_result()
-
-        # set the result identifiers and description
-        self.result.setter(target_id=self.data.target_id, data_id=self.data.data_id)
-        self.result.setter(description='Multi-sine NL-LS optimisation results with coupled harmonics.')
+        # update the result instance and set the identifiers and description
+        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
+                                           description="Multi-sine NL-LS optimisation results with coupled harmonics.")
         # ut.save_inference_data(file_name, inf_data)  # currently not saved
 
         # print some useful info
@@ -478,29 +433,30 @@ class Pipeline:
         t_a = systime.time()
         self.logger.info("Start of analysis")
 
+        # reset the time series object with the time series from data
+        self.ts_model = tms.TimeSeriesModel.from_time_series(self.data.time_series)
+
         # run this sequence for each analysis step of the pipeline
         for step in range(len(step_names)):
-            file_name = os.path.join(self.save_dir, self.save_subdir, f"{self.data.target_id}_result_{step + 1}.hdf5")
+            file_name = os.path.join(self.save_dir, self.save_subdir, f'{self.data.target_id}_result_{step + 1}.hdf5')
 
-            # Load existing result from this step if not overwriting (returns empty Result if no file)
-            print(step, file_name)
-            self.result = Result.load_conditional(file_name, logger=self.logger)
+            # skip to next step if result exists and we were not planning to overwrite it
+            if os.path.isfile(file_name) and not config.overwrite:
+                # load result for next step
+                self.result = Result.load(file_name, logger=self.logger)
 
-            # if existing result was loaded, go to the next step
-            if self.result.target_id != '':
+                # set the TimeSeriesModel
+                self.ts_model = self.result.to_time_series_model(self.ts_model)
+
                 continue
-
-            # Load result from previous step (returns empty Result if no file)
-            self.result = Result.load(file_name.replace(f'result_{step + 1}', f'result_{step}'),
-                                      logger=self.logger)
 
             # do the analysis step
             analysis_step = getattr(self, step_names[step])
             analysis_step()
 
             # save the results if conditions are met
-            print(step, file_name)
-            self.result.save_conditional(file_name)
+            if not os.path.isfile(file_name) or config.overwrite:
+                self.result.save(file_name)
 
         # final message and timing
         t_b = systime.time()

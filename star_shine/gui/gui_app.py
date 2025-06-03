@@ -416,12 +416,15 @@ class MainWindow(QMainWindow):
     def update_table(self, display_err=True):
         """Fill the table with the given data."""
         # get the result parameters
-        col1 = self.pipeline.result.f_n
-        col2 = self.pipeline.result.a_n
-        col3 = self.pipeline.result.ph_n
-        col1_err = self.pipeline.result.f_n_err
-        col2_err = self.pipeline.result.a_n_err
-        col3_err = self.pipeline.result.ph_n_err
+        col1 = self.pipeline.ts_model.sinusoid.f_n
+        col2 = self.pipeline.ts_model.sinusoid.a_n
+        col3 = self.pipeline.ts_model.sinusoid.ph_n
+
+        # make sure uncertainties are updated
+        self.pipeline.ts_model.update_sinusoid_uncertainties()
+        col1_err = self.pipeline.ts_model.sinusoid.f_n_err
+        col2_err = self.pipeline.ts_model.sinusoid.a_n_err
+        col3_err = self.pipeline.ts_model.sinusoid.ph_n_err
 
         # display sinusoid parameters in the table
         self.table_model.setRowCount(len(col1))
@@ -450,16 +453,16 @@ class MainWindow(QMainWindow):
         lower_plot_data = {}
 
         # upper plot area - time series
-        upper_plot_data['scatter_xs'] = [self.pipeline.data.time_series.time]
-        upper_plot_data['scatter_ys'] = [self.pipeline.data.time_series.flux]
+        upper_plot_data['scatter_xs'] = [self.pipeline.ts_model.time]
+        upper_plot_data['scatter_ys'] = [self.pipeline.ts_model.flux]
         # lower plot area - periodogram
-        lower_plot_data['plot_xs'] = [self.pipeline.data.time_series.pd_freqs]
-        lower_plot_data['plot_ys'] = [self.pipeline.data.time_series.pd_ampls]
+        lower_plot_data['plot_xs'] = [self.pipeline.ts_model.pd_freqs]
+        lower_plot_data['plot_ys'] = [self.pipeline.ts_model.pd_ampls]
 
         # include result attributes if present
         if self.pipeline.result.target_id != '' and not self.upper_plot_area.show_residual:
             # upper plot area - time series
-            upper_plot_data['plot_xs'] = [self.pipeline.data.time_series.time]
+            upper_plot_data['plot_xs'] = [self.pipeline.ts_model.time]
             upper_plot_data['plot_ys'] = [self.pipeline.ts_model.full_model()]
             upper_plot_data['plot_colors'] = ['grey']
 
@@ -468,16 +471,15 @@ class MainWindow(QMainWindow):
             freqs, ampls = self.pipeline.ts_model.periodogram(subtract_model=True)
             lower_plot_data['plot_xs'].append(freqs)
             lower_plot_data['plot_ys'].append(ampls)
-            lower_plot_data['vlines_xs'] = [self.pipeline.result.f_n]
-            lower_plot_data['vlines_ys'] = [self.pipeline.result.a_n]
+            lower_plot_data['vlines_xs'] = [self.pipeline.ts_model.sinusoid.f_n]
+            lower_plot_data['vlines_ys'] = [self.pipeline.ts_model.sinusoid.a_n]
             lower_plot_data['vlines_colors'] = ['grey']
 
         # only show residual if toggle checked
         if self.pipeline.result.target_id != '' and self.upper_plot_area.show_residual:
             # upper plot area - time series
-            residual = self.pipeline.data.time_series.flux - self.pipeline.ts_model.full_model()
-            upper_plot_data['scatter_xs'] = [self.pipeline.data.time_series.time]
-            upper_plot_data['scatter_ys'] = [residual]
+            upper_plot_data['scatter_xs'] = [self.pipeline.ts_model.time]
+            upper_plot_data['scatter_ys'] = [self.pipeline.ts_model.residual()]
 
         if self.pipeline.result.target_id != '' and self.lower_plot_area.show_residual:
             # lower plot area - periodogram

@@ -65,7 +65,6 @@ def load_data_hdf5(file_name, h5py_file_kwargs=None):
         data_dict['t_tot'] = file.attrs['t_tot']
         data_dict['t_mean'] = file.attrs['t_mean']
         data_dict['t_step'] = file.attrs['t_step']
-        data_dict['p_orb'] = file.attrs['p_orb']
 
         # the time series data
         data_dict['time'] = np.copy(file['time'])
@@ -120,8 +119,6 @@ def save_data_hdf5(file_name, data_dict):
         file.create_dataset('t_mean_chunk', data=data_dict['t_mean_chunk'])
         file['t_mean_chunk'].attrs['unit'] = 'time unit of the data (often days)'
         file['t_mean_chunk'].attrs['description'] = 'time reference (zero) point of the each time chunk'
-
-        file.attrs['p_orb'] = data_dict['p_orb']  # orbital period, if applicable
 
         # the time series data
         file.create_dataset('time', data=data_dict['time'])
@@ -185,12 +182,12 @@ def load_result_hdf5(file_name, h5py_file_kwargs=None):
         # linear model parameters
         # y-intercepts
         result_dict['const'] = np.copy(file['const'])
-        result_dict['c_err'] = np.copy(file['c_err'])
-        result_dict['c_hdi'] = np.copy(file['c_hdi'])
+        result_dict['const_err'] = np.copy(file['const_err'])
+        result_dict['const_hdi'] = np.copy(file['const_hdi'])
         # slopes
         result_dict['slope'] = np.copy(file['slope'])
-        result_dict['sl_err'] = np.copy(file['sl_err'])
-        result_dict['sl_hdi'] = np.copy(file['sl_hdi'])
+        result_dict['slope_err'] = np.copy(file['slope_err'])
+        result_dict['slope_hdi'] = np.copy(file['slope_hdi'])
 
         # sinusoid model parameters
         # frequencies
@@ -206,13 +203,15 @@ def load_result_hdf5(file_name, h5py_file_kwargs=None):
         result_dict['ph_n_err'] = np.copy(file['ph_n_err'])
         result_dict['ph_n_hdi'] = np.copy(file['ph_n_hdi'])
         # passing criteria
-        result_dict['passed_sigma'] = np.copy(file['passed_sigma'])
-        result_dict['passed_snr'] = np.copy(file['passed_snr'])
-        result_dict['passed_both'] = np.copy(file['passed_both'])
+        result_dict['passing_sigma'] = np.copy(file['passing_sigma'])
+        result_dict['passing_snr'] = np.copy(file['passing_snr'])
 
         # harmonic model
-        result_dict['p_orb'] = np.copy(file['p_orb'])
-        result_dict['passed_harmonic'] = np.copy(file['passed_harmonic'])
+        result_dict['h_base'] = np.copy(file['h_base'])
+        result_dict['h_mult'] = np.copy(file['h_mult'])
+        result_dict['f_h_err'] = np.copy(file['f_h_err'])
+        # passing criteria
+        result_dict['passing_harmonic'] = np.copy(file['passing_harmonic'])
 
     return result_dict
 
@@ -248,77 +247,80 @@ def save_result_hdf5(file_name, result_dict):
         file.attrs['bic'] = result_dict['bic']  # Bayesian Information Criterion of the residuals
         file.attrs['noise_level'] = result_dict['noise_level']  # standard deviation of the residuals
 
-        # orbital period
-        file.create_dataset('p_orb', data=result_dict['p_orb'])
-        file['p_orb'].attrs['unit'] = 'd'
-        file['p_orb'].attrs['description'] = 'Orbital period and error estimates.'
-
         # the linear model
         # y-intercepts
         file.create_dataset('const', data=result_dict['const'])
         file['const'].attrs['unit'] = 'median normalised flux'
         file['const'].attrs['description'] = 'y-intercept per analysed sector'
-        file.create_dataset('c_err', data=result_dict['c_err'])
-        file['c_err'].attrs['unit'] = 'median normalised flux'
-        file['c_err'].attrs['description'] = 'errors in the y-intercept per analysed sector'
-        file.create_dataset('c_hdi', data=result_dict['c_hdi'])
-        file['c_hdi'].attrs['unit'] = 'median normalised flux'
-        file['c_hdi'].attrs['description'] = 'HDI for the y-intercept per analysed sector'
+        file.create_dataset('const_err', data=result_dict['const_err'])
+        file['const_err'].attrs['unit'] = 'median normalised flux'
+        file['const_err'].attrs['description'] = 'errors in the y-intercept per analysed sector'
+        file.create_dataset('const_hdi', data=result_dict['const_hdi'])
+        file['const_hdi'].attrs['unit'] = 'median normalised flux'
+        file['const_hdi'].attrs['description'] = 'HDI for the y-intercept per analysed sector'
 
         # slopes
         file.create_dataset('slope', data=result_dict['slope'])
         file['slope'].attrs['unit'] = 'median normalised flux / d'
         file['slope'].attrs['description'] = 'slope per analysed sector'
-        file.create_dataset('sl_err', data=result_dict['sl_err'])
-        file['sl_err'].attrs['unit'] = 'median normalised flux / d'
-        file['sl_err'].attrs['description'] = 'error in the slope per analysed sector'
-        file.create_dataset('sl_hdi', data=result_dict['sl_hdi'])
-        file['sl_hdi'].attrs['unit'] = 'median normalised flux / d'
-        file['sl_hdi'].attrs['description'] = 'HDI for the slope per analysed sector'
+        file.create_dataset('slope_err', data=result_dict['slope_err'])
+        file['slope_err'].attrs['unit'] = 'median normalised flux / d'
+        file['slope_err'].attrs['description'] = 'error in the slope per analysed sector'
+        file.create_dataset('slope_hdi', data=result_dict['slope_hdi'])
+        file['slope_hdi'].attrs['unit'] = 'median normalised flux / d'
+        file['slope_hdi'].attrs['description'] = 'HDI for the slope per analysed sector'
 
         # the sinusoid model
         # frequencies
         file.create_dataset('f_n', data=result_dict['f_n'])
         file['f_n'].attrs['unit'] = '1 / d'
-        file['f_n'].attrs['description'] = 'frequencies of a number of sine waves'
+        file['f_n'].attrs['description'] = 'frequencies of a number of sinusoids'
         file.create_dataset('f_n_err', data=result_dict['f_n_err'])
         file['f_n_err'].attrs['unit'] = '1 / d'
-        file['f_n_err'].attrs['description'] = 'errors in the frequencies of a number of sine waves'
+        file['f_n_err'].attrs['description'] = 'errors in the frequencies of a number of sinusoids'
         file.create_dataset('f_n_hdi', data=result_dict['f_n_hdi'])
         file['f_n_hdi'].attrs['unit'] = '1 / d'
-        file['f_n_hdi'].attrs['description'] = 'HDI for the frequencies of a number of sine waves'
+        file['f_n_hdi'].attrs['description'] = 'HDI for the frequencies of a number of sinusoids'
 
         # amplitudes
         file.create_dataset('a_n', data=result_dict['a_n'])
         file['a_n'].attrs['unit'] = 'median normalised flux'
-        file['a_n'].attrs['description'] = 'amplitudes of a number of sine waves'
+        file['a_n'].attrs['description'] = 'amplitudes of a number of sinusoids'
         file.create_dataset('a_n_err', data=result_dict['a_n_err'])
         file['a_n_err'].attrs['unit'] = 'median normalised flux'
-        file['a_n_err'].attrs['description'] = 'errors in the amplitudes of a number of sine waves'
+        file['a_n_err'].attrs['description'] = 'errors in the amplitudes of a number of sinusoids'
         file.create_dataset('a_n_hdi', data=result_dict['a_n_hdi'])
         file['a_n_hdi'].attrs['unit'] = 'median normalised flux'
-        file['a_n_hdi'].attrs['description'] = 'HDI for the amplitudes of a number of sine waves'
+        file['a_n_hdi'].attrs['description'] = 'HDI for the amplitudes of a number of sinusoids'
 
         # phases
         file.create_dataset('ph_n', data=result_dict['ph_n'])
         file['ph_n'].attrs['unit'] = 'radians'
-        file['ph_n'].attrs['description'] = 'phases of a number of sine waves, with reference point t_mean'
+        file['ph_n'].attrs['description'] = 'phases of a number of sinusoids, with reference point t_mean'
         file.create_dataset('ph_n_err', data=result_dict['ph_n_err'])
         file['ph_n_err'].attrs['unit'] = 'radians'
-        file['ph_n_err'].attrs['description'] = 'errors in the phases of a number of sine waves'
+        file['ph_n_err'].attrs['description'] = 'errors in the phases of a number of sinusoids'
         file.create_dataset('ph_n_hdi', data=result_dict['ph_n_hdi'])
         file['ph_n_hdi'].attrs['unit'] = 'radians'
-        file['ph_n_hdi'].attrs['description'] = 'HDI for the phases of a number of sine waves'
+        file['ph_n_hdi'].attrs['description'] = 'HDI for the phases of a number of sinusoids'
 
-        # selection criteria
-        file.create_dataset('passed_sigma', data=result_dict['passed_sigma'])
-        file['passed_sigma'].attrs['description'] = 'sinusoids passing the sigma criterion'
-        file.create_dataset('passed_snr', data=result_dict['passed_snr'])
-        file['passed_snr'].attrs['description'] = 'sinusoids passing the signal to noise criterion'
-        file.create_dataset('passed_both', data=result_dict['passed_both'])
-        file['passed_both'].attrs['description'] = 'sinusoids passing both the sigma and the signal to noise criteria'
-        file.create_dataset('passed_harmonic', data=result_dict['passed_harmonic'])
-        file['passed_harmonic'].attrs['description'] = 'harmonic sinusoids passing the sigma criterion'
+        # sinusoid selection criteria
+        file.create_dataset('passing_sigma', data=result_dict['passing_sigma'])
+        file['passing_sigma'].attrs['description'] = 'sinusoids passing the sigma criterion'
+        file.create_dataset('passing_snr', data=result_dict['passing_snr'])
+        file['passing_snr'].attrs['description'] = 'sinusoids passing the signal to noise criterion'
+
+        # harmonic model
+        file.create_dataset('h_base', data=result_dict['h_base'])
+        file['h_base'].attrs['description'] = 'index of the base harmonic frequency'
+        file.create_dataset('h_mult', data=result_dict['h_mult'])
+        file['h_mult'].attrs['description'] = 'multiplier of the base harmonic frequency'
+        file.create_dataset('f_h_err', data=result_dict['f_h_err'])
+        file['f_h_err'].attrs['description'] = 'errors in the harmonic frequencies'
+
+        # harmonic selection criteria
+        file.create_dataset('passing_harmonic', data=result_dict['passing_harmonic'])
+        file['passing_harmonic'].attrs['description'] = 'harmonic sinusoids passing the sigma criterion'
 
     return None
 
@@ -343,12 +345,12 @@ def save_result_csv(file_name, result_dict):
     ext = os.path.splitext(os.path.basename(file_name))[1]
 
     # linear model parameters
-    data = np.column_stack((result_dict['const'], result_dict['c_err'],
-                            result_dict['c_hdi'][:, 0], result_dict['c_hdi'][:, 1],
-                            result_dict['slope'], result_dict['sl_err'],
-                            result_dict['sl_hdi'][:, 0], result_dict['sl_hdi'][:, 1]))
+    data = np.column_stack((result_dict['const'], result_dict['const_err'],
+                            result_dict['const_hdi'][:, 0], result_dict['const_hdi'][:, 1],
+                            result_dict['slope'], result_dict['slope_err'],
+                            result_dict['slope_hdi'][:, 0], result_dict['slope_hdi'][:, 1]))
 
-    hdr = 'const, c_err, c_hdi_l, c_hdi_r, slope, sl_err, sl_hdi_l, sl_hdi_r'
+    hdr = 'const, const_err, const_hdi_l, const_hdi_r, slope, slope_err, slope_hdi_l, slope_hdi_r'
     file_name_lin = file_name.replace(ext, '_linear.csv')
     np.savetxt(file_name_lin, data, delimiter=',', header=hdr)
 
@@ -359,22 +361,23 @@ def save_result_csv(file_name, result_dict):
                             result_dict['a_n_hdi'][:, 0], result_dict['a_n_hdi'][:, 1],
                             result_dict['ph_n'], result_dict['ph_n_err'],
                             result_dict['ph_n_hdi'][:, 0], result_dict['ph_n_hdi'][:, 1],
-                            result_dict['passed_sigma'], result_dict['passed_snr'],
-                            result_dict['passed_both'], result_dict['passed_harmonic']))
+                            result_dict['passing_sigma'], result_dict['passing_snr'],
+                            result_dict['h_base'], result_dict['h_mult'],
+                            result_dict['f_h_err'], result_dict['passing_harmonic']
+                            ))
 
     hdr = ('f_n, f_n_err, f_n_hdi_l, f_n_hdi_r, a_n, a_n_err, a_n_hdi_l, a_n_hdi_r, '
-           'ph_n, ph_n_err, ph_n_hdi_l, ph_n_hdi_r, passed_sigma, passed_snr, passed_b, passed_h')
+           'ph_n, ph_n_err, ph_n_hdi_l, ph_n_hdi_r, passing_sigma, passing_snr, '
+           'h_base, h_mult, f_h_err, passing_h')
     file_name_sin = file_name.replace(ext, '_sinusoid.csv')
     np.savetxt(file_name_sin, data, delimiter=',', header=hdr)
 
     # period and statistics
-    names = ('p_orb', 'p_err', 'p_hdi_l', 'p_hdi_r'  'n_param', 'bic', 'noise_level')
-    stats = (result_dict['p_orb'], result_dict['p_err'], result_dict['p_hdi'][0], result_dict['p_hdi'][1],
-             result_dict['n_param'], result_dict['bic'], result_dict['noise_level'])
+    names = ('n_param', 'bic', 'noise_level')
+    stats = (result_dict['n_param'], result_dict['bic'], result_dict['noise_level'])
 
-    desc = ['Orbital period', 'Error in the orbital period', 'Left bound HDI of the orbital period',
-            'Right bound HDI of the orbital period', 'Number of free parameters',
-            'Bayesian Information Criterion of the residuals', 'Standard deviation of the residuals']
+    desc = ['Number of free parameters', 'Bayesian Information Criterion of the residuals',
+            'Standard deviation of the residuals']
     data = np.column_stack((names, stats, desc))
     hdr = f"{result_dict['target_id']}, {result_dict['data_id']}, Model statistics\nname, value, description"
     file_name_stats = file_name.replace(ext, '_stats.csv')

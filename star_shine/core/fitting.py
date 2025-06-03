@@ -323,7 +323,7 @@ def fit_multi_sinusoid_per_group(time, flux, const, slope, f_n, a_n, ph_n, i_chu
     Notes
     -----
     In reducing the overall runtime of the NL-LS fit, this will improve the
-    fits per group of 15-20 frequencies, leaving the other frequencies as
+    fits per group of 45-50 frequencies, leaving the other frequencies as
     fixed parameters.
     """
     f_groups = frs.group_frequencies_for_fit(a_n, g_min=45, g_max=50)

@@ -107,7 +107,7 @@ def linear_pars(time, flux, i_chunks):
 
 @nb.njit(cache=True)
 def sum_sines_st(time, f_n, a_n, ph_n, t_shift=True):
-    """A sum of sine waves at times t, given the frequencies, amplitudes and phases.
+    """A sum of sinusoids at times t, given the frequencies, amplitudes and phases.
 
     Single threaded version. Better for one to a few sinusoids.
 
@@ -116,18 +116,18 @@ def sum_sines_st(time, f_n, a_n, ph_n, t_shift=True):
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
     f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
+        The frequencies of a number of sinusoids
     a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
+        The amplitudes of a number of sinusoids
     ph_n: numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves
+        The phases of a number of sinusoids
     t_shift: bool
         Mean center the time axis
 
     Returns
     -------
     numpy.ndarray[Any, dtype[float]]
-        Model time series of a sum of sine waves. Varies around 0.
+        Model time series of a sum of sinusoids. Varies around 0.
 
     Notes
     -----
@@ -147,25 +147,25 @@ def sum_sines_st(time, f_n, a_n, ph_n, t_shift=True):
 
 @nb.njit(cache=True, parallel=True)
 def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
-    """A sum of sine waves at times t, given the frequencies, amplitudes and phases.
+    """A sum of sinusoids at times t, given the frequencies, amplitudes and phases.
 
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
     f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
+        The frequencies of a number of sinusoids
     a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
+        The amplitudes of a number of sinusoids
     ph_n: numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves
+        The phases of a number of sinusoids
     t_shift: bool
         Mean center the time axis
 
     Returns
     -------
     numpy.ndarray[Any, dtype[float]]
-        Model time series of a sum of sine waves. Varies around 0.
+        Model time series of a sum of sinusoids. Varies around 0.
 
     Notes
     -----
@@ -185,18 +185,18 @@ def sum_sines(time, f_n, a_n, ph_n, t_shift=True):
 
 @nb.njit(cache=True, parallel=True)
 def sum_sines_deriv(time, f_n, a_n, ph_n, deriv=1, t_shift=True):
-    """The time derivative of a sum of sine waves at times t.
+    """The time derivative of a sum of sinusoids at times t.
 
     Parameters
     ----------
     time: numpy.ndarray[Any, dtype[float]]
         Timestamps of the time series
     f_n: list[float], numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
+        The frequencies of a number of sinusoids
     a_n: list[float], numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves
+        The amplitudes of a number of sinusoids
     ph_n: list[float], numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves
+        The phases of a number of sinusoids
     deriv: int
         Number of time derivatives taken (>= 1)
     t_shift: bool
@@ -205,7 +205,7 @@ def sum_sines_deriv(time, f_n, a_n, ph_n, deriv=1, t_shift=True):
     Returns
     -------
     numpy.ndarray[Any, dtype[float]]
-        Model time series of a sum of sine wave derivatives. Varies around 0.
+        Model time series of a sum of sinusoid derivatives. Varies around 0.
 
     Notes
     -----
@@ -247,28 +247,24 @@ class LinearModel:
         Time series model of the piece-wise linear curve.
     """
 
-    def __init__(self, n_time, n_chunks):
+    def __init__(self, n_time):
         """Initialises the Result object.
 
         Parameters
         ----------
         n_time: int
             Number of points in the time series.
-        n_chunks: int
-            Number of chunks in the time series.
         """
         # linear model parameters
-        self._const = np.zeros((n_chunks,))  # y-intercepts
-        self._slope = np.zeros((n_chunks,))  # slopes
+        self._const = np.zeros((0,))  # y-intercepts
+        self._slope = np.zeros((0,))  # slopes
 
         # linear parameter uncertainties
-        self._const_err = np.zeros((n_chunks,))
-        self._slope_err = np.zeros((n_chunks,))
+        self._const_err = np.zeros((0,))
+        self._slope_err = np.zeros((0,))
 
         # number of time chunks
-        self.n_chunks = n_chunks  # does not change
-        # number of parameters
-        self.n_param = 2 * self.n_chunks  # does not change
+        self.n_chunks = 0
 
         # current model
         self._linear_model = np.zeros((n_time,))
@@ -328,6 +324,17 @@ class LinearModel:
         """
         return self._linear_model.copy()
 
+    @property
+    def n_param(self):
+        """Get the number of parameters of the model."""
+        return 2 * self.n_chunks
+
+    def update_n(self):
+        """Update the current numbers of sinusoids, harmonics, and base frequencies."""
+        self.n_chunks = len(self._const)
+
+        return None
+
     def get_linear_parameters(self):
         """Get a copy of the current linear parameters.
 
@@ -359,6 +366,9 @@ class LinearModel:
         # set the parameters
         self._const = const_new
         self._slope = slope_new
+
+        # set the numbers
+        self.update_n()
 
         return
 
@@ -407,11 +417,11 @@ class SinusoidModel:
     Attributes
     ----------
     _f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves.
+        The frequencies of a number of sinusoids.
     _a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves.
+        The amplitudes of a number of sinusoids.
     _ph_n: numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves.
+        The phases of a number of sinusoids.
     _include: numpy.ndarray[Any, dtype[bool]]
         Include state of the sinusoids in the model.
     _harmonics: numpy.ndarray[Any, dtype[bool]]
@@ -425,13 +435,13 @@ class SinusoidModel:
     _combination_n: dict[int, numpy.ndarray[Any, dtype[int]]]
         Indices of the child frequencies in _f_n, and the corresponding parent multiplier.
     _f_n_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the frequency for each sine wave.
+        Uncertainty in the frequency for each sinusoid.
     _a_n_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the amplitude for each sine wave (these are identical).
+        Uncertainty in the amplitude for each sinusoid (these are identical).
     _ph_n_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the phase for each sine wave.
+        Uncertainty in the phase for each sinusoid.
     _f_h_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the frequency for each harmonic sine wave.
+        Uncertainty in the frequency for each harmonic sinusoid.
     _passing_sigma: numpy.ndarray[Any, dtype[bool]]
         Sinusoids that passed the sigma check.
     _passing_snr: numpy.ndarray[Any, dtype[bool]]
@@ -495,7 +505,7 @@ class SinusoidModel:
         Returns
         -------
         numpy.ndarray[Any, dtype[float]]
-            The frequencies of a number of sine waves.
+            The frequencies of a number of sinusoids.
         """
         return self._f_n.copy()
 
@@ -506,7 +516,7 @@ class SinusoidModel:
         Returns
         -------
         numpy.ndarray[Any, dtype[float]]
-            The amplitudes of a number of sine waves.
+            The amplitudes of a number of sinusoids.
         """
         return self._a_n.copy()
 
@@ -517,7 +527,7 @@ class SinusoidModel:
         Returns
         -------
         numpy.ndarray[Any, dtype[float]]
-            The phases of a number of sine waves.
+            The phases of a number of sinusoids.
         """
         return self._ph_n.copy()
 
@@ -588,7 +598,7 @@ class SinusoidModel:
         Returns
         -------
         numpy.ndarray[Any, dtype[float]]
-            The errors in the frequencies of a number of sine waves.
+            The errors in the frequencies of a number of sinusoids.
 
         Notes
         -----
@@ -603,7 +613,7 @@ class SinusoidModel:
         Returns
         -------
         numpy.ndarray[Any, dtype[float]]
-            The errors in the amplitudes of a number of sine waves.
+            The errors in the amplitudes of a number of sinusoids.
 
         Notes
         -----
@@ -618,13 +628,28 @@ class SinusoidModel:
         Returns
         -------
         numpy.ndarray[Any, dtype[float]]
-            The errors in the phases of a number of sine waves.
+            The errors in the phases of a number of sinusoids.
 
         Notes
         -----
         These need to be updated manually (with update_sinusoid_uncertainties).
         """
         return self._ph_n_err.copy()
+
+    @property
+    def f_h_err(self):
+        """Get a copy of the model harmonic frequency errors (disregarding include).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            The errors in the frequencies of a number of (harmonic) sinusoids.
+
+        Notes
+        -----
+        These need to be updated manually (with update_sinusoid_uncertainties_harmonic).
+        """
+        return self._f_h_err.copy()
 
     @property
     def passing_sigma(self):
@@ -679,6 +704,14 @@ class SinusoidModel:
         """Get the number of parameters of the model."""
         return self.n_base + 2 * self.n_harm + 3 * (self.n_sin - self.n_harm)
 
+    def update_n(self):
+        """Update the current numbers of sinusoids, harmonics, and base frequencies."""
+        self.n_sin = len(self._f_n[self._include])
+        self.n_harm = len(self._f_n[self._include][self._harmonics[self._include]])
+        self.n_base = len(self._f_n[self._h_mult == 1])
+
+        return None
+
     def get_sinusoid_parameters(self, exclude=True):
         """Get a copy of the current sinusoid parameters.
 
@@ -714,14 +747,6 @@ class SinusoidModel:
         """
         return np.abs(self._f_n - f).argmin()
 
-    def update_n(self):
-        """Update the current numbers of sinusoids, harmonics, and base frequencies."""
-        self.n_sin = len(self._f_n[self._include])
-        self.n_harm = len(self._f_n[self._include][self._harmonics[self._include]])
-        self.n_base = len(self._f_n[self._h_mult == 1])
-
-        return None
-
     def _check_removed_h_base(self, indices):
         """If a harmonic base frequency was removed, remove the whole harmonic series."""
         if np.any(self._harmonics):
@@ -753,11 +778,11 @@ class SinusoidModel:
         time: numpy.ndarray[Any, dtype[float]]
             Timestamps of the time series
         f_n_new: numpy.ndarray[Any, dtype[float]]
-            The frequencies of a number of sine waves.
+            The frequencies of a number of sinusoids.
         a_n_new: numpy.ndarray[Any, dtype[float]]
-            The amplitudes of a number of sine waves.
+            The amplitudes of a number of sinusoids.
         ph_n_new: numpy.ndarray[Any, dtype[float]]
-            The phases of a number of sine waves.
+            The phases of a number of sinusoids.
         h_base_new: numpy.ndarray[Any, dtype[int]], optional
             Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.
         h_mult_new: numpy.ndarray[Any, dtype[int]], optional
@@ -809,11 +834,11 @@ class SinusoidModel:
         time: numpy.ndarray[Any, dtype[float]]
             Timestamps of the time series
         f_n_new: numpy.ndarray[Any, dtype[float]]
-            The frequencies of a number of sine waves.
+            The frequencies of a number of sinusoids.
         a_n_new: numpy.ndarray[Any, dtype[float]]
-            The amplitudes of a number of sine waves.
+            The amplitudes of a number of sinusoids.
         ph_n_new: numpy.ndarray[Any, dtype[float]]
-            The phases of a number of sine waves.
+            The phases of a number of sinusoids.
         h_base_new: numpy.ndarray[Any, dtype[int]], optional
             Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.
         h_mult_new: numpy.ndarray[Any, dtype[int]], optional
@@ -868,11 +893,11 @@ class SinusoidModel:
         time: numpy.ndarray[Any, dtype[float]]
             Timestamps of the time series
         f_n_new: numpy.ndarray[Any, dtype[float]]
-            The frequencies of a number of sine waves.
+            The frequencies of a number of sinusoids.
         a_n_new: numpy.ndarray[Any, dtype[float]]
-            The amplitudes of a number of sine waves.
+            The amplitudes of a number of sinusoids.
         ph_n_new: numpy.ndarray[Any, dtype[float]]
-            The phases of a number of sine waves.
+            The phases of a number of sinusoids.
         indices: numpy.ndarray[Any, dtype[int]]
             Indices for the sinusoids to update.
         h_base_new: numpy.ndarray[Any, dtype[int]], optional
@@ -1089,6 +1114,15 @@ class SinusoidModel:
         self._f_n_err = out[0]
         self._a_n_err = out[1]
         self._ph_n_err = out[2]
+
+        return
+
+    def update_sinusoid_uncertainties_harmonic(self):
+        """Update the harmonic sinusoid model parameter errors.
+
+        Note: uses the sinusoid uncertainties. These should be updated first.
+        """
+        self._f_h_err = ut.formal_uncertainties_harmonic(self._f_n_err, self._h_base, self._h_mult)
 
         return
 

@@ -136,7 +136,7 @@ class TimeSeriesModel(TimeSeries):
         super().__init__(time, flux, flux_err, i_chunks)
 
         # time series models making up the full model
-        self.linear = mdl.LinearModel(self.n_time, self.n_chunks)
+        self.linear = mdl.LinearModel(self.n_time)
         self.sinusoid = mdl.SinusoidModel(self.n_time)
 
     @staticmethod
@@ -263,6 +263,10 @@ class TimeSeriesModel(TimeSeries):
     def update_sinusoid_uncertainties(self):
         """Delegates to update_sinusoid_uncertainties of SinusoidModel."""
         self.sinusoid.update_sinusoid_uncertainties(self.time, self.residual(), self.flux_err, self.i_chunks)
+
+    def update_sinusoid_uncertainties_harmonic(self):
+        """Delegates to update_sinusoid_uncertainties_harmonic of SinusoidModel."""
+        self.sinusoid.update_sinusoid_uncertainties_harmonic()
 
     def update_sinusoid_passing_sigma(self):
         """Delegates to update_sinusoid_passing_sigma of SinusoidModel."""

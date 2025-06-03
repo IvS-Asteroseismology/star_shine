@@ -36,48 +36,46 @@ class Result:
         The noise level (standard deviation of the residuals).
     const: numpy.ndarray[Any, dtype[float]]
         The y-intercepts of a piece-wise linear curve.
+    const_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the constant for each time chunk.
+    const_hdi: numpy.ndarray[Any, dtype[float]]
+        HDI bounds for the constant for each time chunk.
     slope: numpy.ndarray[Any, dtype[float]]
         The slopes of a piece-wise linear curve.
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves.
-    a_n: numpy.ndarray[Any, dtype[float]]
-        The amplitudes of a number of sine waves.
-    ph_n: numpy.ndarray[Any, dtype[float]]
-        The phases of a number of sine waves.
-    c_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the constant for each time chunk.
-    sl_err: numpy.ndarray[Any, dtype[float]]
+    slope_err: numpy.ndarray[Any, dtype[float]]
         Uncertainty in the slope for each time chunk.
-    f_n_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the frequency for each sine wave.
-    a_n_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the amplitude for each sine wave (these are identical).
-    ph_n_err: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the phase for each sine wave.
-    c_hdi: numpy.ndarray[Any, dtype[float]]
-        HDI bounds for the constant for each time chunk.
-    sl_hdi: numpy.ndarray[Any, dtype[float]]
+    slope_hdi: numpy.ndarray[Any, dtype[float]]
         HDI bounds for the slope for each time chunk.
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sinusoids.
+    f_n_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the frequency for each sinusoid.
     f_n_hdi: numpy.ndarray[Any, dtype[float]]
-        HDI bounds for the frequency for each sine wave.
+        HDI bounds for the frequency for each sinusoid.
+    a_n: numpy.ndarray[Any, dtype[float]]
+        The amplitudes of a number of sinusoids.
+    a_n_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the amplitude for each sinusoid (these are identical).
     a_n_hdi: numpy.ndarray[Any, dtype[float]]
-        HDI bounds for the amplitude for each sine wave (these are identical).
+        HDI bounds for the amplitude for each sinusoid.
+    ph_n: numpy.ndarray[Any, dtype[float]]
+        The phases of a number of sinusoids.
+    ph_n_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the phase for each sinusoid.
     ph_n_hdi: numpy.ndarray[Any, dtype[float]]
-        HDI bounds for the phase for each sine wave.
-    passed_sigma: numpy.ndarray[Any, dtype[bool]]
+        HDI bounds for the phase for each sinusoid.
+    passing_sigma: numpy.ndarray[Any, dtype[bool]]
         Sinusoids that passed the sigma check.
-    passed_snr: numpy.ndarray[Any, dtype[bool]]
+    passing_snr: numpy.ndarray[Any, dtype[bool]]
         Sinusoids that passed the signal-to-noise check.
-    passed_both: numpy.ndarray[Any, dtype[bool]]
-        Sinusoids that passed both checks.
-    p_orb: float
-        Orbital period.
-    p_err: float
-        Error in the orbital period.
-    p_hdi: numpy.ndarray[2, dtype[float]]
-        HDI for the period.
-    passed_harmonic: numpy.ndarray[bool]
-        Harmonic sinusoids that passed.
+    h_base: numpy.ndarray[Any, dtype[int]]
+        Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.
+    h_mult: numpy.ndarray[Any, dtype[int]]
+        Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.
+    f_h_err: numpy.ndarray[Any, dtype[float]]
+        Uncertainty in the frequency for each harmonic sinusoid.
+    passing_harmonic: numpy.ndarray[Any, dtype[bool]]
+        Sinusoids that passed the harmonic check.
     """
 
     def __init__(self):
@@ -92,22 +90,23 @@ class Result:
         self.bic = -1.
         self.noise_level = -1.
 
+        # attribute lists per model
+        self.linear_property_list = ['const', 'const_err', 'const_hdi', 'slope', 'slope_err', 'slope_hdi']
+        self.sinusoid_property_list = ['f_n', 'f_n_err', 'f_n_hdi', 'a_n', 'a_n_err', 'a_n_hdi',
+                                       'ph_n', 'ph_n_err', 'ph_n_hdi', 'passing_sigma', 'passing_snr',
+                                       'h_base', 'h_mult', 'f_h_err', 'passing_harmonic']
+
         # linear model parameters
         # y-intercepts
         self.const = np.zeros((0,))
-        self.c_err = np.zeros((0,))
-        self.c_hdi = np.zeros((0, 2))
+        self.const_err = np.zeros((0,))
+        self.const_hdi = np.zeros((0, 2))
         # slopes
         self.slope = np.zeros((0,))
-        self.sl_err = np.zeros((0,))
-        self.sl_hdi = np.zeros((0, 2))
+        self.slope_err = np.zeros((0,))
+        self.slope_hdi = np.zeros((0, 2))
 
         # sinusoid model parameters
-        self.sinusoid_property_list = ['f_n', 'a_n', 'ph_n']
-        self.property_type_list = ['', '_err', '_hdi']
-        self.sinusoid_passed_list = ['passed_sigma', 'passed_snr', 'passed_both']
-        # note: I could make the below attrs with a nice loop but then my IDE complains about undefined references
-
         # frequencies
         self.f_n = np.zeros((0,))
         self.f_n_err = np.zeros((0,))
@@ -121,31 +120,17 @@ class Result:
         self.ph_n_err = np.zeros((0,))
         self.ph_n_hdi = np.zeros((0, 2))
         # passing criteria
-        self.passed_sigma = np.zeros((0,), dtype=bool)
-        self.passed_snr = np.zeros((0,), dtype=bool)
-        self.passed_both = np.zeros((0,), dtype=bool)
+        self.passing_sigma = np.zeros((0,), dtype=bool)
+        self.passing_snr = np.zeros((0,), dtype=bool)
 
         # harmonic model
-        self.p_orb = 0.
-        self.p_err = 0.
-        self.p_hdi = np.zeros((2,))
-        self.passed_harmonic = np.zeros((0,), dtype=bool)
+        self.h_base = np.zeros((0,), dtype=int)
+        self.h_mult = np.zeros((0,), dtype=int)
+        self.f_h_err = np.zeros((0,))
+        # passing criteria
+        self.passing_harmonic = np.zeros((0,), dtype=bool)
 
         return
-
-    def setter(self, **kwargs):
-        """Fill in the attributes with results.
-
-        Parameters
-        ----------
-        kwargs:
-            Accepts any of the class attributes as keyword input and sets them accordingly
-        """
-        # set any attribute that exists if it is in the kwargs
-        for key in kwargs.keys():
-            setattr(self, key, kwargs[key])
-
-        return None
 
     def get_dict(self):
         """Make a dictionary of the attributes.
@@ -154,7 +139,7 @@ class Result:
 
         Returns
         -------
-        result_dict: dict
+        dict
             Dictionary of the result attributes and fields
         """
         # make a dictionary of the fields to be saved
@@ -168,43 +153,66 @@ class Result:
         result_dict['bic'] = self.bic  # Bayesian Information Criterion of the residuals
         result_dict['noise_level'] = self.noise_level  # standard deviation of the residuals
 
-        # orbital period
-        result_dict['p_orb'] = self.p_orb
-
         # the linear model
-        # y-intercepts
-        result_dict['const'] = self.const
-        result_dict['c_err'] = self.c_err
-        result_dict['c_hdi'] = self.c_hdi
-
-        # slopes
-        result_dict['slope'] = self.slope
-        result_dict['sl_err'] = self.sl_err
-        result_dict['sl_hdi'] = self.sl_hdi
+        for key in self.linear_property_list:
+            result_dict[key] = getattr(self, key)
 
         # the sinusoid model
-        # frequencies
-        result_dict['f_n'] = self.f_n
-        result_dict['f_n_err'] = self.f_n_err
-        result_dict['f_n_hdi'] = self.f_n_hdi
-
-        # amplitudes
-        result_dict['a_n'] = self.a_n
-        result_dict['a_n_err'] = self.a_n_err
-        result_dict['a_n_hdi'] = self.a_n_hdi
-
-        # phases
-        result_dict['ph_n'] = self.ph_n
-        result_dict['ph_n_err'] = self.ph_n_err
-        result_dict['ph_n_hdi'] = self.ph_n_hdi
-
-        # selection criteria
-        result_dict['passed_sigma'] = self.passed_sigma
-        result_dict['passed_snr'] = self.passed_snr
-        result_dict['passed_both'] = self.passed_both
-        result_dict['passed_harmonic'] = self.passed_harmonic
+        for key in self.sinusoid_property_list:
+            result_dict[key] = getattr(self, key)
 
         return result_dict
+
+    def from_dict(self, **kwargs):
+        """Fill in the attributes with results in a dictionary (or keyword arguments).
+
+        Parameters
+        ----------
+        kwargs:
+            Accepts any of the class attributes as keyword input and sets them accordingly.
+        """
+        # set any attribute that exists if it is in the kwargs
+        for key in kwargs.keys():
+            setattr(self, key, kwargs[key])
+
+        return None
+
+    def from_time_series_model(self, ts_model, target_id=None, data_id=None, description=None):
+        """Fill in the Result attributes with results from a TimeSeriesModel.
+
+        Parameters
+        ----------
+        ts_model: tms.TimeSeriesModel
+            Instance of TimeSeriesModel containing the time series and model parameters.
+        target_id: str
+            User defined identification number or name for the target under investigation.
+        data_id: str
+            User defined identification name for the dataset used.
+        description: str
+            User defined description of the result in question.
+        """
+        # descriptive
+        self.target_id = target_id
+        self.data_id = data_id
+        self.description = description
+
+        # summary statistics
+        self.n_param = ts_model.n_param
+        self.bic = ts_model.bic()
+        self.noise_level = ut.std_unb(ts_model.residual(), ts_model.n_time - ts_model.n_param)
+
+        # linear model parameters
+        for key in self.linear_property_list:
+            if '_hdi' not in key:  # avoid hdi for now
+                setattr(self, key, getattr(ts_model.linear, key))
+
+        # sinusoid model parameters
+        ts_model.remove_excluded()  # clean up before transfer
+        for key in self.sinusoid_property_list:
+            if '_hdi' not in key:  # avoid hdi for now
+                setattr(self, key, getattr(ts_model.sinusoid, key))
+
+        return None
 
     @classmethod
     def load(cls, file_name, h5py_file_kwargs=None, logger=None):
@@ -225,7 +233,7 @@ class Result:
         Result
             Instance of the Result class with the loaded results.
         """
-        # guard for existing file
+        # guard for not existing file
         if not os.path.isfile(file_name):
             instance = cls()
             return instance
@@ -235,7 +243,7 @@ class Result:
 
         # initiate the Results instance and fill in the results
         instance = cls()
-        instance.setter(**result_dict)
+        instance.from_dict(**result_dict)
 
         if logger is not None:
             logger.info(f"Loaded result file with target identifier: {result_dict['target_id']}, "
@@ -244,32 +252,47 @@ class Result:
 
         return instance
 
-    @classmethod
-    def load_conditional(cls, file_name, logger=None):
-        """Load a result file into a Result instance only if it exists and if no overwriting.
+    def to_time_series_model(self, ts_model):
+        """Copy the parameters into an existing TimeSeriesModel instance.
 
         Parameters
         ----------
-        file_name: str
-            File name to load the results from
-        logger: logging.Logger, optional
-            Instance of the logging library.
+        ts_model: tms.TimeSeriesModel
+            Instance of TimeSeriesModel containing the time series and model parameters.
 
         Returns
         -------
-        Result
-            Instance of the Result class with the loaded results.
-            Returns empty Result if condition not met.
+        tms.TimeSeriesModel
+            Instance of TimeSeriesModel containing the time series and model parameters.
         """
-        # guard for existing file when not overwriting
-        if (not os.path.isfile(file_name)) | config.overwrite:
-            instance = cls()
-            return instance
+        # linear model
+        ts_model.set_linear_model(self.const, self.slope)
 
-        # make the Data instance and load the data
-        instance = cls.load(file_name, logger=logger)
+        # set the errors
+        ts_model.linear._const_err = self.const_err
+        ts_model.linear._slope_err = self.slope_err
 
-        return instance
+        # update numbers
+        ts_model.linear.update_n()
+
+        # sinusoid model
+        ts_model.set_sinusoids(self.f_n, self.a_n, self.ph_n, self.h_base, self.h_mult)
+
+        # set the errors
+        ts_model.sinusoid._f_n_err = self.f_n_err
+        ts_model.sinusoid._a_n_err = self.a_n_err
+        ts_model.sinusoid._ph_n_err = self.ph_n_err
+        ts_model.sinusoid._f_h_err = self.f_h_err
+
+        # set the criterion passing masks
+        ts_model.sinusoid._passing_sigma = self.passing_sigma
+        ts_model.sinusoid._passing_snr = self.passing_snr
+        ts_model.sinusoid._passing_harmonic = self.passing_harmonic
+
+        # update numbers
+        ts_model.sinusoid.update_n()
+
+        return ts_model
 
     def save(self, file_name):
         """Save the results to a file in hdf5 format.
@@ -284,6 +307,10 @@ class Result:
 
         # io module handles writing to file
         io.save_result_hdf5(file_name, result_dict)
+
+        # save csv files if configured
+        if config.save_ascii:
+            self.save_as_csv(file_name)
 
         return None
 
@@ -300,22 +327,5 @@ class Result:
 
         # io module handles writing to file
         io.save_result_csv(file_name, result_dict)
-
-        return None
-
-    def save_conditional(self, file_name):
-        """Save a result file only if it doesn't exist or if it exists and if no overwriting.
-
-        Parameters
-        ----------
-        file_name: str
-            File name to load the results from
-        """
-        if (not os.path.isfile(file_name)) | config.overwrite:
-            self.save(file_name)
-
-            # save csv files if configured
-            if config.save_ascii:
-                self.save_as_csv(file_name)
 
         return None

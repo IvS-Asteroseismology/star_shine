@@ -473,6 +473,9 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
                                         select=select)
         ts_model.add_sinusoids(f_i, a_i, ph_i)
 
+        # update the linear pars
+        ts_model.update_linear_model()
+
         # improve frequencies with some strategy
         if fit_each_step:
             # fit all frequencies for best improvement
@@ -488,9 +491,6 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
             if len(close_f) > 1:
                 # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
                 ts_model = refine_subset(ts_model, close_f, logger=logger)
-            else:
-                # only update the linear pars
-                ts_model.update_linear_model()
 
         # possibly replace close frequencies
         if replace_each_step:
@@ -845,22 +845,13 @@ def select_sinusoids(ts_model, logger=None):
 
     Returns
     -------
-    tuple
-        A tuple containing the following elements:
-        passed_sigma: numpy.ndarray[bool]
-            Non-harmonic frequencies that passed the sigma check
-        passed_snr: numpy.ndarray[bool]
-            Non-harmonic frequencies that passed the signal-to-noise check
-        passed_both: numpy.ndarray[bool]
-            Non-harmonic frequencies that passed both checks
-        passed_harmonic: numpy.ndarray[bool]
-            Harmonic frequencies that passed
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
 
     Notes
     -----
-    Harmonic frequencies that are said to be passing the criteria
-    are in fact passing the criteria for individual frequencies,
-    not those for a set of harmonics (which would be a looser constraint).
+    Harmonic frequencies that are said to be passing the criteria are in fact passing the criteria for
+    individual frequencies, not those for a set of harmonics (which would be a looser constraint).
     """
     n_sin = ts_model.sinusoid.n_sin
 
@@ -873,31 +864,18 @@ def select_sinusoids(ts_model, logger=None):
     # apply the signal-to-noise threshold
     ts_model.update_sinusoid_passing_snr(window_width=config.window_width)
 
-    # frequencies that pass sigma criteria
-    passed_sigma = np.ones(n_sin, dtype=bool)
-    passed_sigma[remove_sigma] = False
-
-    # frequencies that pass S/N criteria
-    passed_snr = np.ones(n_sin, dtype=bool)
-    passed_snr[remove_snr] = False
-
-    # passing both
-    passed_both = (passed_sigma & passed_snr)
-
-    # candidate harmonic frequencies
-    harmonics = np.array([], dtype=int)
-    passed_harmonic = np.zeros(n_sin, dtype=bool)
-    for f_base in ts_model.sinusoid.f_base:
-        harmonics, harmonic_n = frs.select_harmonics_sigma(ts_model.sinusoid.f_n, ts_model.sinusoid.f_n_err, 1/f_base,
-                                                           f_tol=ts_model.f_resolution/2, sigma_f=3)
-        passed_harmonic[harmonics] = True
+    # candidate harmonic frequencies passing criteria
+    ts_model.update_sinusoid_passing_harmonic()
 
     if logger is not None:
-        logger.extra(f"Number of sinusoids passed criteria: {np.sum(passed_both)} of {n_sin}. "
-                     f"Number of harmonics passed criteria: "
-                     f"{np.sum(passed_both[harmonics])} of {np.sum(passed_harmonic)}.")
+        passed_all = (ts_model.sinusoid.passing_sigma & ts_model.sinusoid.passing_snr)
+        n_pass_all = np.sum(passed_all)
+        n_harm = np.sum(ts_model.sinusoid.passing_harmonic)
+        n_harm_pass_all = np.sum(passed_all & ts_model.sinusoid.passing_harmonic)
+        logger.extra(f"Number of sinusoids passed criteria: {n_pass_all} of {n_sin}. "
+                     f"Number of harmonics passed criteria: {n_harm_pass_all} of {n_harm}.")
 
-    return passed_sigma, passed_snr, passed_both, passed_harmonic
+    return ts_model
 
 
 def refine_orbital_period(p_orb, time, f_n):
