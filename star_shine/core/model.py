@@ -990,11 +990,11 @@ class SinusoidModel:
         self._h_base = np.delete(self._h_base, indices)
         self._h_mult = np.delete(self._h_mult, indices)
 
-        # update indices for the removals
-        self._h_base = np.array(ut.adjust_indices_removed(self._h_base, indices))
-
         # if we deleted a base harmonic, also delete the harmonic series
         self._check_removed_h_base(indices)
+
+        # update indices for the removals (needs to go after _check_removed_h_base)
+        self._h_base = np.array(ut.adjust_indices_removed(self._h_base, indices))
 
         # update numbers
         self.update_n()
@@ -1086,11 +1086,11 @@ class SinusoidModel:
         # include itself needs to go last
         self._include = self._include[self._include]
 
-        # update indices for the removals
-        self._h_base = np.array(ut.adjust_indices_removed(self._h_base, indices))
-
         # check for base frequency removal
         self._check_removed_h_base(indices)
+
+        # update indices for the removals (needs to go after _check_removed_h_base)
+        self._h_base = np.array(ut.adjust_indices_removed(self._h_base, indices))
 
         # numbers do not change here, except if we removed a base frequency
         self.update_n()  # n_sin won't change but n_harm and n_base might
