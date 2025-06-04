@@ -792,11 +792,11 @@ def replace_sinusoid_groups(ts_model, logger=None):
     n_excluded = np.sum(~ts_model.sinusoid.include[:n_sin_tot_init])
     n_replaced = n_excluded - n_excluded_init
     n_new = len(ts_model.sinusoid.f_n) - n_sin_tot_init
-    print('3', ts_model.sinusoid.h_base)
+
     # lastly re-determine slope and const and remove the excluded frequencies
     ts_model.remove_excluded()
     ts_model.update_linear_model()
-    print('4', ts_model.sinusoid.h_base)
+
     if logger is not None:
         bic = ts_model.bic()
         logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - N_replaced= {n_replaced}, N_kept= {n_new}.")
