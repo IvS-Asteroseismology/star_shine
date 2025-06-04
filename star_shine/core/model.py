@@ -1086,6 +1086,9 @@ class SinusoidModel:
         # include itself needs to go last
         self._include = self._include[self._include]
 
+        # update indices for the removals
+        self._h_base = np.array(ut.adjust_indices_removed(self._h_base, indices))
+
         # check for base frequency removal
         self._check_removed_h_base(indices)
 
