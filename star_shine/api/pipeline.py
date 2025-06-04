@@ -107,6 +107,9 @@ class Pipeline:
         # remove any frequencies that end up not making the statistical cut
         self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
 
+        # update the TimeSeriesModel passing masks and uncertainties
+        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+
         # update the result instance and set the identifiers and description
         self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
                                            description="Manual extraction.")
@@ -139,6 +142,9 @@ class Pipeline:
 
         # remove the sinusoid
         self.ts_model.remove_sinusoids(index)
+
+        # update the TimeSeriesModel passing masks and uncertainties
+        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
 
         # update the result instance and set the identifiers and description
         self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
@@ -183,6 +189,9 @@ class Pipeline:
 
         # remove any frequencies that end up not making the statistical cut
         self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
+
+        # update the TimeSeriesModel passing masks and uncertainties
+        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
 
         # update the result instance and set the identifiers and description
         self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
@@ -241,6 +250,9 @@ class Pipeline:
 
         self.result.from_dict(const=par_mean[0], slope=par_mean[1], f_n=par_mean[2], a_n=par_mean[3], ph_n=par_mean[4])
 
+        # update the TimeSeriesModel passing masks and uncertainties
+        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+
         # update the result instance and set the identifiers and description
         self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
                                            description="Multi-sinusoid NL-LS optimisation results.")
@@ -248,8 +260,8 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        self.logger.info(f"Optimisation of sinusoids complete. Time taken: {t_b - t_a:1.1f}s.")
-        self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
+        self.logger.info(f"N_f= {len(self.result.f_n)}, BIC= {self.result.bic:1.2f}, N_p= {self.result.n_param} - "
+                         f"Optimisation complete. Time taken: {t_b - t_a:1.1f}s.")
 
         return None
 
@@ -290,6 +302,9 @@ class Pipeline:
         # remove any frequencies that end up not making the statistical cut
         self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
 
+        # update the TimeSeriesModel passing masks and uncertainties
+        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+
         # update the result instance and set the identifiers and description
         self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
                                            description="Harmonic frequencies coupled to the orbital period.")
@@ -297,11 +312,10 @@ class Pipeline:
         # print some useful info
         t_b = systime.time()
         i_base = 0  # todo: fix
-        self.ts_model.update_sinusoid_uncertainties_harmonic()
         p_err = self.ts_model.sinusoid.f_h_err[i_base]
         p_orb_formatted = ut.float_to_str_scientific(p_orb, p_err, error=True, brackets=True)
-        self.logger.info(f"N_f: {self.ts_model.sinusoid.n_sin}, BIC: {self.ts_model.bic():1.2f}, "
-                         f"N_p: {self.ts_model.n_param} - Harmonic frequencies coupled. P_orb= {p_orb_formatted}. "
+        self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
+                         f"N_p= {self.ts_model.n_param} - Harmonic frequencies coupled. P_orb= {p_orb_formatted}. "
                          f"Time taken: {t_b - t_a:1.1f}s")
 
         # log if short time span or few harmonics
@@ -322,7 +336,7 @@ class Pipeline:
             Instance of the Result class containing the analysis results
         """
         t_a = systime.time()
-        self.logger.info("Starting multi-sine NL-LS optimisation with harmonics.")
+        self.logger.info("Starting multi-sine NL-LS optimisation with coupled harmonics.")
 
         # use the chosen optimisation method
         if config.optimise_method == 'fitter':
@@ -361,6 +375,9 @@ class Pipeline:
         self.result.from_dict(p_orb=par_mean[0], const=par_mean[1], slope=par_mean[2], f_n=par_mean[3], a_n=par_mean[4],
                               ph_n=par_mean[5])
 
+        # update the TimeSeriesModel passing masks and uncertainties
+        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+
         # update the result instance and set the identifiers and description
         self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
                                            description="Multi-sine NL-LS optimisation results with coupled harmonics.")
@@ -368,10 +385,8 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        p_orb_formatted = ut.float_to_str_scientific(self.result.p_orb, self.result.p_err, error=True, brackets=True)
-        self.logger.info(f"Optimisation with coupled harmonics complete. P_orb: {p_orb_formatted}."
-                         f"Time taken: {t_b - t_a:1.1f}s.")
-        self.logger.extra(f"N_f: {len(self.result.f_n)}, N_p: {self.result.n_param}, BIC: {self.result.bic:1.2f}.")
+        self.logger.info(f"N_f= {len(self.result.f_n)}, BIC= {self.result.bic:1.2f}, N_p= {self.result.n_param} - "
+                          f"Optimisation complete. Time taken: {t_b - t_a:1.1f}s.")
 
         return None
 

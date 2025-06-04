@@ -857,6 +857,7 @@ def select_sinusoids(ts_model, logger=None):
 
     # update the sinusoid errors in the model
     ts_model.update_sinusoid_uncertainties()
+    ts_model.update_sinusoid_uncertainties_harmonic()
 
     # find the insignificant frequencies
     ts_model.update_sinusoid_passing_sigma()
