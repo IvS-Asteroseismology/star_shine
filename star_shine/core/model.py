@@ -1068,8 +1068,8 @@ class SinusoidModel:
 
     def remove_excluded(self):
         """Remove the sinusoids that are currently not included from the list."""
-        # make indices out of _include
-        indices = np.arange(len(self._include))[self._include]
+        # make removal indices out of _include
+        indices = np.arange(len(self._include))[~self._include]
 
         # the model already doesn't include these sinusoids
 
