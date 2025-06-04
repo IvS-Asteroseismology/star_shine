@@ -634,8 +634,8 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
         # the range of harmonic multipliers below the Nyquist frequency
         harmonics_i = np.arange(1, ts_model.pd_fn / ts_model.sinusoid.f_n[i_base], dtype=int)
 
-        # harmonic_n minus one is the position for existing harmonics
-        harmonics_i = np.delete(harmonics_i, ts_model.sinusoid.harmonic_n[ts_model.sinusoid.h_base == i_base] - 1)
+        # h_mult minus one is the position for existing harmonics
+        harmonics_i = np.delete(harmonics_i, ts_model.sinusoid.h_mult[ts_model.sinusoid.h_base == i_base] - 1)
         h_candidates_n.extend(harmonics_i)
 
         # add to the bae frequency lists
