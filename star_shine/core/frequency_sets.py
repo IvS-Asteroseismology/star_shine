@@ -181,8 +181,8 @@ def remove_insignificant_snr(time, a_n, noise_at_f):
     return a_insig
 
 
-def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
-    """Groups frequencies into sets of g_min to g_max for multi-sine fitting
+def group_frequencies_for_fit(a_n, g_min=20, g_max=25, indices=None):
+    """Groups sinusoids into sets of g_min to g_max for multi-sine fitting
 
     Parameters
     ----------
@@ -192,6 +192,8 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
         Minimum group size
     g_max: int
         Maximum group size (g_max > g_min)
+    indices: numpy.ndarray[Any, dtype[int]]
+        Alternate sinusoid indices to use.
 
     Returns
     -------
@@ -200,25 +202,35 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25):
 
     Notes
     -----
-    To make the task of fitting more manageable, the free parameters are binned into groups,
-    in which the remaining parameters are kept fixed. Frequencies of similar amplitude are
-    grouped together, and the group cut-off is determined by the biggest gaps in amplitude
-    between frequencies, but group size is always kept between g_min and g_max. g_min < g_max.
-    The idea of using amplitudes is that frequencies of similar amplitude have a similar
-    amount of influence on each other.
+    To make the task of fitting more manageable, the free parameters are binned into groups, in which
+    the remaining parameters are kept fixed. Sinusoids of similar amplitude are grouped together,
+    and the group cut-off is determined by the biggest gaps in amplitude between frequencies, but group size
+    is always kept between g_min and g_max. g_min < g_max. The idea of using amplitudes is that sinusoids
+    of similar amplitude have a similar amount of influence on each other.
     """
     # keep track of which freqs have been used with the sorted indices
     not_used = np.argsort(a_n)[::-1]
+
+    # if indices are provided, swap them in
+    if indices is not None:
+        not_used = indices[not_used]
+
     groups = []
     while len(not_used) > 0:
         if len(not_used) > g_min + 1:
+            # find index of maximum amplitude difference in group size range
             a_diff = np.diff(a_n[not_used[g_min:g_max + 1]])
             i_max = np.argmin(a_diff)  # the diffs are negative so this is max absolute difference
+
+            # since not_used is sorted, pick the first i_group sinusoids
             i_group = g_min + i_max + 1
             group_i = not_used[:i_group]
         else:
+            # we have minimum group size or fewer left, so use all
             group_i = np.copy(not_used)
             i_group = len(not_used)
+
+        # delete group_i from not_used and append group_i to groups
         not_used = np.delete(not_used, np.arange(i_group))
         groups.append(group_i)
 
