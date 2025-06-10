@@ -448,6 +448,12 @@ class SinusoidModel:
         Sinusoids that passed the signal-to-noise check.
     _passing_harmonic: numpy.ndarray[Any, dtype[bool]]
         Sinusoids that passed the harmonic check.
+    n_sin: int
+        Number of sinusoids (including harmonics).
+    n_harm: int
+        Number of harmonic sinusoids.
+    n_base: int
+        Number of harmonic series/base frequencies.
     _sinusoid_model: numpy.ndarray[Any, dtype[float]]
         Current time series model of the sinusoids.
     """
@@ -746,6 +752,19 @@ class SinusoidModel:
             Index of f in f_n.
         """
         return np.abs(self._f_n - f).argmin()
+
+    def get_h_base_map(self):
+        """Get the indices of each base harmonic frequency and a map to recreate h_base[harmonics].
+
+        Returns
+        -------
+        tuple
+            numpy.ndarray[Any, dtype[int]]
+            Indices of the base harmonic frequencies in _f_n.
+            numpy.ndarray[Any, dtype[int]]
+            Map of harmonics to base frequencies.
+        """
+        return np.unique(self.h_base[self._harmonics], return_index=True)
 
     def _check_removed_h_base(self, indices):
         """If a harmonic base frequency was removed, remove the whole harmonic series."""
