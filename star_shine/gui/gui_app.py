@@ -11,8 +11,9 @@ import functools
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter, QMenuBar
 from PySide6.QtWidgets import QWidget, QLabel, QTextEdit, QLineEdit, QSpinBox, QFileDialog, QMessageBox, QPushButton
-from PySide6.QtWidgets import QTableView, QHeaderView
+from PySide6.QtWidgets import QTableView, QHeaderView, QDialog, QFormLayout, QCheckBox
 from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor, QIcon
+from PySide6.QtGui import QDoubleValidator
 
 from star_shine.core import utility as ut
 from star_shine.api import Data, Result, Pipeline
@@ -234,27 +235,27 @@ class MainWindow(QMainWindow):
         self.spin_box = QSpinBox(self)
         self.spin_box.setRange(0, 99999)
         self.spin_box.setValue(0)
-        # Button for starting analysis
+        # Button for starting iterative prewhitening
         self.extract_button = QPushButton("Extract")
         self.extract_button.clicked.connect(lambda: self.perform_analysis('iterative_prewhitening',
                                                                           n_extract=self.spin_box.value()))
         steps_button_layout.addWidget(self.extract_button)
         steps_button_layout.addWidget(self.spin_box)  # add the number field after the button
 
-        # Button for starting analysis
+        # Button for starting sinusoid fit
         self.free_fit_button = QPushButton("Free Fit")
         self.free_fit_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid'))
         steps_button_layout.addWidget(self.free_fit_button)
 
-        # Button for starting analysis
-        self.find_period_button = QPushButton("Find Period")
-        self.find_period_button.clicked.connect(functools.partial(self.perform_analysis, 'couple_harmonics'))
-        steps_button_layout.addWidget(self.find_period_button)
+        # Button for starting finder
+        self.find_harmonic_button = QPushButton("Find Harmonics")
+        self.find_harmonic_button.clicked.connect(functools.partial(self.perform_analysis, 'couple_harmonics'))
+        steps_button_layout.addWidget(self.find_harmonic_button)
 
-        # Button for starting analysis
-        self.harmonic_fit_button = QPushButton("Harmonic Fit")
-        self.harmonic_fit_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid_h'))
-        steps_button_layout.addWidget(self.harmonic_fit_button)
+        # Button for inputting
+        self.add_harmonic_button = QPushButton("Add Base Harmonic")
+        self.add_harmonic_button.clicked.connect(self.add_harmonic_series)
+        steps_button_layout.addWidget(self.add_harmonic_button)
 
         # Button for saving the results
         self.save_result_button = QPushButton("Save Result")
@@ -679,6 +680,36 @@ class MainWindow(QMainWindow):
 
         return None
 
+    def add_harmonic_series(self):
+        """Let the user add a base harmonic frequency and add the harmonic series."""
+        if self.pipeline is None:
+            QMessageBox.warning(self, "Warning", "Load data first.")
+            return None
+
+        # get some parameters
+        min_val = self.pipeline.ts_model.pd_f0
+        max_val = self.pipeline.ts_model.pd_fn
+        text = f"Please enter a number between {min_val:1.2f} and {max_val:1.2f}."
+
+        # open the dialog
+        dialog = InputDialog("Add base harmonic frequency", text, "Exact")
+
+        if dialog.exec():
+            value, checked = dialog.get_values()
+
+            try:
+                value = float(value)
+            except ValueError:
+                warn_message = "Invalid input: Unable to convert to a floating point number."
+                QMessageBox.warning(self, "Warning", warn_message)
+
+                return None
+
+            # if we made it here, add the harmonics
+            self.pipeline_thread.start_function('add_harmonic_series', value, exact=checked)
+
+        return None
+
     def show_settings_dialog(self):
         """Show a 'settings' dialog with configuration for the application."""
         dialog = gui_config.SettingsDialog(config=config, parent=self)
@@ -704,6 +735,36 @@ class MainWindow(QMainWindow):
         QMessageBox.about(self, "About", message)
 
         return None
+
+
+class InputDialog(QDialog):
+    def __init__(self, title, text1, text2):
+        super().__init__()
+
+        self.setWindowTitle(title)
+        layout = QFormLayout()
+
+        # Create a label
+        label = QLabel(text1)
+
+        # Create a QLineEdit for input with double validation
+        self.line_edit = QLineEdit()
+        layout.addRow(label, self.line_edit)
+
+        # Create a label and checkbox for additional option
+        checkbox_label = QLabel(text2)
+        self.checkbox = QCheckBox()
+        layout.addRow(checkbox_label, self.checkbox)
+
+        # Create a button to accept input
+        ok_button = QPushButton("Accept")
+        ok_button.clicked.connect(self.accept)
+        layout.addWidget(ok_button)
+
+        self.setLayout(layout)
+
+    def get_values(self):
+        return self.line_edit.text(), self.checkbox.isChecked()
 
 
 def launch_gui():

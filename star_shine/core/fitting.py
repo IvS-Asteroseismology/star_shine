@@ -456,12 +456,12 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
     i_non_h = np.arange(len(harmonics))[~harmonics]
 
     # remove harmonics from the sinusoids (to be fitted)
-    f_n = ts_model.sinusoid.f_n[i_non_h]
-    a_n = ts_model.sinusoid.a_n[i_non_h]
-    ph_n = ts_model.sinusoid.ph_n[i_non_h]
+    f_n = ts_model.sinusoid.f_n
+    a_n = ts_model.sinusoid.a_n
+    ph_n = ts_model.sinusoid.ph_n
 
     # prepare the group lists and some numbers
-    f_groups = frs.group_frequencies_for_fit(a_n, g_min=g_min, g_max=g_max, indices=i_non_h)
+    f_groups = frs.group_frequencies_for_fit(a_n[i_non_h], g_min=g_min, g_max=g_max, indices=i_non_h)
     n_groups = len(f_groups)
     n_chunk = len(ts_model.i_chunks)
     n_sin_tot = len(f_n)
@@ -485,7 +485,8 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
         residual = ts_model.flux - ts_model.sinusoid.sinusoid_model
 
         # prepare fit input
-        par_init_i = np.concatenate((f_base, ts_model.linear.const, ts_model.linear.slope, f_n[group], a_n[group], ph_n[group]))
+        par_init_i = np.concatenate((f_base, ts_model.linear.const, ts_model.linear.slope,
+                                     f_n[group], a_n[group], ph_n[group]))
         par_bounds_i = par_bounds + [(f_low, None) for _ in range(n_sin_g)]  # frequencies of free sinusoids
         par_bounds_i += [(0, None) for _ in range(n_sin_g)]  # amplitudes of free sinusoids
         par_bounds_i += [(None, None) for _ in range(n_sin_g)]  # phases of free sinusoids
@@ -521,7 +522,7 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
         ts_model.update_sinusoids(f_h, a_h, ph_h, i_h, h_base_new=h_base, h_mult_new=h_mult)
 
         if logger is not None:
-            logger.extra(f'N_f= {n_sin_tot + len(i_h)}, BIC= {ts_model.bic():1.2f} - Fit group {k + 1} of {n_groups}, '
+            logger.extra(f'N_f= {n_sin_tot}, BIC= {ts_model.bic():1.2f} - Fit group {k + 1} of {n_groups}, '
                          f'N_f(group)= {len(group)}')
 
     return ts_model

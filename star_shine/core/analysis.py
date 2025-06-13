@@ -468,6 +468,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
 
         # remember the current sinusoids
         f_c, a_c, ph_c = ts_model.sinusoid.get_sinusoid_parameters(exclude=False)
+        _, h_base, h_mult = ts_model.sinusoid.get_harmonic_parameters(exclude=False)
 
         # attempt to extract the next frequency
         f_i, a_i, ph_i = extract_single(ts_model.time, ts_model.residual(), f0=ts_model.pd_f0, fn=ts_model.pd_fn,
@@ -515,7 +516,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
             # accept the new frequency
             bic_prev = bic
         else:
-            ts_model.set_sinusoids(f_c, a_c, ph_c)
+            ts_model.set_sinusoids(f_c, a_c, ph_c, h_base_new=h_base, h_mult_new=h_mult)
             ts_model.update_linear_model()
 
         # stop the loop if n_sin reaches limit
@@ -677,7 +678,7 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
 
     if logger is not None:
         n_sin = ts_model.sinusoid.n_sin
-        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_extracted= {n_sin_init - n_sin}")
+        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_h_extracted= {n_sin_init - n_sin}")
 
     return ts_model
 

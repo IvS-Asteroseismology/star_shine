@@ -738,6 +738,40 @@ class SinusoidModel:
 
         return f_n, a_n, ph_n
 
+    def get_harmonic_parameters(self, exclude=True):
+        """Get a copy of the current harmonic parameters.
+
+        Parameters
+        ----------
+        exclude: bool
+            Exclude the sinusoids intended for removal.
+
+        Returns
+        -------
+        tuple
+            Consisting of three numpy.ndarray[Any, dtype[float]] for f_n, a_n, ph_n.
+        """
+        if exclude:
+            harmonics = self._harmonics[self._include]
+            h_base, h_mult = self._h_base[self._include], self._h_mult[self._include]
+        else:
+            harmonics, h_base, h_mult = self._harmonics, self._h_base, self._h_mult
+
+        return harmonics, h_base, h_mult
+
+    def get_h_base_map(self):
+        """Get the indices of each base harmonic frequency and a map to recreate h_base[harmonics].
+
+        Returns
+        -------
+        tuple
+            numpy.ndarray[Any, dtype[int]]
+            Indices of the base harmonic frequencies in _f_n.
+            numpy.ndarray[Any, dtype[int]]
+            Map of harmonics to base frequencies.
+        """
+        return np.unique(self.h_base[self._harmonics], return_inverse=True)
+
     def get_f_index(self, f):
         """Get the index in f_n of a given frequency.
 
@@ -752,19 +786,6 @@ class SinusoidModel:
             Index of f in f_n.
         """
         return np.abs(self._f_n - f).argmin()
-
-    def get_h_base_map(self):
-        """Get the indices of each base harmonic frequency and a map to recreate h_base[harmonics].
-
-        Returns
-        -------
-        tuple
-            numpy.ndarray[Any, dtype[int]]
-            Indices of the base harmonic frequencies in _f_n.
-            numpy.ndarray[Any, dtype[int]]
-            Map of harmonics to base frequencies.
-        """
-        return np.unique(self.h_base[self._harmonics], return_index=True)
 
     def _check_removed_h_base(self, indices):
         """If a harmonic base frequency was removed, remove the whole harmonic series."""

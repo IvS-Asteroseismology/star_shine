@@ -85,7 +85,7 @@ class Pipeline:
 
         return
 
-    def extract_approx(self, f_approx):
+    def extract_approx(self, f_approx, ):
         """Extract a sinusoid from the time series at an approximate frequency.
 
         Parameters
@@ -156,6 +156,34 @@ class Pipeline:
 
         return None
 
+    def add_harmonic_series(self, f_base, exact=False):
+        """Given a base harmonic frequency, add a series of harmonics to the model."""
+        # if the input is not exact, extract approx
+        if not exact:
+            f_base, a, ph = ana.extract_approx(self.ts_model.time, self.ts_model.residual(), f_base)
+        else:
+            a, ph = pdg.scargle_ampl_phase_single(self.ts_model.time, self.ts_model.residual(), f_base)
+
+        # add the sinusoid
+        index = len(self.ts_model.sinusoid.f_n)
+        self.ts_model.add_sinusoids(f_base, a, ph, h_base_new=index, h_mult_new=1)
+        self.ts_model.update_linear_model()
+
+        # extract the harmonics
+        self.ts_model = ana.extract_harmonics(self.ts_model, config.bic_thr, logger=self.logger)
+
+        # remove any frequencies that end up not making the statistical cut
+        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
+
+        # update the TimeSeriesModel passing masks and uncertainties
+        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+
+        # update the result instance and set the identifiers and description
+        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
+                                           description="Addition of harmonic series.")
+
+        return None
+
     def iterative_prewhitening(self, n_extract=0):
         """Iterative prewhitening of the input flux time series in the form of sine waves and a piece-wise linear curve.
 
@@ -216,35 +244,34 @@ class Pipeline:
         t_a = systime.time()
         self.logger.info("Starting multi-sinusoid NL-LS optimisation.")
 
-        # use the chosen optimisation method
-        if config.optimise_method == 'fitter':
-            par_mean = fit.fit_multi_sinusoid_grouped(self.ts_model, logger=self.logger)
-        else:
-            # make model including everything to calculate noise level
-            resid = self.data.time_series.flux - self.ts_model.model_linear() - self.ts_model.model_sinusoid()
-            n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
-            noise_level = ut.std_unb(resid, len(self.data.time_series.time) - n_param)
+        # optimisation
+        self.ts_model = fit.fit_multi_sinusoid_grouped(self.ts_model, logger=self.logger)
+            # # make model including everything to calculate noise level
+            # resid = self.data.time_series.flux - self.ts_model.model_linear() - self.ts_model.model_sinusoid()
+            # n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
+            # noise_level = ut.std_unb(resid, len(self.data.time_series.time) - n_param)
+            #
+            # # formal linear and sinusoid parameter errors
+            # out_a = ut.formal_uncertainties(self.data.time_series.time, resid, self.data.time_series.flux_err,
+            #                                 self.result.a_n, self.data.time_series.i_chunks)
+            # c_err, sl_err, f_n_err, a_n_err, ph_n_err = out_a
+            #
+            # # do not include those frequencies that have too big uncertainty
+            # include = (ph_n_err < 1 / np.sqrt(6))  # circular distribution for ph_n cannot handle these
+            # f_n, a_n, ph_n = self.result.f_n[include], self.result.a_n[include], self.result.ph_n[include]
+            # f_n_err, a_n_err, ph_n_err = f_n_err[include], a_n_err[include], ph_n_err[include]
+            #
+            # # Monte Carlo sampling of the model
+            # out_b = mcf.sample_sinusoid(self.data.time_series.time, self.data.time_series.flux, self.result.const,
+            #                             self.result.slope, f_n, a_n, ph_n, self.result.c_err, self.result.sl_err,
+            #                             f_n_err, a_n_err, ph_n_err, noise_level, self.data.time_series.i_chunks,
+            #                             logger=self.logger)
+            # inf_data, par_mean, par_hdi = out_b
+            # self.result.from_dict(c_hdi=par_hdi[0], sl_hdi=par_hdi[1], f_n_hdi=par_hdi[2], a_n_hdi=par_hdi[3],
+            #                       ph_n_hdi=par_hdi[4])
 
-            # formal linear and sinusoid parameter errors
-            out_a = ut.formal_uncertainties(self.data.time_series.time, resid, self.data.time_series.flux_err,
-                                            self.result.a_n, self.data.time_series.i_chunks)
-            c_err, sl_err, f_n_err, a_n_err, ph_n_err = out_a
-
-            # do not include those frequencies that have too big uncertainty
-            include = (ph_n_err < 1 / np.sqrt(6))  # circular distribution for ph_n cannot handle these
-            f_n, a_n, ph_n = self.result.f_n[include], self.result.a_n[include], self.result.ph_n[include]
-            f_n_err, a_n_err, ph_n_err = f_n_err[include], a_n_err[include], ph_n_err[include]
-
-            # Monte Carlo sampling of the model
-            out_b = mcf.sample_sinusoid(self.data.time_series.time, self.data.time_series.flux, self.result.const,
-                                        self.result.slope, f_n, a_n, ph_n, self.result.c_err, self.result.sl_err,
-                                        f_n_err, a_n_err, ph_n_err, noise_level, self.data.time_series.i_chunks,
-                                        logger=self.logger)
-            inf_data, par_mean, par_hdi = out_b
-            self.result.from_dict(c_hdi=par_hdi[0], sl_hdi=par_hdi[1], f_n_hdi=par_hdi[2], a_n_hdi=par_hdi[3],
-                                  ph_n_hdi=par_hdi[4])
-
-        self.result.from_dict(const=par_mean[0], slope=par_mean[1], f_n=par_mean[2], a_n=par_mean[3], ph_n=par_mean[4])
+        # remove any frequencies that end up not making the statistical cut
+        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
 
         # update the TimeSeriesModel passing masks and uncertainties
         self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
@@ -320,66 +347,6 @@ class Pipeline:
             self.logger.warning(f"Time-base over period is less than two: {t_over_p}.")
         elif (n_harm := np.sum(self.ts_model.sinusoid.h_base == i_f_base)) < 2:
             self.logger.warning(f"Not enough harmonics found: {n_harm}.")
-
-        return None
-
-    def optimise_sinusoid_h(self):
-        """Optimise the parameters of the sinusoid and linear model with coupled harmonics
-
-        Returns
-        -------
-        Result
-            Instance of the Result class containing the analysis results
-        """
-        t_a = systime.time()
-        self.logger.info("Starting multi-sine NL-LS optimisation with coupled harmonics.")
-
-        # use the chosen optimisation method
-        if config.optimise_method == 'fitter':
-            par_mean = fit.fit_multi_sinusoid_grouped(self.ts_model, logger=self.logger)
-        else:
-            # make model including everything to calculate noise level
-            resid = self.data.time_series.flux - self.ts_model.model_linear() - self.ts_model.model_sinusoid()
-            harmonics, harmonic_n = frs.find_harmonics_from_pattern(self.result.f_n, self.result.p_orb, f_tol=1e-9)
-            n_param = 2 * len(self.result.const) + 1 + 2 * len(harmonics) + 3 * (len(self.result.f_n) - len(harmonics))
-            noise_level = ut.std_unb(resid, len(self.data.time_series.time) - n_param)
-
-            # formal linear and sinusoid parameter errors
-            c_err, sl_err, f_n_err, a_n_err, ph_n_err = ut.formal_uncertainties(self.data.time.time_series, resid,
-                                                                                self.data.time_series.flux_err, self.result.a_n,
-                                                                                self.data.time_series.i_chunks)
-            p_err, _, _ = ut.linear_regression_uncertainty_ephem(self.data.time.time_series, self.result.p_orb,
-                                                                                      sigma_t=self.data.t_step / 2)
-
-            # do not include those frequencies that have too big uncertainty
-            include = (ph_n_err < 1 / np.sqrt(6))  # circular distribution for ph_n cannot handle these
-            f_n, a_n, ph_n = self.result.f_n[include], self.result.a_n[include], self.result.ph_n[include]
-            f_n_err, a_n_err, ph_n_err = f_n_err[include], a_n_err[include], ph_n_err[include]
-
-            # Monte Carlo sampling of the model
-            output = mcf.sample_sinusoid_h(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb, self.result.const,
-                                           self.result.slope, f_n, a_n, ph_n, self.result.p_err, self.result.c_err,
-                                           self.result.sl_err, f_n_err, a_n_err, ph_n_err, noise_level,
-                                           self.data.time_series.i_chunks, logger=self.logger)
-            inf_data, par_mean, par_hdi = output
-            self.result.from_dict(p_hdi=par_hdi[0], c_hdi=par_hdi[1], sl_hdi=par_hdi[2], f_n_hdi=par_hdi[3],
-                                  a_n_hdi=par_hdi[4], ph_n_hdi=par_hdi[5])
-
-        self.result.from_dict(p_orb=par_mean[0], const=par_mean[1], slope=par_mean[2], f_n=par_mean[3], a_n=par_mean[4],
-                              ph_n=par_mean[5])
-
-        # update the TimeSeriesModel passing masks and uncertainties
-        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
-
-        # update the result instance and set the identifiers and description
-        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
-                                           description="Multi-sine NL-LS optimisation results with coupled harmonics.")
-        # ut.save_inference_data(file_name, inf_data)  # currently not saved
-
-        # print some useful info
-        t_b = systime.time()
-        self.logger.info(f"N_f= {len(self.result.f_n)}, BIC= {self.result.bic:1.2f}, N_p= {self.result.n_param} - "
-                          f"Optimisation complete. Time taken: {t_b - t_a:1.1f}s.")
 
         return None
 
