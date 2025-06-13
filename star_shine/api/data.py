@@ -61,6 +61,9 @@ class Data:
 
         return
 
+    def __repr__(self):
+        pass # todo: implement repr
+
     def _check_file_existence(self, logger=None):
         """Checks whether the given file(s) exist.
 

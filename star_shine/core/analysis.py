@@ -464,6 +464,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         if switch and not condition_1:
             select = 'sn'
             switch = False
+            logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - Switch selection from a to sn.")
 
         # remember the current sinusoids
         f_c, a_c, ph_c = ts_model.sinusoid.get_sinusoid_parameters(exclude=False)
@@ -479,11 +480,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         # improve frequencies with some strategy
         if fit_each_step:
             # fit all frequencies for best improvement
-            out = fit.fit_multi_sinusoid_per_group(ts_model.time, ts_model.flux, *ts_model.get_parameters(),
-                                                   ts_model.i_chunks, logger=logger)
-
-            ts_model.set_linear_model(out[0], out[1])
-            ts_model.set_sinusoids(out[2], out[3], out[4])
+            ts_model = fit.fit_multi_sinusoid_grouped(ts_model, logger=logger)
         else:
             # select only close frequencies for iteration
             close_f = frs.f_within_rayleigh(ts_model.sinusoid.n_sin - 1, ts_model.sinusoid.f_n, ts_model.f_resolution)
@@ -529,7 +526,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
 
     if logger is not None:
         n_sin = ts_model.sinusoid.n_sin
-        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_extracted= {n_sin_init - n_sin}.")
+        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_extracted= {n_sin - n_sin_init}.")
 
     return ts_model
 

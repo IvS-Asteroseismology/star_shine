@@ -218,11 +218,7 @@ class Pipeline:
 
         # use the chosen optimisation method
         if config.optimise_method == 'fitter':
-            par_mean = fit.fit_multi_sinusoid_per_group(self.data.time_series.time, self.data.time_series.flux,
-                                                        self.result.const,
-                                                        self.result.slope, self.result.f_n, self.result.a_n,
-                                                        self.result.ph_n, self.data.time_series.i_chunks,
-                                                        logger=self.logger)
+            par_mean = fit.fit_multi_sinusoid_grouped(self.ts_model, logger=self.logger)
         else:
             # make model including everything to calculate noise level
             resid = self.data.time_series.flux - self.ts_model.model_linear() - self.ts_model.model_sinusoid()
@@ -340,10 +336,7 @@ class Pipeline:
 
         # use the chosen optimisation method
         if config.optimise_method == 'fitter':
-            par_mean = fit.fit_multi_sinusoid_harmonics_per_group(self.data.time_series.time, self.data.time_series.flux, self.result.p_orb,
-                                                                  self.result.const, self.result.slope,
-                                                                  self.result.f_n, self.result.a_n, self.result.ph_n,
-                                                                  self.data.time_series.i_chunks, logger=self.logger)
+            par_mean = fit.fit_multi_sinusoid_grouped(self.ts_model, logger=self.logger)
         else:
             # make model including everything to calculate noise level
             resid = self.data.time_series.flux - self.ts_model.model_linear() - self.ts_model.model_sinusoid()
