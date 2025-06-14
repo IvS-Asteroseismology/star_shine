@@ -1216,7 +1216,7 @@ class SinusoidModel:
         # select candidate harmonic frequencies meeting some criteria
         self._passing_harmonic = np.zeros(self.n_sin, dtype=bool)
         for f_base in self.f_base:
-            harmonics, _ = frs.select_harmonics_sigma(self._f_n, self._f_n_err, 1 / f_base, f_tol=f_resolution / 2,
+            harmonics, _ = frs.select_harmonics_sigma(self._f_n, self._f_n_err, f_base, f_tol=f_resolution / 2,
                                                       sigma_f=3)
             self._passing_harmonic[harmonics] = True
 
