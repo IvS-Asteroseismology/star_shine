@@ -235,7 +235,7 @@ def jacobian_sinusoids(params, time, flux, i_chunks, h_base, h_mult):
 
 
 @nb.njit(cache=True)
-def make_design_matrix_harmonic(time, f_base, h_mult):
+def make_design_matrix_harmonic(time, f_base, h_mult, t_shift=True):
     """Generate a design matrix for a series of harmonics and a constant term.
 
     Also returns weights for each model feature.
@@ -248,6 +248,8 @@ def make_design_matrix_harmonic(time, f_base, h_mult):
         Base frequencies of the harmonics (of multiple series).
     h_mult: numpy.ndarray[Any, dtype[int]]
         Harmonic multiplier of the base frequency for each harmonic.
+    t_shift: bool
+        Mean center the time axis.
 
     Returns
     -------
@@ -260,8 +262,13 @@ def make_design_matrix_harmonic(time, f_base, h_mult):
     https://github.com/colej/puffins/
     Which is itself based on D. W. Hogg & S. Villar (2021, https://arxiv.org/pdf/2101.07256)
     """
+    if t_shift:
+        mean_t = np.mean(time)
+    else:
+        mean_t = 0
+
     # sinusoid angle term
-    two_pi_f_t = 2. * np.pi * (f_base * h_mult)[None,:] * time[:, None]
+    two_pi_f_t = 2. * np.pi * (f_base * h_mult)[None,:] * (time - mean_t)[:, None]
 
     # make empty matrix
     n_param = 1 + 2 * len(h_mult)
@@ -446,7 +453,6 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
     """
     # get the harmonic base frequencies and harmonic parameters
     h_base_unique, h_base_map = ts_model.sinusoid.get_h_base_map()
-    f_base = ts_model.sinusoid.f_n[h_base_unique]
     harmonics = ts_model.sinusoid.harmonics
     h_base = ts_model.sinusoid.h_base[harmonics]  # only include the harmonics
     h_mult = ts_model.sinusoid.h_mult[harmonics]  # only include the harmonics
@@ -465,7 +471,7 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
     n_groups = len(f_groups)
     n_chunk = len(ts_model.i_chunks)
     n_sin_tot = len(f_n)
-    n_base = len(f_base)
+    n_base = len(h_base_unique)
 
     # we don't want the frequencies to go lower than about 1/100/T
     f_low = 0.01 / ts_model.t_tot
@@ -485,7 +491,7 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
         residual = ts_model.flux - ts_model.sinusoid.sinusoid_model
 
         # prepare fit input
-        par_init_i = np.concatenate((f_base, ts_model.linear.const, ts_model.linear.slope,
+        par_init_i = np.concatenate((ts_model.sinusoid.f_base, ts_model.linear.const, ts_model.linear.slope,
                                      f_n[group], a_n[group], ph_n[group]))
         par_bounds_i = par_bounds + [(f_low, None) for _ in range(n_sin_g)]  # frequencies of free sinusoids
         par_bounds_i += [(0, None) for _ in range(n_sin_g)]  # amplitudes of free sinusoids
@@ -515,7 +521,7 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
         cosines = harmonic_betas[1::2]
         sines = harmonic_betas[2::2]
         a_h = np.sqrt(cosines ** 2 + sines ** 2)
-        ph_h = np.arctan2(sines, cosines)
+        ph_h = np.pi / 2 - np.arctan2(sines, cosines)  # this stupid formula ensures the phases are compatible
 
         # update the model parameters (this re-includes the harmonic sinusoids)
         f_h = f_base[h_base_map] * h_mult

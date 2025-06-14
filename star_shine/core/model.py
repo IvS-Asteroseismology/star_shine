@@ -714,7 +714,7 @@ class SinusoidModel:
         """Update the current numbers of sinusoids, harmonics, and base frequencies."""
         self.n_sin = len(self._f_n[self._include])
         self.n_harm = len(self._f_n[self._include][self._harmonics[self._include]])
-        self.n_base = len(self._f_n[self._h_mult == 1])
+        self.n_base = len(np.unique(self._h_base[(self._h_base != -1) & self._include]))
 
         return None
 

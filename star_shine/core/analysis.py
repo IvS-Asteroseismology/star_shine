@@ -454,7 +454,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
 
     # log a message
     if logger is not None:
-        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_prev:1.2f}")
+        logger.extra(f"N_f= {n_sin_init}, BIC= {bic_prev:1.2f} - Iterative prewhitening")
 
     # stop the loop when the BIC decreases by less than 2 (or increases)
     condition_1 = True
@@ -645,7 +645,7 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
     bic_prev = ts_model.bic()  # initialise current BIC to the mean (and slope) subtracted flux
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f}")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - Extract harmonics")
 
     # loop over candidates and try to extract (BIC decreases by 2 or more)
     for i in range(len(i_base_all)):

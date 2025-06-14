@@ -211,10 +211,6 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25, indices=None):
     # keep track of which freqs have been used with the sorted indices
     not_used = np.argsort(a_n)[::-1]
 
-    # if indices are provided, swap them in
-    if indices is not None:
-        not_used = indices[not_used]
-
     groups = []
     while len(not_used) > 0:
         if len(not_used) > g_min + 1:
@@ -232,7 +228,12 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25, indices=None):
 
         # delete group_i from not_used and append group_i to groups
         not_used = np.delete(not_used, np.arange(i_group))
-        groups.append(group_i)
+
+        # if indices are provided, swap them in
+        if indices is not None:
+            groups.append(indices[group_i])
+        else:
+            groups.append(group_i)
 
     return groups
 
