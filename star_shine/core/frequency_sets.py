@@ -239,8 +239,8 @@ def group_frequencies_for_fit(a_n, g_min=20, g_max=25, indices=None):
 
 
 @nb.njit(cache=True)
-def find_harmonics(f_n, f_n_err, p_orb, sigma=1.):
-    """Find the orbital harmonics from a set of frequencies, given the orbital period.
+def find_harmonics(f_n, f_n_err, f_base, sigma=1.):
+    """Find the orbital harmonics from a set of frequencies, given the base frequency.
 
     Parameters
     ----------
@@ -248,8 +248,8 @@ def find_harmonics(f_n, f_n_err, p_orb, sigma=1.):
         The frequencies of a number of sine waves
     f_n_err: numpy.ndarray[Any, dtype[float]]
         Formal errors in the frequencies
-    p_orb: float
-        The orbital period
+    f_base: float
+        Base frequency of the harmonic series.
     sigma: float
         Number of times the error to use for check of significance
 
@@ -264,8 +264,8 @@ def find_harmonics(f_n, f_n_err, p_orb, sigma=1.):
     If multiple frequencies correspond to one harmonic, only the closest is kept.
     """
     # the frequencies divided by the orbital frequency gives integers for harmonics
-    test_int = f_n * p_orb
-    is_harmonic = ((test_int % 1) > 1 - sigma * f_n_err * p_orb) | ((test_int % 1) < sigma * f_n_err * p_orb)
+    test_int = f_n / f_base
+    is_harmonic = ((test_int % 1) > 1 - sigma * f_n_err / f_base) | ((test_int % 1) < sigma * f_n_err / f_base)
 
     # look for harmonics that have multiple close frequencies
     harmonic_f = f_n[is_harmonic]
@@ -316,15 +316,15 @@ def construct_harmonic_range(f_0, domain):
 
 
 @nb.njit(cache=True)
-def find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9):
+def find_harmonics_from_pattern(f_n, f_base, f_tol=1e-9):
     """Get the indices of the frequencies matching closest to the harmonics.
 
     Parameters
     ----------
     f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    p_orb: float
-        The orbital period
+    f_base: float
+        Base frequency of the harmonic series.
     f_tol: float
         Tolerance in the frequency for accepting harmonics
 
@@ -343,14 +343,14 @@ def find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9):
     (by default). This can now be user defined for more flexibility.
     """
     # guard against zero period or empty list
-    if (p_orb == 0) | (len(f_n) == 0):
+    if (f_base == 0) | (len(f_n) == 0):
         harmonics = np.zeros(0, dtype=np.int_)
         harmonic_n = np.zeros(0, dtype=np.int_)
         return harmonics, harmonic_n
 
     # make the pattern of harmonics
-    domain = [0, np.max(f_n) + 0.5 / p_orb]
-    harmonic_pattern, harmonic_n = construct_harmonic_range(1 / p_orb, domain)
+    domain = [0, np.max(f_n) + 0.5 * f_base]
+    harmonic_pattern, harmonic_n = construct_harmonic_range(f_base, domain)
 
     # sort the frequencies
     sorter = np.argsort(f_n)
@@ -366,7 +366,7 @@ def find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9):
     d_nn = np.abs(f_n[i_nn] - harmonic_pattern)
 
     # check that the closest neighbours are reasonably close to the harmonic
-    m_cn = (d_nn < min(f_tol, 1 / (2 * p_orb)))  # distance must be smaller than tolerance (and never larger than 1/2P)
+    m_cn = (d_nn < min(f_tol, f_base / 2))  # distance must be smaller than tolerance (and never larger than 1/2P)
 
     # keep the ones left over
     harmonics = sorter[i_nn[m_cn]]
@@ -376,15 +376,15 @@ def find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9):
 
 
 @nb.njit(cache=True)
-def find_harmonics_tolerance(f_n, p_orb, f_tol):
+def find_harmonics_tolerance(f_n, f_base, f_tol):
     """Get the indices of the frequencies matching within a tolerance to the harmonics.
 
     Parameters
     ----------
     f_n: numpy.ndarray[Any, dtype[float]]
         The frequencies of a number of sine waves
-    p_orb: float
-        The orbital period
+    f_base: float
+        Base frequency of the harmonic series.
     f_tol: float
         Tolerance in the frequency for accepting harmonics
 
@@ -403,14 +403,14 @@ def find_harmonics_tolerance(f_n, p_orb, f_tol):
     This can be user defined for flexibility.
     """
     harmonic_n = np.zeros(len(f_n))
-    harmonic_n = np.round(f_n * p_orb, 0, harmonic_n)  # closest harmonic (out argument needed in numba atm)
+    harmonic_n = np.round(f_n / f_base, 0, harmonic_n)  # closest harmonic (out argument needed in numba atm)
     harmonic_n[harmonic_n == 0] = 1  # avoid zeros resulting from large f_tol
 
     # get the distances to the nearest pattern frequency
-    d_nn = np.abs(f_n - harmonic_n / p_orb)
+    d_nn = np.abs(f_n - harmonic_n * f_base)
 
     # check that the closest neighbours are reasonably close to the harmonic
-    m_cn = (d_nn < min(f_tol, 1 / (2 * p_orb)))  # distance smaller than tolerance (or half the harmonic spacing)
+    m_cn = (d_nn < min(f_tol, f_base / 2))  # distance smaller than tolerance (or half the harmonic spacing)
 
     # produce indices and make the right selection
     harmonics = np.arange(len(f_n))[m_cn]
@@ -420,7 +420,7 @@ def find_harmonics_tolerance(f_n, p_orb, f_tol):
 
 
 @nb.njit(cache=True)
-def select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol, sigma_f=3):
+def select_harmonics_sigma(f_n, f_n_err, f_base, f_tol, sigma_f=3):
     """Selects only those frequencies that are probably harmonics
 
     Parameters
@@ -429,8 +429,8 @@ def select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol, sigma_f=3):
         The frequencies of a number of sine waves
     f_n_err: numpy.ndarray[Any, dtype[float]]
         Formal errors in the frequencies
-    p_orb: float
-        The orbital period
+    f_base: float
+        Base frequency of the harmonic series.
     f_tol: float
         Tolerance in the frequency for accepting harmonics
     sigma_f: float
@@ -453,12 +453,12 @@ def select_harmonics_sigma(f_n, f_n_err, p_orb, f_tol, sigma_f=3):
     of the frequency uncertainty
     """
     # get the harmonics within f_tol
-    harmonics, harm_n = find_harmonics_from_pattern(f_n, p_orb, f_tol=f_tol)
+    harmonics, harm_n = find_harmonics_from_pattern(f_n, f_base, f_tol=f_tol)
 
     # frequency error overlaps with theoretical harmonic
     passed_h = np.zeros(len(harmonics), dtype=np.bool_)
     for i, (h, n) in enumerate(zip(harmonics, harm_n)):
-        f_theo = n / p_orb
+        f_theo = n * f_base
         margin = sigma_f * f_n_err[h]
         overlap_h = (f_n[h] + margin > f_theo) & (f_n[h] - margin < f_theo)
         if overlap_h:
@@ -556,11 +556,11 @@ def find_unknown_harmonics(f_n, f_n_err, sigma=1., n_max=5, f_tol=None):
     candidate_h = {}
     for i in indices:
         for n in n_harm:
-            p_base = n / f_n[i]  # 1/(f_n[i]/n)
+            f_base = f_n[i] / n
             if f_tol is not None:
-                i_harmonic, _ = find_harmonics_from_pattern(f_n, p_base, f_tol=f_tol)
+                i_harmonic, _ = find_harmonics_from_pattern(f_n, f_base, f_tol=f_tol)
             else:
-                i_harmonic = find_harmonics(f_n, f_n_err, p_base, sigma=sigma)  # harmonic indices
+                i_harmonic = find_harmonics(f_n, f_n_err, f_base, sigma=sigma)  # harmonic indices
 
             if len(i_harmonic) > 1:
                 # don't allow any gaps of more than 20 + the number of preceding harmonics
@@ -701,7 +701,7 @@ def harmonic_series_length(f_test, f_n, freq_res, f_max):
     distance = np.zeros(len(f_test))
 
     for i, f in enumerate(f_test):
-        harmonics, harmonic_n = find_harmonics_from_pattern(f_n, 1 / f, f_tol=freq_res / 2)
+        harmonics, harmonic_n = find_harmonics_from_pattern(f_n, f, f_tol=freq_res / 2)
         n_harm[i] = len(harmonics)
         if n_harm[i] == 0:
             completeness[i] = 1

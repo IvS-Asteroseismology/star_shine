@@ -128,7 +128,7 @@ def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n,
     None
     """
     # separate harmonics
-    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, 1/p_orb, f_tol=1e-9)
 
     # make model
     model_linear = mdl.linear_curve(time, const, slope, i_chunks)
@@ -448,7 +448,7 @@ def plot_lc_harmonics(time, flux, p_orb, p_err, const, slope, f_n, a_n, ph_n, i_
 
     # make models
     model_line = mdl.linear_curve(time, const, slope, i_chunks)
-    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, 1/p_orb, f_tol=1e-9)
     model_h = mdl.sum_sines(time, f_n[harmonics], a_n[harmonics], ph_n[harmonics])
     model_nh = mdl.sum_sines(time, np.delete(f_n, harmonics), np.delete(a_n, harmonics),
                                                      np.delete(ph_n, harmonics))
@@ -545,7 +545,7 @@ def plot_pair_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n, save_file
     # convert phases to interval [-pi, pi] from [0, 2pi]
     above_pi = (ph_n >= np.pi)
     ph_n[above_pi] = ph_n[above_pi] - 2 * np.pi
-    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, 1/p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(len(f_n)), harmonics)
     ref_values = {'p_orb': p_orb, 'const': const, 'slope': slope,
                   'f_n': f_n[non_harm], 'a_n': a_n[non_harm], 'ph_n': ph_n[non_harm],
@@ -595,7 +595,7 @@ def plot_trace_harmonics(inf_data, p_orb, const, slope, f_n, a_n, ph_n):
     # convert phases to interval [-pi, pi] from [0, 2pi]
     above_pi = (ph_n >= np.pi)
     ph_n[above_pi] = ph_n[above_pi] - 2 * np.pi
-    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=1e-9)
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, 1/p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(len(f_n)), harmonics)
     par_lines = [('p_orb', {}, p_orb), ('const', {}, const), ('slope', {}, slope),
                  ('f_n', {}, f_n[non_harm]), ('a_n', {}, a_n[non_harm]), ('ph_n', {}, ph_n[non_harm]),
@@ -705,7 +705,7 @@ def sequential_plotting(time, flux, flux_err, i_chunks, target_id, load_dir, sav
         model_linear = mdl.linear_curve(time, const_5, slope_5, i_chunks)
         model_sinusoid = mdl.sum_sines(time, f_n_5, a_n_5, ph_n_5)
         model_5 = model_linear + model_sinusoid
-        harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n_5, p_orb_5, f_tol=1e-9)
+        harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n_5, 1/p_orb_5, f_tol=1e-9)
         f_h_5, a_h_5, ph_h_5 = f_n_5[harmonics], a_n_5[harmonics], ph_n_5[harmonics]
     else:
         const_5, slope_5, f_n_5, a_n_5, ph_n_5 = np.array([[], [], [], [], []])
