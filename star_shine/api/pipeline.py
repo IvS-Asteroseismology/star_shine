@@ -309,13 +309,11 @@ class Pipeline:
         for i_h in h_base_unique:
             # take the first f_base without a series
             if len(h_base_map[h_base_map == i_h]) > 1:
-                i_base = i_h
                 f_base = self.ts_model.sinusoid.f_n[i_h]
                 f_base = ana.refine_harmonic_base_frequency(f_base, self.ts_model)
                 break
         else:
             # if no break encountered (no non-coupled f_base found), an f_base is searched for globally
-            i_base = len(self.ts_model.sinusoid.f_n)
             f_base = ana.find_harmonic_base_frequency(self.ts_model)
 
         if (t_over_p := self.ts_model.t_tot * f_base) > 1.1:
@@ -334,7 +332,7 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        f_base_err = self.ts_model.sinusoid.f_h_err[i_base]
+        f_base_err = self.ts_model.sinusoid.f_h_err[self.ts_model.sinusoid.get_f_index(f_base)]
         f_base_formatted = ut.float_to_str_scientific(f_base, f_base_err, error=True, brackets=True)
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
                          f"N_p= {self.ts_model.n_param} - Harmonic frequencies coupled. f_base= {f_base_formatted}, "
