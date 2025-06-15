@@ -209,11 +209,6 @@ def refine_subset(ts_model, close_f, logger=None):
     logger: logging.Logger, optional
         Instance of the logging library.
 
-    Returns
-    -------
-    ts_model: tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
-
     See Also
     --------
     extract_sinusoids
@@ -270,7 +265,7 @@ def refine_subset(ts_model, close_f, logger=None):
     if logger is not None:
         logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - N_refined= {len(close_f)}")
 
-    return ts_model
+    return None
 
 def replace_subset(ts_model, close_f, final_remove=True, logger=None):
     """Attempt the replacement of frequencies within the Rayleigh criterion of each other by a single one,
@@ -288,11 +283,6 @@ def replace_subset(ts_model, close_f, final_remove=True, logger=None):
         Remove the excluded frequencies at the end.
     logger: logging.Logger, optional
         Instance of the logging library.
-
-    Returns
-    -------
-    ts_model: tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
 
     See Also
     --------
@@ -370,7 +360,7 @@ def replace_subset(ts_model, close_f, final_remove=True, logger=None):
     if logger is not None:
         logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - N_replaced= {n_replaced}")
 
-    return ts_model
+    return None
 
 
 def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='hybrid', n_extract=0,
@@ -401,11 +391,6 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         May increase the quality of the extraction more than only doing this all the way at the end.
     logger: logging.Logger, optional
         Instance of the logging library.
-
-    Returns
-    -------
-    ts_model: tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
 
     Notes
     -----
@@ -481,20 +466,20 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         # improve frequencies with some strategy
         if fit_each_step:
             # fit all frequencies for best improvement
-            ts_model = fit.fit_multi_sinusoid_grouped(ts_model, logger=logger)
+            fit.fit_multi_sinusoid_grouped(ts_model, logger=logger)
         else:
             # select only close frequencies for iteration
             close_f = frs.f_within_rayleigh(ts_model.sinusoid.n_sin - 1, ts_model.sinusoid.f_n, ts_model.f_resolution)
 
             if len(close_f) > 1:
                 # iterate over (re-extract) close frequencies (around f_i) a number of times to improve them
-                ts_model = refine_subset(ts_model, close_f, logger=logger)
+                refine_subset(ts_model, close_f, logger=logger)
 
         # possibly replace close frequencies
         if replace_each_step:
             close_f = frs.f_within_rayleigh(ts_model.sinusoid.n_sin - 1, ts_model.sinusoid.f_n, ts_model.f_resolution)
             if len(close_f) > 1:
-                ts_model = replace_subset(ts_model, close_f, logger=logger)
+                replace_subset(ts_model, close_f, logger=logger)
 
         # calculate BIC
         bic = ts_model.bic()
@@ -523,13 +508,14 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         condition_2 = ts_model.sinusoid.n_sin - n_sin_init < n_extract
 
         if logger is not None and condition_1:
-            logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - Extracted: f= {f_i:1.6f}, a= {a_i:1.6f}")
+            logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - Extracted: f= {f_i:1.6f}, a= {a_i:1.6f}",
+                         extra={'update': True})
 
     if logger is not None:
         n_sin = ts_model.sinusoid.n_sin
         logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_extracted= {n_sin - n_sin_init}.")
 
-    return ts_model
+    return None
 
 
 def couple_harmonics(ts_model, f_base, logger=None):
@@ -545,11 +531,6 @@ def couple_harmonics(ts_model, f_base, logger=None):
         Base frequency to couple the harmonics to.
     logger: logging.Logger, optional
         Instance of the logging library.
-
-    Returns
-    -------
-    tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
     """
     # find the harmonic candidates using the period
     harmonics, h_mult = frs.find_harmonics_tolerance(ts_model.sinusoid.f_n, f_base, f_tol=ts_model.f_resolution / 2)
@@ -558,7 +539,7 @@ def couple_harmonics(ts_model, f_base, logger=None):
         if logger is not None:
             logger.warning("No harmonic frequencies found")
 
-        return ts_model
+        return None
 
     # the index of f_base is len(f_n), because the base harmonic is the first frequency to be added at the end
     i_base = len(ts_model.sinusoid.f_n)
@@ -595,9 +576,9 @@ def couple_harmonics(ts_model, f_base, logger=None):
     if logger is not None:
         bic = ts_model.bic()
         logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - N_coupled= {ts_model.sinusoid.n_harm}, "
-                     f"N_harmonics_init= {n_harm_init}")
+                     f"N_harmonics_init= {n_harm_init}", extra={'update': True})
 
-    return ts_model
+    return None
 
 
 def extract_harmonics(ts_model, bic_thr=2, logger=None):
@@ -611,11 +592,6 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
         The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
     logger: logging.Logger, optional
         Instance of the logging library.
-
-    Returns
-    -------
-    ts_model: tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
 
     See Also
     --------
@@ -676,13 +652,14 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
 
         if logger is not None and condition_1:
             logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - Extracted: "
-                         f"f_base= {f_base_all[i]:1.2f}, h= {h_candidates_n[i]}, f= {f_i:1.6f}, a= {a_i:1.6f}")
+                         f"f_base= {f_base_all[i]:1.2f}, h= {h_candidates_n[i]}, f= {f_i:1.6f}, a= {a_i:1.6f}",
+                         extra={'update': True})
 
     if logger is not None:
         n_sin = ts_model.sinusoid.n_sin
         logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_h_extracted= {n_sin - n_sin_init}")
 
-    return ts_model
+    return None
 
 
 def remove_sinusoids_single(ts_model, logger=None):
@@ -696,11 +673,6 @@ def remove_sinusoids_single(ts_model, logger=None):
         Instance of TimeSeriesModel containing the time series and model parameters.
     logger: logging.Logger, optional
         Instance of the logging library.
-
-    Returns
-    -------
-    ts_model: tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
     """
     # determine initial quantities
     n_sin_init = len(ts_model.sinusoid.f_n)
@@ -742,9 +714,9 @@ def remove_sinusoids_single(ts_model, logger=None):
 
     if logger is not None:
         n_sin = ts_model.sinusoid.n_sin
-        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_removed= {n_sin_init - n_sin}.")
+        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_removed= {n_sin_init - n_sin}.", extra={'update': True})
 
-    return ts_model
+    return None
 
 
 def replace_sinusoid_groups(ts_model, logger=None):
@@ -759,11 +731,6 @@ def replace_sinusoid_groups(ts_model, logger=None):
         Instance of TimeSeriesModel containing the time series and model parameters.
     logger: logging.Logger, optional
         Instance of the logging library.
-
-    Returns
-    -------
-    ts_model: tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
     """
     # make an array of sets of frequencies to be investigated for replacement
     close_f_groups = frs.chains_within_rayleigh(ts_model.sinusoid.f_n, ts_model.f_resolution)
@@ -783,7 +750,7 @@ def replace_sinusoid_groups(ts_model, logger=None):
                 continue
 
             # use the replace_subset function to handle the details
-            ts_model = replace_subset(ts_model, close_f, final_remove=False, logger=None)
+            replace_subset(ts_model, close_f, final_remove=False, logger=None)
 
             # update number of sinusoids after replacement
             n_sin = np.sum(ts_model.sinusoid.include)
@@ -799,9 +766,10 @@ def replace_sinusoid_groups(ts_model, logger=None):
 
     if logger is not None:
         bic = ts_model.bic()
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - N_replaced= {n_replaced}, N_kept= {n_new}.")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic:1.2f} - N_replaced= {n_replaced}, N_kept= {n_new}.",
+                     extra={'update': True})
 
-    return ts_model
+    return None
 
 
 def reduce_sinusoids(ts_model, logger=None):
@@ -814,23 +782,18 @@ def reduce_sinusoids(ts_model, logger=None):
     logger: logging.Logger, optional
         Instance of the logging library.
 
-    Returns
-    -------
-    ts_model: tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
-
     Notes
     -----
     Checks whether the BIC can be improved by removing a frequency. Special attention is given to frequencies
     that are within the Rayleigh criterion of each other. It is attempted to replace these by a single frequency.
     """
     # first check if any frequency can be left out (after the fit, this may be possible)
-    ts_model = remove_sinusoids_single(ts_model, logger=logger)
+    remove_sinusoids_single(ts_model, logger=logger)
 
     # Now go on to trying to replace sets of frequencies that are close together
-    ts_model = replace_sinusoid_groups(ts_model, logger=logger)
+    replace_sinusoid_groups(ts_model, logger=logger)
 
-    return ts_model
+    return None
 
 
 def select_sinusoids(ts_model, logger=None):
@@ -842,11 +805,6 @@ def select_sinusoids(ts_model, logger=None):
         Instance of TimeSeriesModel containing the time series and model parameters.
     logger: logging.Logger, optional
         Instance of the logging library.
-
-    Returns
-    -------
-    ts_model: tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
 
     Notes
     -----
@@ -876,7 +834,7 @@ def select_sinusoids(ts_model, logger=None):
         logger.extra(f"Sinusoids passing criteria: {n_pass_all} of {n_sin}. "
                      f"Harmonics passing criteria: {n_harm_pass_all} of {n_harm}.")
 
-    return ts_model
+    return None
 
 
 def refine_harmonic_base_frequency(f_base, ts_model):

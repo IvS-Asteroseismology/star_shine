@@ -13,7 +13,6 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayou
 from PySide6.QtWidgets import QWidget, QLabel, QTextEdit, QLineEdit, QSpinBox, QFileDialog, QMessageBox, QPushButton
 from PySide6.QtWidgets import QTableView, QHeaderView, QDialog, QFormLayout, QCheckBox
 from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor, QIcon
-from PySide6.QtGui import QDoubleValidator
 
 from star_shine.core import utility as ut
 from star_shine.api import Data, Result, Pipeline
@@ -451,6 +450,10 @@ class MainWindow(QMainWindow):
 
         # include result attributes if present
         if self.pipeline.ts_model.sinusoid.n_param > 0 and not self.upper_plot_area.show_residual:
+            import numpy as np
+            print(self.pipeline.ts_model.sinusoid.n_sin)
+            self.pipeline.ts_model.include_sinusoids(np.arange(len(self.pipeline.ts_model.sinusoid.f_n)))
+            print(self.pipeline.ts_model.sinusoid.n_sin)
             # upper plot area - time series
             upper_plot_data['plot_xs'] = [self.pipeline.ts_model.time]
             upper_plot_data['plot_ys'] = [self.pipeline.ts_model.full_model()]
@@ -491,6 +494,20 @@ class MainWindow(QMainWindow):
 
         return None
 
+    def handle_result_signal(self, msg, update=False):
+        """Handle the emitted result signal: update the GUI with the results."""
+        # update log text field
+        self.append_text(msg)
+
+        if update:
+            # display sinusoid parameters in the table
+            self.update_table(display_err=True)
+
+            # Update the plot area with the results
+            self.update_plots(new_plot=False)
+
+        return None
+
     def new_dataset(self, data):
         """Set up pipeline and logger for the new data that was loaded"""
         # for saving, make a folder if not there yet
@@ -502,14 +519,14 @@ class MainWindow(QMainWindow):
 
         # custom gui-specific logger
         self.logger = gui_log.get_custom_gui_logger(data.target_id, full_dir)
-        self.logger.log_signal.connect(self.append_text)
+        self.logger.log_signal.connect(self.handle_result_signal)
 
         # Make ready the pipeline class
         self.pipeline = Pipeline(data=data, save_dir=self.save_dir, logger=self.logger)
 
         # set up a pipeline thread
         self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline)
-        self.pipeline_thread.result_signal.connect(self.handle_result_signal)
+        # self.pipeline_thread.result_signal.connect(self.handle_result_signal)
 
         # update the info fields
         self.update_info_fields()
@@ -526,7 +543,7 @@ class MainWindow(QMainWindow):
 
         if new_dir:
             self.save_dir = new_dir
-            self.append_text(f"Save location set to: {self.save_dir}")
+            self.logger.info(f"Save location set to: {self.save_dir}")
 
         # update the current directory info field
         self.update_info_fields()
@@ -623,16 +640,6 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def handle_result_signal(self):
-        """Handle the emitted result signal: update the GUI with the results."""
-        # display sinusoid parameters in the table
-        self.update_table(display_err=True)
-
-        # Update the plot area with the results
-        self.update_plots(new_plot=False)
-
-        return None
-
     def add_base_harmonic(self):
         """Let the user add a base harmonic frequency and add the harmonic series."""
         if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
@@ -690,7 +697,7 @@ class MainWindow(QMainWindow):
         """Handle click events on the periodogram plot."""
         # Guard against empty data
         if self.pipeline is None:
-            self.append_text(f"Plot clicked at coordinates: ({x}, {y})")
+            self.logger.info(f"Plot clicked at coordinates: ({x}, {y})")
             return None
 
         # Left click

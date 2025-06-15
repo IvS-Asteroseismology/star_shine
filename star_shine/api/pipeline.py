@@ -105,14 +105,14 @@ class Pipeline:
         self.ts_model.update_linear_model()
 
         # remove any frequencies that end up not making the statistical cut
-        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
+        ana.reduce_sinusoids(self.ts_model, logger=self.logger)
 
         # update the TimeSeriesModel passing masks and uncertainties
-        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+        ana.select_sinusoids(self.ts_model, logger=self.logger)
 
         # print some useful info
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
-                         f"N_p= {self.ts_model.n_param} - Extracted f= {f:1.2f}")
+                         f"N_p= {self.ts_model.n_param} - Extracted f= {f:1.2f}", extra={'update': True})
 
         return None
 
@@ -140,11 +140,11 @@ class Pipeline:
         self.ts_model.remove_sinusoids(index)
 
         # update the TimeSeriesModel passing masks and uncertainties
-        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+        ana.select_sinusoids(self.ts_model, logger=self.logger)
 
         # print some useful info
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
-                         f"N_p= {self.ts_model.n_param} - Removed f= {f_to_remove:1.2f}")
+                         f"N_p= {self.ts_model.n_param} - Removed f= {f_to_remove:1.2f}", extra={'update': True})
 
         return None
 
@@ -171,19 +171,19 @@ class Pipeline:
 
         # start by looking for more harmonics
         if self.ts_model.sinusoid.n_base != 0:
-            self.ts_model = ana.extract_harmonics(self.ts_model, config.bic_thr, logger=self.logger)
+            ana.extract_harmonics(self.ts_model, config.bic_thr, logger=self.logger)
 
         # extract all frequencies with the iterative scheme
-        self.ts_model = ana.extract_sinusoids(self.ts_model, bic_thr=config.bic_thr, snr_thr=config.snr_thr,
-                                              stop_crit=config.stop_criterion, select=config.select_next,
-                                              n_extract=n_extract, fit_each_step=config.optimise_step,
-                                              replace_each_step=config.replace_step, logger=self.logger)
+        ana.extract_sinusoids(self.ts_model, bic_thr=config.bic_thr, snr_thr=config.snr_thr,
+                              stop_crit=config.stop_criterion, select=config.select_next,  n_extract=n_extract,
+                              fit_each_step=config.optimise_step, replace_each_step=config.replace_step,
+                              logger=self.logger)
 
         # remove any frequencies that end up not making the statistical cut
-        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
+        ana.reduce_sinusoids(self.ts_model, logger=self.logger)
 
         # update the TimeSeriesModel passing masks and uncertainties
-        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+        ana.select_sinusoids(self.ts_model, logger=self.logger)
 
         # print some useful info
         t_b = systime.time()
@@ -205,7 +205,7 @@ class Pipeline:
         self.logger.info("Starting multi-sinusoid NL-LS optimisation.")
 
         # optimisation
-        self.ts_model = fit.fit_multi_sinusoid_grouped(self.ts_model, logger=self.logger)
+        fit.fit_multi_sinusoid_grouped(self.ts_model, logger=self.logger)
             # # make model including everything to calculate noise level
             # resid = self.data.time_series.flux - self.ts_model.model_linear() - self.ts_model.model_sinusoid()
             # n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)
@@ -231,17 +231,17 @@ class Pipeline:
             #                       ph_n_hdi=par_hdi[4])
 
         # remove any frequencies that end up not making the statistical cut
-        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
+        ana.reduce_sinusoids(self.ts_model, logger=self.logger)
 
         # update the TimeSeriesModel passing masks and uncertainties
-        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+        ana.select_sinusoids(self.ts_model, logger=self.logger)
 
         # ut.save_inference_data(file_name, inf_data)  # currently not saved
 
         # print some useful info
         t_b = systime.time()
-        self.logger.info(f"N_f= {len(self.result.f_n)}, BIC= {self.result.bic:1.2f}, N_p= {self.result.n_param} - "
-                         f"Optimisation complete. Time taken: {t_b - t_a:1.1f}s.")
+        self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
+                         f"N_p= {self.ts_model.n_param} - Optimisation complete. Time taken: {t_b - t_a:1.1f}s.")
 
         return None
 
@@ -256,11 +256,11 @@ class Pipeline:
         self.ts_model.update_linear_model()
 
         # update the TimeSeriesModel passing masks and uncertainties
-        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+        ana.select_sinusoids(self.ts_model, logger=self.logger)
 
         # print some useful info
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
-                         f"N_p= {self.ts_model.n_param} - Added f= {f_base:1.2f}")
+                         f"N_p= {self.ts_model.n_param} - Added f= {f_base:1.2f}", extra={'update': True})
 
         return None
 
@@ -299,13 +299,13 @@ class Pipeline:
 
         if (t_over_p := self.ts_model.t_tot * f_base) > 1.1:
             # couple the harmonics to the period. likely removes more frequencies that need re-extracting
-            self.ts_model = ana.couple_harmonics(self.ts_model, f_base, logger=self.logger)
+            ana.couple_harmonics(self.ts_model, f_base, logger=self.logger)
 
         # remove any frequencies that end up not making the statistical cut
-        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
+        ana.reduce_sinusoids(self.ts_model, logger=self.logger)
 
         # update the TimeSeriesModel passing masks and uncertainties
-        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+        ana.select_sinusoids(self.ts_model, logger=self.logger)
 
         # print some useful info
         t_b = systime.time()
@@ -404,7 +404,7 @@ class Pipeline:
 
         # final message and timing
         t_b = systime.time()
-        self.logger.info(f"End of analysis. Total time elapsed: {t_b - t_a:1.1f}s.")  # info to save to log
+        self.logger.info(f"End of analysis. Total time elapsed: {t_b - t_a:1.1f}s.")
 
         return None
 

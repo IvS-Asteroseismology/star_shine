@@ -442,11 +442,6 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
     logger: logging.Logger, optional
         Instance of the logging library.
 
-    Returns
-    -------
-    tms.TimeSeriesModel
-        Instance of TimeSeriesModel containing the time series and model parameters.
-
     Notes
     -----
     ts_model must have been cleaned up before use here.
@@ -470,7 +465,7 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
     f_groups = frs.group_frequencies_for_fit(a_n[i_non_h], g_min=g_min, g_max=g_max, indices=i_non_h)
     n_groups = len(f_groups)
     n_chunk = len(ts_model.i_chunks)
-    n_sin_tot = len(f_n)
+    n_sin = len(f_n)
     n_base = len(h_base_unique)
 
     # we don't want the frequencies to go lower than about 1/100/T
@@ -527,8 +522,8 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
         f_h = f_base[h_base_map] * h_mult
         ts_model.update_sinusoids(f_h, a_h, ph_h, i_h, h_base_new=h_base, h_mult_new=h_mult)
 
-        if logger is not None:
-            logger.extra(f'N_f= {n_sin_tot}, BIC= {ts_model.bic():1.2f} - Fit group {k + 1} of {n_groups}, '
-                         f'N_f(group)= {len(group)}')
+    if logger is not None:
+        logger.extra(f"N_f= {n_sin}, BIC= {ts_model.bic():1.2f} - Optimised model, N_group= {n_groups}",
+                     extra={'update': True})
 
-    return ts_model
+    return None

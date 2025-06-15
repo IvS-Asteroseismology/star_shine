@@ -15,7 +15,7 @@ from star_shine.config import helpers as hlp
 class QLogEmitter(QObject):
     """A signal emitter helper class."""
     # Define a signal that emits the log message
-    log_signal = Signal(str)
+    log_signal = Signal(str, bool)  # message, update flag
 
     def __init__(self):
         super().__init__()
@@ -46,7 +46,8 @@ class QSignalHandler(logging.Handler):
             The log record to be formatted and emitted.
         """
         msg = self.format(record)
-        self.emitter.log_signal.emit(msg)
+        update = getattr(record, 'update', False)  # get the extra kwarg out of record
+        self.emitter.log_signal.emit(msg, update)
 
 
 def get_custom_gui_logger(target_id, save_dir):
