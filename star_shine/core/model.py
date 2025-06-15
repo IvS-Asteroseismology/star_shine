@@ -766,9 +766,9 @@ class SinusoidModel:
         -------
         tuple
             numpy.ndarray[Any, dtype[int]]
-            Indices of the base harmonic frequencies in _f_n.
+                Indices of the base harmonic frequencies in _f_n.
             numpy.ndarray[Any, dtype[int]]
-            Map of harmonics to base frequencies.
+                Map of harmonics to base frequencies.
         """
         return np.unique(self.h_base[self._harmonics], return_inverse=True)
 

@@ -156,34 +156,6 @@ class Pipeline:
 
         return None
 
-    def add_harmonic_series(self, f_base, exact=False):
-        """Given a base harmonic frequency, add a series of harmonics to the model."""
-        # if the input is not exact, extract approx
-        if not exact:
-            f_base, a, ph = ana.extract_approx(self.ts_model.time, self.ts_model.residual(), f_base)
-        else:
-            a, ph = pdg.scargle_ampl_phase_single(self.ts_model.time, self.ts_model.residual(), f_base)
-
-        # add the sinusoid
-        index = len(self.ts_model.sinusoid.f_n)
-        self.ts_model.add_sinusoids(f_base, a, ph, h_base_new=index, h_mult_new=1)
-        self.ts_model.update_linear_model()
-
-        # extract the harmonics
-        self.ts_model = ana.extract_harmonics(self.ts_model, config.bic_thr, logger=self.logger)
-
-        # remove any frequencies that end up not making the statistical cut
-        self.ts_model = ana.reduce_sinusoids(self.ts_model, logger=self.logger)
-
-        # update the TimeSeriesModel passing masks and uncertainties
-        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
-
-        # update the result instance and set the identifiers and description
-        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
-                                           description="Addition of harmonic series.")
-
-        return None
-
     def iterative_prewhitening(self, n_extract=0):
         """Iterative prewhitening of the input flux time series in the form of sine waves and a piece-wise linear curve.
 
@@ -288,6 +260,29 @@ class Pipeline:
 
         return None
 
+    def add_base_harmonic(self, f_base):
+        """Add a base harmonic frequency to the model."""
+        # get amplitude and phase
+        a, ph = pdg.scargle_ampl_phase_single(self.ts_model.time, self.ts_model.residual(), f_base)
+
+        # add the sinusoid
+        index = len(self.ts_model.sinusoid.f_n)
+        self.ts_model.add_sinusoids(f_base, a, ph, h_base_new=index, h_mult_new=1)
+        self.ts_model.update_linear_model()
+
+        # update the TimeSeriesModel passing masks and uncertainties
+        self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
+
+        # update the result instance and set the identifiers and description
+        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
+                                           description="Addition of harmonic series.")
+
+        # print some useful info
+        self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
+                         f"N_p= {self.ts_model.n_param} - Added f= {f_base:1.2f}")
+
+        return None
+
     def couple_harmonics(self):
         """Find the orbital period and couple harmonic frequencies to the orbital period
 
@@ -298,27 +293,32 @@ class Pipeline:
 
         Notes
         -----
-        Performs a global period search, if the period is unknown.
-        If a period is given, it is locally refined for better performance.
+        Performs a global search for the base frequency, if unknown. If a frequency is given, it is locally
+        refined for better performance. Needs an existing list of extracted sinusoids.
 
-        Removes theoretical harmonic candidate frequencies within the frequency
-        resolution, then extracts a single harmonic at the theoretical location.
+        Removes theoretical harmonic candidate frequencies within the frequency resolution, then extracts
+        a single harmonic at the theoretical location.
 
         Removes any frequencies that end up not making the statistical cut.
         """
         t_a = systime.time()
-        self.logger.info("Coupling the harmonic frequencies to the orbital frequency...")
+        self.logger.info("Coupling the harmonic frequencies to the base frequency.")
 
-        # if given, the input f_base is refined locally, otherwise the f_base is searched for globally
-        if self.ts_model.sinusoid.n_base == 0:
-            p_orb = ana.find_orbital_period(self.ts_model.time, self.ts_model.flux, self.ts_model.sinusoid.f_n)
+        # check for non-coupled f_base
+        h_base_unique, h_base_map = self.ts_model.sinusoid.get_h_base_map()
+        for i_h in h_base_unique:
+            # take the first f_base without a series
+            if len(h_base_map[h_base_map == i_h]) > 1:
+                i_base = i_h
+                f_base = self.ts_model.sinusoid.f_n[i_h]
+                f_base = ana.refine_harmonic_base_frequency(f_base, self.ts_model)
+                break
         else:
-            p_orb = ana.refine_orbital_period(self.data.p_orb, self.ts_model.time, self.ts_model.sinusoid.f_n)
+            # if no break encountered (no non-coupled f_base found), an f_base is searched for globally
+            i_base = len(self.ts_model.sinusoid.f_n)
+            f_base = ana.find_harmonic_base_frequency(self.ts_model)
 
-        # convert
-        f_base = 1 / p_orb
-
-        if (t_over_p := self.ts_model.t_tot / p_orb) > 1.1:
+        if (t_over_p := self.ts_model.t_tot * f_base) > 1.1:
             # couple the harmonics to the period. likely removes more frequencies that need re-extracting
             self.ts_model = ana.couple_harmonics(self.ts_model, f_base, logger=self.logger)
 
@@ -334,19 +334,17 @@ class Pipeline:
 
         # print some useful info
         t_b = systime.time()
-        i_base = 0  # todo: fix
-        p_err = self.ts_model.sinusoid.f_h_err[i_base]
-        p_orb_formatted = ut.float_to_str_scientific(p_orb, p_err, error=True, brackets=True)
+        f_base_err = self.ts_model.sinusoid.f_h_err[i_base]
+        f_base_formatted = ut.float_to_str_scientific(f_base, f_base_err, error=True, brackets=True)
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
-                         f"N_p= {self.ts_model.n_param} - Harmonic frequencies coupled. P_orb= {p_orb_formatted}. "
-                         f"Time taken: {t_b - t_a:1.1f}s")
+                         f"N_p= {self.ts_model.n_param} - Harmonic frequencies coupled. f_base= {f_base_formatted}, "
+                         f"1/f_base= {1/f_base:1.2f}. Time taken: {t_b - t_a:1.1f}s")
 
         # log if short time span or few harmonics
-        i_f_base = self.ts_model.sinusoid.get_f_index(f_base)
         if t_over_p < 1.1:
             self.logger.warning(f"Time-base over period is less than two: {t_over_p}.")
-        elif (n_harm := np.sum(self.ts_model.sinusoid.h_base == i_f_base)) < 2:
-            self.logger.warning(f"Not enough harmonics found: {n_harm}.")
+        elif self.ts_model.sinusoid.n_harm < 2:
+            self.logger.warning(f"Not enough harmonics found: {self.ts_model.sinusoid.n_harm}.")
 
         return None
 
@@ -395,10 +393,10 @@ class Pipeline:
         """
         # this list determines which analysis steps are taken and in what order
         step_names = ['iterative_prewhitening', 'optimise_sinusoid', 'couple_harmonics', 'iterative_prewhitening',
-                      'optimise_sinusoid_h']
+                      'optimise_sinusoid']
 
         # if we have predefined periods, repeat the harmonic steps
-        harmonic_step_names = ['couple_harmonics', 'iterative_prewhitening', 'optimise_sinusoid_h']
+        harmonic_step_names = ['couple_harmonics', 'iterative_prewhitening', 'optimise_sinusoid']
 
         # run steps until config number
         if config.stop_at_stage != 0:

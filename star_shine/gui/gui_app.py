@@ -211,22 +211,6 @@ class MainWindow(QMainWindow):
         info_widget = self._create_info_fields()
         l_col_layout.addWidget(info_widget)
 
-        # create a horizontal layout with some buttons
-        run_button_widget = QWidget()
-        run_button_layout = QHBoxLayout(run_button_widget)
-
-        # Button for starting analysis
-        self.analyze_button = QPushButton("Run Full Analyis")
-        self.analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'run'))
-        run_button_layout.addWidget(self.analyze_button)
-
-        # Button for starting analysis
-        self.stop_button = QPushButton("Stop [WIP]")
-        self.stop_button.clicked.connect(self.stop_analysis)
-        run_button_layout.addWidget(self.stop_button)
-
-        l_col_layout.addWidget(run_button_widget)
-
         # create a horizontal layout with the buttons for each step
         steps_button_widget = QWidget()
         steps_button_layout = QHBoxLayout(steps_button_widget)
@@ -236,44 +220,49 @@ class MainWindow(QMainWindow):
         self.spin_box.setRange(0, 99999)
         self.spin_box.setValue(0)
         # Button for starting iterative prewhitening
-        self.extract_button = QPushButton("Extract")
-        self.extract_button.clicked.connect(lambda: self.perform_analysis('iterative_prewhitening',
-                                                                          n_extract=self.spin_box.value()))
-        steps_button_layout.addWidget(self.extract_button)
+        extract_button = QPushButton("Extract")
+        extract_button.clicked.connect(lambda: self.perform_analysis('iterative_prewhitening',
+                                                                     n_extract=self.spin_box.value()))
+        steps_button_layout.addWidget(extract_button)
         steps_button_layout.addWidget(self.spin_box)  # add the number field after the button
 
         # Button for starting sinusoid fit
-        self.free_fit_button = QPushButton("Free Fit")
-        self.free_fit_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid'))
-        steps_button_layout.addWidget(self.free_fit_button)
+        optimise_button = QPushButton("Optimise")
+        optimise_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid'))
+        steps_button_layout.addWidget(optimise_button)
 
-        # Button for starting finder
-        self.find_harmonic_button = QPushButton("Find Harmonics")
-        self.find_harmonic_button.clicked.connect(functools.partial(self.perform_analysis, 'couple_harmonics'))
-        steps_button_layout.addWidget(self.find_harmonic_button)
+        # Button for coupling harmonics
+        couple_harmonic_button = QPushButton("Couple Harmonics")
+        couple_harmonic_button.clicked.connect(functools.partial(self.perform_analysis, 'couple_harmonics'))
+        steps_button_layout.addWidget(couple_harmonic_button)
 
-        # Button for inputting
-        self.add_harmonic_button = QPushButton("Add Base Harmonic")
-        self.add_harmonic_button.clicked.connect(self.add_harmonic_series)
-        steps_button_layout.addWidget(self.add_harmonic_button)
-
-        # Button for saving the results
-        self.save_result_button = QPushButton("Save Result")
-        self.save_result_button.clicked.connect(self.save_result)
-        steps_button_layout.addWidget(self.save_result_button)
+        # Button for inputting a base harmonic
+        add_harmonic_button = QPushButton("Add Base Harmonic")
+        add_harmonic_button.clicked.connect(self.add_base_harmonic)
+        steps_button_layout.addWidget(add_harmonic_button)
 
         l_col_layout.addWidget(steps_button_widget)
 
         # create a horizontal layout with some buttons
-        extra_button_widget = QWidget()
-        extra_button_layout = QHBoxLayout(extra_button_widget)
+        run_button_widget = QWidget()
+        run_button_layout = QHBoxLayout(run_button_widget)
 
-        # Button for adding base harmonic frequency
-        self.harmonic_button = QPushButton("Add base harmonic")
-        # self.harmonic_button.clicked.connect(self.add_base_harmonic)
-        extra_button_layout.addWidget(self.harmonic_button)
+        # Button for starting analysis
+        analyze_button = QPushButton("Run Full Analyis")
+        analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'run'))
+        run_button_layout.addWidget(analyze_button)
 
-        l_col_layout.addWidget(extra_button_widget)
+        # Button for starting analysis
+        interrupt_button = QPushButton("Interrupt [WIP]")
+        interrupt_button.clicked.connect(self.stop_analysis)
+        run_button_layout.addWidget(interrupt_button)
+
+        # Button for saving the results
+        save_result_button = QPushButton("Save Result")
+        save_result_button.clicked.connect(self.save_result)
+        run_button_layout.addWidget(save_result_button)
+
+        l_col_layout.addWidget(run_button_widget)
 
         # Log area
         log_label = QLabel("Log:")
@@ -680,7 +669,7 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def add_harmonic_series(self):
+    def add_base_harmonic(self):
         """Let the user add a base harmonic frequency and add the harmonic series."""
         if self.pipeline is None:
             QMessageBox.warning(self, "Warning", "Load data first.")
@@ -689,24 +678,28 @@ class MainWindow(QMainWindow):
         # get some parameters
         min_val = self.pipeline.ts_model.pd_f0
         max_val = self.pipeline.ts_model.pd_fn
-        text = f"Please enter a number between {min_val:1.2f} and {max_val:1.2f}."
+        text = f"Enter a number between {min_val:1.2f} and {max_val:1.2f}."
 
         # open the dialog
-        dialog = InputDialog("Add base harmonic frequency", text, "Exact")
+        dialog = InputDialog("Add base harmonic frequency", text)
 
         if dialog.exec():
-            value, checked = dialog.get_values()
+            value = dialog.get_values()
 
             try:
                 value = float(value)
             except ValueError:
-                warn_message = "Invalid input: Unable to convert to a floating point number."
-                QMessageBox.warning(self, "Warning", warn_message)
+                QMessageBox.warning(self, "Warning", "Invalid input: not a float.")
+
+                return None
+
+            if value < min_val or value > max_val:
+                QMessageBox.warning(self, "Warning", "Value out of range.")
 
                 return None
 
             # if we made it here, add the harmonics
-            self.pipeline_thread.start_function('add_harmonic_series', value, exact=checked)
+            self.pipeline_thread.start_function('add_base_harmonic', value)
 
         return None
 
@@ -738,7 +731,7 @@ class MainWindow(QMainWindow):
 
 
 class InputDialog(QDialog):
-    def __init__(self, title, text1, text2):
+    def __init__(self, title, text1):
         super().__init__()
 
         self.setWindowTitle(title)
@@ -751,11 +744,6 @@ class InputDialog(QDialog):
         self.line_edit = QLineEdit()
         layout.addRow(label, self.line_edit)
 
-        # Create a label and checkbox for additional option
-        checkbox_label = QLabel(text2)
-        self.checkbox = QCheckBox()
-        layout.addRow(checkbox_label, self.checkbox)
-
         # Create a button to accept input
         ok_button = QPushButton("Accept")
         ok_button.clicked.connect(self.accept)
@@ -764,7 +752,7 @@ class InputDialog(QDialog):
         self.setLayout(layout)
 
     def get_values(self):
-        return self.line_edit.text(), self.checkbox.isChecked()
+        return self.line_edit.text()
 
 
 def launch_gui():

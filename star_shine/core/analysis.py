@@ -552,17 +552,19 @@ def couple_harmonics(ts_model, f_base, logger=None):
         Instance of TimeSeriesModel containing the time series and model parameters.
     """
     # find the harmonic candidates using the period
-    harmonics, harmonic_n = frs.find_harmonics_tolerance(ts_model.sinusoid.f_n, 1/f_base, f_tol=ts_model.f_resolution/2)
+    harmonics, h_mult = frs.find_harmonics_tolerance(ts_model.sinusoid.f_n, f_base, f_tol=ts_model.f_resolution / 2)
+
     if len(harmonics) == 0:
         if logger is not None:
             logger.warning("No harmonic frequencies found")
+
         return ts_model
 
     # the index of f_base is len(f_n), because the base harmonic is the first frequency to be added at the end
     i_base = len(ts_model.sinusoid.f_n)
 
     # if the base frequency is not yet present, add it
-    if 1 not in harmonic_n:
+    if 1 not in h_mult:
         a_1, ph_1 = pdg.scargle_ampl_phase_single(ts_model.time, ts_model.residual(), f_base)
         ts_model.add_sinusoids(f_base, a_1, ph_1, h_base_new=i_base, h_mult_new=1)
 
@@ -570,10 +572,10 @@ def couple_harmonics(ts_model, f_base, logger=None):
     n_harm_init = len(harmonics)
 
     # go through the harmonics by harmonic number and re-extract them (n==1 must come first, if present)
-    for n in np.unique(harmonic_n):
+    for n in np.unique(h_mult):
         # get the indices to exclude, disregarding included state
         n_sin_tot = len(ts_model.sinusoid.f_n)
-        remove = np.arange(n_sin_tot)[harmonics][harmonic_n == n]
+        remove = np.arange(n_sin_tot)[harmonics][h_mult == n]
 
         # exclude the neighbouring harmonic candidates and update linear model
         ts_model.exclude_sinusoids(remove)
@@ -622,7 +624,7 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
     Notes
     -----
     Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).
-    Assumes the harmonics are already fixed multiples of 1/p_orb as can be achieved with fix_harmonic_frequency.
+    Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.
     """
     # make lists of not-present possible harmonics paired with their base frequency
     i_base_all = []
@@ -678,7 +680,7 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
 
     if logger is not None:
         n_sin = ts_model.sinusoid.n_sin
-        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_h_extracted= {n_sin_init - n_sin}")
+        logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_h_extracted= {n_sin - n_sin_init}")
 
     return ts_model
 
@@ -871,28 +873,26 @@ def select_sinusoids(ts_model, logger=None):
         n_pass_all = np.sum(passed_all)
         n_harm = np.sum(ts_model.sinusoid.passing_harmonic)
         n_harm_pass_all = np.sum(passed_all & ts_model.sinusoid.passing_harmonic)
-        logger.extra(f"Number of sinusoids passed criteria: {n_pass_all} of {n_sin}. "
-                     f"Number of harmonics passed criteria: {n_harm_pass_all} of {n_harm}.")
+        logger.extra(f"Sinusoids passing criteria: {n_pass_all} of {n_sin}. "
+                     f"Harmonics passing criteria: {n_harm_pass_all} of {n_harm}.")
 
     return ts_model
 
 
-def refine_orbital_period(p_orb, time, f_n):
-    """Find the most likely eclipse period from a sinusoid model
+def refine_harmonic_base_frequency(f_base, ts_model):
+    """Refine the base frequency for a harmonic sinusoid model.
 
     Parameters
     ----------
-    p_orb: float
-        Orbital period of the eclipsing binary in days
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
+    f_base: float
+        Base frequency of the harmonic series to refine.
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
 
     Returns
     -------
     float
-        Orbital period of the eclipsing binary in days
+        Base frequency of the harmonic series.
 
     Notes
     -----
@@ -903,73 +903,66 @@ def refine_orbital_period(p_orb, time, f_n):
 
     Same refine algorithm as used in find_orbital_period
     """
-    freq_res = 1.5 / np.ptp(time)  # Rayleigh criterion
-    f_nyquist = 1 / (2 * np.min(np.diff(time)))  # nyquist frequency
+    freq_res = ts_model.f_resolution
+    f_nyquist = ts_model.pd_fn
+    f_n = ts_model.sinusoid.f_n
 
     # refine by using a dense sampling and the harmonic distances
-    f_refine = np.arange(0.99 / p_orb, 1.01 / p_orb, 0.00001 / p_orb)
+    f_refine = np.arange(0.99 * f_base, 1.01 * f_base, 0.00001 * f_base)
     n_harm_r, completeness_r, distance_r = frs.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
     h_measure = n_harm_r * completeness_r  # compute h_measure for constraining a domain
     mask_peak = (h_measure > np.max(h_measure) / 1.5)  # constrain the domain of the search
     i_min_dist = np.argmin(distance_r[mask_peak])
-    p_orb = 1 / f_refine[mask_peak][i_min_dist]
+    f_base = f_refine[mask_peak][i_min_dist]
 
-    return p_orb
+    return f_base
 
 
-def find_orbital_period(time, flux, f_n):
-    """Find the most likely eclipse period from a sinusoid model
+def find_harmonic_base_frequency(ts_model):
+    """Find the most likely base frequency for a harmonic sinusoid model.
 
     Parameters
     ----------
-    time: numpy.ndarray[Any, dtype[float]]
-        Timestamps of the time series
-    flux: numpy.ndarray[Any, dtype[float]]
-        Measurement values of the time series
-    f_n: numpy.ndarray[Any, dtype[float]]
-        The frequencies of a number of sine waves
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
 
     Returns
     -------
-    tuple
-        A tuple containing the following elements:
-        p_orb: float
-            Orbital period of the eclipsing binary in days
-        multiple: float
-            Multiple of the initial period that was chosen
+    float
+        Base frequency of the harmonic series.
 
     Notes
     -----
-    Uses a combination of phase dispersion minimisation and
-    Lomb-Scargle periodogram (see Saha & Vivas 2017), and some
-    refining steps to get the best period.
+    Uses a combination of phase dispersion minimisation and Lomb-Scargle periodogram (see Saha & Vivas 2017),
+    and some refining steps to get the best frequency.
 
-    Also tests various multiples of the period.
-    Precision is 0.00001 (one part in one-hundred-thousand).
+    Also tests various multiples of the period. Precision is 0.00001 (one part in one-hundred-thousand).
     (accuracy might be slightly lower)
     """
-    freq_res = 1.5 / np.ptp(time)  # Rayleigh criterion
-    f_nyquist = 1 / (2 * np.min(np.diff(time)))  # nyquist frequency
+    freq_res = ts_model.f_resolution
+    f_nyquist = ts_model.pd_fn
+    f_n = ts_model.sinusoid.f_n
 
     # first to get a global minimum do combined PDM and LS, at select frequencies
-    periods, phase_disp = pdg.phase_dispersion_minimisation(time, flux, f_n, local=False)
-    ampls, _ = pdg.scargle_ampl_phase(time, flux, 1 / periods)
+    periods, phase_disp = pdg.phase_dispersion_minimisation(ts_model.time, ts_model.flux, f_n, local=False)
+    freqs = 1 / periods
+    ampls, _ = pdg.scargle_ampl_phase(ts_model.time, ts_model.flux, freqs)
     psi_measure = ampls / phase_disp
 
     # also check the number of harmonics at each period and include into best f
-    n_harm, completeness, distance = frs.harmonic_series_length(1 / periods, f_n, freq_res, f_nyquist)
+    n_harm, completeness, distance = frs.harmonic_series_length(freqs, f_n, freq_res, f_nyquist)
     psi_h_measure = psi_measure * n_harm * completeness
 
     # select the best period, refine it and check double P
-    p_orb = periods[np.argmax(psi_h_measure)]
+    f_base = freqs[np.argmax(psi_h_measure)]
 
     # refine by using a dense sampling and the harmonic distances
-    f_refine = np.arange(0.99 / p_orb, 1.01 / p_orb, 0.00001 / p_orb)
+    f_refine = np.arange(0.99 * f_base, 1.01 * f_base, 0.00001 * f_base)
     n_harm_r, completeness_r, distance_r = frs.harmonic_series_length(f_refine, f_n, freq_res, f_nyquist)
     h_measure = n_harm_r * completeness_r  # compute h_measure for constraining a domain
     mask_peak = (h_measure > np.max(h_measure) / 1.5)  # constrain the domain of the search
     i_min_dist = np.argmin(distance_r[mask_peak])
-    p_orb = 1 / f_refine[mask_peak][i_min_dist]
+    f_base = f_refine[mask_peak][i_min_dist]
 
     # reduce the search space by taking limits in the distance metric
     f_left = f_refine[mask_peak][:i_min_dist]
@@ -988,23 +981,22 @@ def find_orbital_period(time, flux, f_n):
     bound_interval = f_r_bound - f_l_bound
 
     # decide on the multiple of the period
-    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, p_orb, f_tol=freq_res / 2)
-    completeness_p = (len(harmonics) / (f_nyquist // (1 / p_orb)))
-    completeness_p_l = (len(harmonics[harmonic_n <= 15]) / (f_nyquist // (1 / p_orb)))
+    harmonics, harmonic_n = frs.find_harmonics_from_pattern(f_n, f_base, f_tol=freq_res / 2)
+    completeness_p = (len(harmonics) / (f_nyquist // f_base))
+    completeness_p_l = (len(harmonics[harmonic_n <= 15]) / (f_nyquist // f_base))
 
-    # check these (commonly missed) multiples
+    # check these (commonly missed) fractions
     n_multiply = np.array([1/2, 2, 3, 4, 5])
-    p_multiples = p_orb * n_multiply
-    n_harm_r_m, completeness_r_m, distance_r_m = frs.harmonic_series_length(1 / p_multiples, f_n, freq_res, f_nyquist)
+    f_fracs = f_base / n_multiply
+    n_harm_r_m, completeness_r_m, distance_r_m = frs.harmonic_series_length(f_fracs, f_n, freq_res, f_nyquist)
     h_measure_m = n_harm_r_m * completeness_r_m  # compute h_measure for constraining a domain
 
     # if there are very high numbers, add double that fraction for testing
     test_frac = h_measure_m / h_measure[mask_peak][i_min_dist]
     if np.any(test_frac[2:] > 3):
         n_multiply = np.append(n_multiply, [2 * n_multiply[2:][test_frac[2:] > 3]])
-        p_multiples = p_orb * n_multiply
-        n_harm_r_m, completeness_r_m, distance_r_m = frs.harmonic_series_length(1 / p_multiples, f_n, freq_res,
-                                                                                f_nyquist)
+        f_fracs = f_base / n_multiply
+        n_harm_r_m, completeness_r_m, distance_r_m = frs.harmonic_series_length(f_fracs, f_n, freq_res, f_nyquist)
         h_measure_m = n_harm_r_m * completeness_r_m  # compute h_measure for constraining a domain
 
     # compute diagnostic fractions that need to meet some threshold
@@ -1014,7 +1006,7 @@ def find_orbital_period(time, flux, f_n):
     # doubling the period may be done if the harmonic filling factor below f_16 is very high
     f_cut = np.max(f_n[harmonics][harmonic_n <= 15])
     f_n_c = f_n[f_n <= f_cut]
-    n_harm_r_2, completeness_r_2, distance_r_2 = frs.harmonic_series_length(1 / p_multiples, f_n_c, freq_res, f_nyquist)
+    n_harm_r_2, completeness_r_2, distance_r_2 = frs.harmonic_series_length(f_fracs, f_n_c, freq_res, f_nyquist)
     compl_frac_2 = completeness_r_2[1] / completeness_p_l
 
     # empirically determined thresholds for the various measures
@@ -1031,20 +1023,20 @@ def find_orbital_period(time, flux, f_n):
     if np.any(test_condition & compl_condition) | (test_condition_2 & compl_condition_2):
         if np.any(test_condition & compl_condition):
             i_best = np.argmax(test_frac[compl_condition])
-            p_orb = p_multiples[compl_condition][i_best]
+            f_base = f_fracs[compl_condition][i_best]
         else:
-            p_orb = 2 * p_orb
+            f_base = f_base / 2
 
         # make new bounds for refining
-        f_left_b = 1 / p_orb - (bound_interval / 2)
-        f_right_b = 1 / p_orb + (bound_interval / 2)
+        f_left_b = f_base - (bound_interval / 2)
+        f_right_b = f_base + (bound_interval / 2)
 
         # refine by using a dense sampling and the harmonic distances
-        f_refine_2 = np.arange(f_left_b, f_right_b, 0.00001 / p_orb)
+        f_refine_2 = np.arange(f_left_b, f_right_b, 0.00001 * f_base)
         n_harm_r2, completeness_r2, distance_r2 = frs.harmonic_series_length(f_refine_2, f_n, freq_res, f_nyquist)
         h_measure_2 = n_harm_r2 * completeness_r2  # compute h_measure for constraining a domain
         mask_peak = (h_measure_2 > np.max(h_measure_2) / 1.5)  # constrain the domain of the search
         i_min_dist = np.argmin(distance_r2[mask_peak])
-        p_orb = 1 / f_refine_2[mask_peak][i_min_dist]
+        f_base = f_refine_2[mask_peak][i_min_dist]
 
-    return p_orb
+    return f_base
