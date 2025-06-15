@@ -54,7 +54,6 @@ def load_data_hdf5(file_name, h5py_file_kwargs=None):
         # file description
         data_dict['target_id'] = file.attrs['target_id']
         data_dict['data_id'] = file.attrs['data_id']
-        data_dict['description'] = file.attrs['description']
         data_dict['date_time'] = file.attrs['date_time']
 
         # original list of files
@@ -104,7 +103,6 @@ def save_data_hdf5(file_name, data_dict):
     with h5py.File(file_name, 'w') as file:
         file.attrs['target_id'] = data_dict['target_id']
         file.attrs['data_id'] = data_dict['data_id']
-        file.attrs['description'] = data_dict['description']
         file.attrs['date_time'] = data_dict['date_time']
 
         # original list of files
@@ -171,7 +169,6 @@ def load_result_hdf5(file_name, h5py_file_kwargs=None):
         # file description
         result_dict['target_id'] = file.attrs['target_id']
         result_dict['data_id'] = file.attrs['data_id']
-        result_dict['description'] = file.attrs['description']
         result_dict['date_time'] = file.attrs['date_time']
 
         # summary statistics
@@ -241,7 +238,6 @@ def save_result_hdf5(file_name, result_dict):
     with h5py.File(file_name, 'w') as file:
         file.attrs['target_id'] = result_dict['target_id']
         file.attrs['data_id'] = result_dict['data_id']
-        file.attrs['description'] = result_dict['description']
         file.attrs['date_time'] = result_dict['date_time']
         file.attrs['n_param'] = result_dict['n_param']  # number of free parameters
         file.attrs['bic'] = result_dict['bic']  # Bayesian Information Criterion of the residuals

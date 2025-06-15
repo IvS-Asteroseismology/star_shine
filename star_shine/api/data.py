@@ -113,7 +113,6 @@ class Data:
         data_dict = dict()
         data_dict['target_id'] = self.target_id
         data_dict['data_id'] = self.data_id
-        data_dict['description'] = 'Star Shine data file'
         data_dict['date_time'] = ut.datetime_formatted()
 
         # original list of files

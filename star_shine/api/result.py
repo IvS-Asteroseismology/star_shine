@@ -26,8 +26,6 @@ class Result:
         User defined identification number or name for the target under investigation.
     data_id: str
         User defined identification name for the dataset used.
-    description: str
-        User defined description of the result in question.
     n_param: int
         Number of free parameters in the model.
     bic: float
@@ -83,7 +81,6 @@ class Result:
         # descriptive
         self.target_id = ''
         self.data_id = ''
-        self.description = ''
 
         # summary statistics
         self.n_param = -1
@@ -146,7 +143,6 @@ class Result:
         result_dict = dict()
         result_dict['target_id'] = self.target_id
         result_dict['data_id'] = self.data_id
-        result_dict['description'] = self.description
         result_dict['date_time'] = ut.datetime_formatted()
 
         result_dict['n_param'] = self.n_param  # number of free parameters
@@ -177,7 +173,7 @@ class Result:
 
         return None
 
-    def from_time_series_model(self, ts_model, target_id=None, data_id=None, description=None):
+    def from_time_series_model(self, ts_model, target_id=None, data_id=None):
         """Fill in the Result attributes with results from a TimeSeriesModel.
 
         Parameters
@@ -188,13 +184,10 @@ class Result:
             User defined identification number or name for the target under investigation.
         data_id: str
             User defined identification name for the dataset used.
-        description: str
-            User defined description of the result in question.
         """
         # descriptive
         self.target_id = target_id
         self.data_id = data_id
-        self.description = description
 
         # summary statistics
         self.n_param = ts_model.n_param
@@ -247,8 +240,7 @@ class Result:
 
         if logger is not None:
             logger.info(f"Loaded result file with target identifier: {result_dict['target_id']}, "
-                        f"created on {result_dict['date_time']}. Data identifier: {result_dict['data_id']}. "
-                        f"Description: {result_dict['description']}")
+                        f"created on {result_dict['date_time']}. Data identifier: {result_dict['data_id']}.")
 
         return instance
 

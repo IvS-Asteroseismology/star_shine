@@ -450,13 +450,13 @@ class MainWindow(QMainWindow):
         lower_plot_data['plot_ys'] = [self.pipeline.ts_model.pd_ampls]
 
         # include result attributes if present
-        if self.pipeline.result.target_id != '' and not self.upper_plot_area.show_residual:
+        if self.pipeline.ts_model.sinusoid.n_param > 0 and not self.upper_plot_area.show_residual:
             # upper plot area - time series
             upper_plot_data['plot_xs'] = [self.pipeline.ts_model.time]
             upper_plot_data['plot_ys'] = [self.pipeline.ts_model.full_model()]
             upper_plot_data['plot_colors'] = ['grey']
 
-        if self.pipeline.result.target_id != '' and not self.lower_plot_area.show_residual:
+        if self.pipeline.ts_model.sinusoid.n_param > 0 and not self.lower_plot_area.show_residual:
             # lower plot area - periodogram
             freqs, ampls = self.pipeline.ts_model.periodogram(subtract_model=True)
             lower_plot_data['plot_xs'].append(freqs)
@@ -466,12 +466,12 @@ class MainWindow(QMainWindow):
             lower_plot_data['vlines_colors'] = ['grey']
 
         # only show residual if toggle checked
-        if self.pipeline.result.target_id != '' and self.upper_plot_area.show_residual:
+        if self.pipeline.ts_model.sinusoid.n_param > 0 and self.upper_plot_area.show_residual:
             # upper plot area - time series
             upper_plot_data['scatter_xs'] = [self.pipeline.ts_model.time]
             upper_plot_data['scatter_ys'] = [self.pipeline.ts_model.residual()]
 
-        if self.pipeline.result.target_id != '' and self.lower_plot_area.show_residual:
+        if self.pipeline.ts_model.sinusoid.n_param > 0 and self.lower_plot_area.show_residual:
             # lower plot area - periodogram
             freqs, ampls = self.pipeline.ts_model.periodogram(subtract_model=True)
             lower_plot_data['plot_xs'] = [freqs]
@@ -595,7 +595,7 @@ class MainWindow(QMainWindow):
 
         # load result into instance
         try:
-            self.pipeline.result = Result.load(file_name=file_path, logger=self.logger)
+            self.pipeline.load_result(file_path)
         except KeyError as e:
             self.logger.error(f"Incompatible file: {e}")
 
@@ -619,7 +619,7 @@ class MainWindow(QMainWindow):
         if not file_path:
             return None
 
-        self.pipeline.result.save(file_path)
+        self.pipeline.save_result(file_path)
 
         return None
 
@@ -630,6 +630,40 @@ class MainWindow(QMainWindow):
 
         # Update the plot area with the results
         self.update_plots(new_plot=False)
+
+        return None
+
+    def add_base_harmonic(self):
+        """Let the user add a base harmonic frequency and add the harmonic series."""
+        if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
+            self.logger.error("Input Error: Load data first.")
+            return None
+
+        # get some parameters
+        min_val = self.pipeline.ts_model.pd_f0
+        max_val = self.pipeline.ts_model.pd_fn
+        text = f"Enter a number between {min_val:1.2f} and {max_val:1.2f}."
+
+        # open the dialog
+        dialog = InputDialog("Add base harmonic frequency", text)
+
+        if dialog.exec():
+            value = dialog.get_values()
+
+            try:
+                value = float(value)
+            except ValueError:
+                QMessageBox.warning(self, "Warning", "Invalid input: not a float.")
+
+                return None
+
+            if value < min_val or value > max_val:
+                QMessageBox.warning(self, "Warning", "Value out of range.")
+
+                return None
+
+            # if we made it here, add the harmonics
+            self.pipeline_thread.start_function('add_base_harmonic', value)
 
         return None
 
@@ -666,40 +700,6 @@ class MainWindow(QMainWindow):
         # Right click
         if button == 3:
             self.pipeline_thread.start_function('remove_approx', x)
-
-        return None
-
-    def add_base_harmonic(self):
-        """Let the user add a base harmonic frequency and add the harmonic series."""
-        if self.pipeline is None:
-            QMessageBox.warning(self, "Warning", "Load data first.")
-            return None
-
-        # get some parameters
-        min_val = self.pipeline.ts_model.pd_f0
-        max_val = self.pipeline.ts_model.pd_fn
-        text = f"Enter a number between {min_val:1.2f} and {max_val:1.2f}."
-
-        # open the dialog
-        dialog = InputDialog("Add base harmonic frequency", text)
-
-        if dialog.exec():
-            value = dialog.get_values()
-
-            try:
-                value = float(value)
-            except ValueError:
-                QMessageBox.warning(self, "Warning", "Invalid input: not a float.")
-
-                return None
-
-            if value < min_val or value > max_val:
-                QMessageBox.warning(self, "Warning", "Value out of range.")
-
-                return None
-
-            # if we made it here, add the harmonics
-            self.pipeline_thread.start_function('add_base_harmonic', value)
 
         return None
 

@@ -110,10 +110,6 @@ class Pipeline:
         # update the TimeSeriesModel passing masks and uncertainties
         self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
 
-        # update the result instance and set the identifiers and description
-        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
-                                           description="Manual extraction.")
-
         # print some useful info
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
                          f"N_p= {self.ts_model.n_param} - Extracted f= {f:1.2f}")
@@ -145,10 +141,6 @@ class Pipeline:
 
         # update the TimeSeriesModel passing masks and uncertainties
         self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
-
-        # update the result instance and set the identifiers and description
-        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
-                                           description="Manual extraction.")
 
         # print some useful info
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
@@ -192,10 +184,6 @@ class Pipeline:
 
         # update the TimeSeriesModel passing masks and uncertainties
         self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
-
-        # update the result instance and set the identifiers and description
-        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
-                                           description="Iterative prewhitening results.")
 
         # print some useful info
         t_b = systime.time()
@@ -248,9 +236,6 @@ class Pipeline:
         # update the TimeSeriesModel passing masks and uncertainties
         self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
 
-        # update the result instance and set the identifiers and description
-        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
-                                           description="Multi-sinusoid NL-LS optimisation results.")
         # ut.save_inference_data(file_name, inf_data)  # currently not saved
 
         # print some useful info
@@ -272,10 +257,6 @@ class Pipeline:
 
         # update the TimeSeriesModel passing masks and uncertainties
         self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
-
-        # update the result instance and set the identifiers and description
-        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
-                                           description="Addition of harmonic series.")
 
         # print some useful info
         self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
@@ -325,10 +306,6 @@ class Pipeline:
 
         # update the TimeSeriesModel passing masks and uncertainties
         self.ts_model = ana.select_sinusoids(self.ts_model, logger=self.logger)
-
-        # update the result instance and set the identifiers and description
-        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id,
-                                           description="Harmonic frequencies coupled to the orbital period.")
 
         # print some useful info
         t_b = systime.time()
@@ -413,11 +390,7 @@ class Pipeline:
 
             # skip to next step if result exists and we were not planning to overwrite it
             if os.path.isfile(file_name) and not config.overwrite:
-                # load result for next step
-                self.result = Result.load(file_name, logger=self.logger)
-
-                # set the TimeSeriesModel
-                self.ts_model = self.result.to_time_series_model(self.ts_model)
+                self.load_result(file_name)  # load result for next step
 
                 continue
 
@@ -427,10 +400,42 @@ class Pipeline:
 
             # save the results if conditions are met
             if not os.path.isfile(file_name) or config.overwrite:
-                self.result.save(file_name)
+                self.save_result(file_name)
 
         # final message and timing
         t_b = systime.time()
         self.logger.info(f"End of analysis. Total time elapsed: {t_b - t_a:1.1f}s.")  # info to save to log
+
+        return None
+
+    def load_result(self, file_name):
+        """Load a result file and update the model.
+
+        Parameters
+        ----------
+        file_name: str
+            File name to load the results from
+        """
+        # load result from file
+        self.result = Result.load(file_name, logger=self.logger)
+
+        # set the TimeSeriesModel
+        self.ts_model = self.result.to_time_series_model(self.ts_model)
+
+        return None
+
+    def save_result(self, file_name):
+        """Update the result form model and save.
+
+        Parameters
+        ----------
+        file_name: str
+            File name to load the results from
+        """
+        # update the result instance and set the identifiers
+        self.result.from_time_series_model(self.ts_model, target_id=self.data.target_id, data_id=self.data.data_id)
+
+        # save result to file
+        self.result.save(file_name)
 
         return None
