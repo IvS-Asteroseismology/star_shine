@@ -15,7 +15,7 @@ from PySide6.QtWidgets import QTableView, QHeaderView, QDialog, QFormLayout, QCh
 from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor, QIcon
 
 from star_shine.core import utility as ut
-from star_shine.api import Data, Result, Pipeline
+from star_shine.api import Data, Pipeline
 from star_shine.gui import gui_log, gui_plot, gui_analysis, gui_config
 from star_shine.config import helpers as hlp
 
@@ -441,44 +441,46 @@ class MainWindow(QMainWindow):
         upper_plot_data = {}
         lower_plot_data = {}
 
+        # collect attributes
+        n_param = self.pipeline.ts_model.sinusoid.n_param
+        time = self.pipeline.ts_model.time
+        flux = self.pipeline.ts_model.flux
+
         # upper plot area - time series
-        upper_plot_data['scatter_xs'] = [self.pipeline.ts_model.time]
-        upper_plot_data['scatter_ys'] = [self.pipeline.ts_model.flux]
+        upper_plot_data['scatter_xs'] = [time]
+        upper_plot_data['scatter_ys'] = [flux]
         # lower plot area - periodogram
         lower_plot_data['plot_xs'] = [self.pipeline.ts_model.pd_freqs]
         lower_plot_data['plot_ys'] = [self.pipeline.ts_model.pd_ampls]
 
         # include result attributes if present
-        if self.pipeline.ts_model.sinusoid.n_param > 0 and not self.upper_plot_area.show_residual:
-            import numpy as np
-            print(self.pipeline.ts_model.sinusoid.n_sin)
-            self.pipeline.ts_model.include_sinusoids(np.arange(len(self.pipeline.ts_model.sinusoid.f_n)))
-            print(self.pipeline.ts_model.sinusoid.n_sin)
+        if n_param > 0:
+            # calculate model and residual
+            model = self.pipeline.ts_model.calc_model()
+            residual = flux - model
+
+            # calculate periodogram
+            freqs, ampls = self.pipeline.ts_model.calc_periodogram()
+
             # upper plot area - time series
-            upper_plot_data['plot_xs'] = [self.pipeline.ts_model.time]
-            upper_plot_data['plot_ys'] = [self.pipeline.ts_model.full_model()]
-            upper_plot_data['plot_colors'] = ['grey']
+            if not self.upper_plot_area.show_residual:
+                upper_plot_data['plot_xs'] = [time]
+                upper_plot_data['plot_ys'] = [model]
+                upper_plot_data['plot_colors'] = ['grey']
+            else: # only show residual if toggle checked
+                upper_plot_data['scatter_xs'] = [time]
+                upper_plot_data['scatter_ys'] = [residual]
 
-        if self.pipeline.ts_model.sinusoid.n_param > 0 and not self.lower_plot_area.show_residual:
             # lower plot area - periodogram
-            freqs, ampls = self.pipeline.ts_model.periodogram(subtract_model=True)
-            lower_plot_data['plot_xs'].append(freqs)
-            lower_plot_data['plot_ys'].append(ampls)
-            lower_plot_data['vlines_xs'] = [self.pipeline.ts_model.sinusoid.f_n]
-            lower_plot_data['vlines_ys'] = [self.pipeline.ts_model.sinusoid.a_n]
-            lower_plot_data['vlines_colors'] = ['grey']
-
-        # only show residual if toggle checked
-        if self.pipeline.ts_model.sinusoid.n_param > 0 and self.upper_plot_area.show_residual:
-            # upper plot area - time series
-            upper_plot_data['scatter_xs'] = [self.pipeline.ts_model.time]
-            upper_plot_data['scatter_ys'] = [self.pipeline.ts_model.residual()]
-
-        if self.pipeline.ts_model.sinusoid.n_param > 0 and self.lower_plot_area.show_residual:
-            # lower plot area - periodogram
-            freqs, ampls = self.pipeline.ts_model.periodogram(subtract_model=True)
-            lower_plot_data['plot_xs'] = [freqs]
-            lower_plot_data['plot_ys'] = [ampls]
+            if not self.lower_plot_area.show_residual:
+                lower_plot_data['plot_xs'].append(freqs)
+                lower_plot_data['plot_ys'].append(ampls)
+                lower_plot_data['vlines_xs'] = [self.pipeline.ts_model.sinusoid.f_n]
+                lower_plot_data['vlines_ys'] = [self.pipeline.ts_model.sinusoid.a_n]
+                lower_plot_data['vlines_colors'] = ['grey']
+            else: # only show residual if toggle checked
+                lower_plot_data['plot_xs'] = [freqs]
+                lower_plot_data['plot_ys'] = [ampls]
 
         # set the plot data
         self.upper_plot_area.set_plot_data(**upper_plot_data)
@@ -494,9 +496,9 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def handle_result_signal(self, msg, update=False):
-        """Handle the emitted result signal: update the GUI with the results."""
-        # update log text field
+    def update_results(self, msg, update=False):
+        """Update the GUI with the results."""
+        # show the message in the log area
         self.append_text(msg)
 
         if update:
@@ -519,14 +521,13 @@ class MainWindow(QMainWindow):
 
         # custom gui-specific logger
         self.logger = gui_log.get_custom_gui_logger(data.target_id, full_dir)
-        self.logger.log_signal.connect(self.handle_result_signal)
+        self.logger.log_signal.connect(self.update_results)
 
         # Make ready the pipeline class
         self.pipeline = Pipeline(data=data, save_dir=self.save_dir, logger=self.logger)
 
         # set up a pipeline thread
         self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline)
-        # self.pipeline_thread.result_signal.connect(self.handle_result_signal)
 
         # update the info fields
         self.update_info_fields()

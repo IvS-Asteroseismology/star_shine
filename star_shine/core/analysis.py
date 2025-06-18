@@ -263,7 +263,8 @@ def refine_subset(ts_model, close_f, logger=None):
             ts_model.update_linear_model()
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - N_refined= {len(close_f)}")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - N_refined= {len(close_f)}",
+                     extra={'update': True})
 
     return None
 
@@ -358,7 +359,8 @@ def replace_subset(ts_model, close_f, final_remove=True, logger=None):
         ts_model.remove_excluded()
 
     if logger is not None:
-        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - N_replaced= {n_replaced}")
+        logger.extra(f"N_f= {ts_model.sinusoid.n_sin}, BIC= {bic_prev:1.2f} - N_replaced= {n_replaced}",
+                     extra={'update': True})
 
     return None
 

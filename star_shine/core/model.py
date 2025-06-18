@@ -345,6 +345,24 @@ class LinearModel:
         """
         return self.const, self.slope
 
+    def calc_linear_model(self, time, i_chunks):
+        """Calculate the current linear model.
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series.
+        i_chunks: numpy.ndarray[Any, dtype[int]]
+            Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+            the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            Time series model of the piece-wise linear curve.
+        """
+        return linear_curve(time, self.const, self.slope, i_chunks)
+
     def set_linear_model(self, time, const_new, slope_new, i_chunks):
         """Set the linear model according to the new parameters.
 
@@ -786,6 +804,16 @@ class SinusoidModel:
             Index of f in f_n.
         """
         return np.abs(self._f_n - f).argmin()
+
+    def calc_sinusoid_model(self, time):
+        """Calculate the current sinusoid model (disregarding include).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            Time series model of the sinusoids.
+        """
+        return sum_sines(time, self.f_n, self.a_n, self.ph_n)
 
     def _check_removed_h_base(self, indices):
         """If a harmonic base frequency was removed, remove the whole harmonic series."""

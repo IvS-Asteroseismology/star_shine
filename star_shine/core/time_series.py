@@ -166,7 +166,7 @@ class TimeSeriesModel(TimeSeries):
         """
         return *self.linear.get_linear_parameters(), *self.sinusoid.get_sinusoid_parameters()
 
-    def full_model(self):
+    def model(self):
         """The full time series model.
 
         Returns
@@ -184,7 +184,7 @@ class TimeSeriesModel(TimeSeries):
         numpy.ndarray[Any, dtype[float]]
             Flux minus the current time series model.
         """
-        return self.flux - self.full_model()
+        return self.flux - self.model()
 
     def bic(self):
         """Calculate the BIC of the residual.
@@ -217,6 +217,30 @@ class TimeSeriesModel(TimeSeries):
             f, a = pdg.scargle_parallel(self.time, self.residual(), f0=f0, fn=fn, df=df, norm='amplitude')
         else:
             f, a = self.pd_freqs, self.pd_ampls
+
+        return f, a
+
+    def calc_model(self):
+        """Calculate the full time series model (disregarding include).
+
+        Returns
+        -------
+        numpy.ndarray[Any, dtype[float]]
+            Combined time series model.
+        """
+        return self.linear.calc_linear_model(self.time, self.i_chunks) + self.sinusoid.calc_sinusoid_model(self.time)
+
+    def calc_periodogram(self):
+        """Calculate Lomb-Scargle periodogram of the time series (disregarding include).
+
+        Returns
+        -------
+        tuple
+            Contains the frequencies numpy.ndarray[Any, dtype[float]]
+            and the spectrum numpy.ndarray[Any, dtype[float]]
+        """
+        f0, fn, df = self.pd_f0, self.pd_fn, self.pd_df
+        f, a = pdg.scargle_parallel(self.time, self.flux - self.calc_model(), f0=f0, fn=fn, df=df, norm='amplitude')
 
         return f, a
 
