@@ -101,6 +101,69 @@ def chains_within_rayleigh(f_n, rayleigh):
 
 
 @nb.njit(cache=True)
+def f_close_pairs(f_n, df):
+    """Find pairs of frequencies that are closer than df.
+
+    Only retains the pair with the closest distance if a chain occurs.
+
+    Parameters
+    ----------
+    f_n: numpy.ndarray[Any, dtype[float]]
+        The frequencies of a number of sine waves
+    df: float
+        The threshold difference below which two frequencies are considered too close.
+
+    Returns
+    -------
+    list of lists
+        A list where each sublist contains the indices of two frequencies from `f_n` that are closer than `df`.
+
+    Examples
+    --------
+    In this example, the frequencies at indices 0 and 2 (i.e., 10.5 and 11.2), and at 1 and 3 are closer than 1.0.
+    >>> f_n = np.array([10.5, 20.3, 11.2, 19.8])
+    >>> df = 1.0
+    >>> print(f_close_pairs(f_n, df))
+    [[0, 2], [3, 1]]
+
+    In this example, 0 and 2  are closer than 1.0, but 2 and 4 are closer than 0 and 2.
+    >>> f_n = np.array([19.8, 10.1, 20.3, 11.2, 20.4])
+    >>> df = 1.0
+    >>> print(f_close_pairs(f_n, df))
+    [[2, 4]]
+    """
+    # first sort by frequency
+    sorter = np.argsort(f_n)
+
+    # spaces between frequencies
+    f_diff = np.diff(f_n[sorter])
+
+    # find pairs that are too close
+    pairs = []
+    for i in range(len(f_n) - 1):
+        if f_diff[i] < df:
+            i_1, i_2 = sorter[i], sorter[i + 1]
+
+            # loop through existing pairs to find double use
+            remove_pair = []
+            append = True
+            for j in range(len(pairs)):
+                if i_1 in pairs[j] or i_2 in pairs[j]:
+                    if f_diff[i] < (f_n[pairs[j][1]] - f_n[pairs[j][0]]):
+                        remove_pair.append(j)
+                    else:
+                        append = False
+
+            for pair in remove_pair:
+                pairs.pop(pair)
+
+            if append:
+                pairs.append([i_1, i_2])
+
+    return pairs
+
+
+@nb.njit(cache=True)
 def remove_insignificant_sigma(f_n, f_n_err, a_n, a_n_err, sigma_f=1., sigma_a=3.):
     """Removes insufficiently significant frequencies in terms of error margins.
 

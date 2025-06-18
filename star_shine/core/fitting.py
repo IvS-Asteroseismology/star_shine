@@ -20,7 +20,7 @@ import numba as nb
 from scipy.optimize import minimize
 
 from star_shine.core import time_series as tms, model as mdl, goodness_of_fit as gof
-from star_shine.core import frequency_sets as frs
+from star_shine.core import frequency_sets as frs, periodogram as pdg
 
 
 @nb.njit(cache=True)
@@ -485,11 +485,14 @@ def fit_multi_sinusoid_grouped(ts_model, g_min=45, g_max=50, logger=None):
         # get current residual (excluding group, harmonics, and linear curve)
         residual = ts_model.flux - ts_model.sinusoid.sinusoid_model
 
+        # get the periodogram amplitudes for amplitude limits
+        pd_ampls, _ = pdg.scargle_ampl_phase(ts_model.time, residual, f_n[group])
+
         # prepare fit input
         par_init_i = np.concatenate((ts_model.sinusoid.f_base, ts_model.linear.const, ts_model.linear.slope,
                                      f_n[group], a_n[group], ph_n[group]))
         par_bounds_i = par_bounds + [(f_low, None) for _ in range(n_sin_g)]  # frequencies of free sinusoids
-        par_bounds_i += [(0, None) for _ in range(n_sin_g)]  # amplitudes of free sinusoids
+        par_bounds_i += [(0, 2 * pd_ampls[i]) for i in range(n_sin_g)]  # amplitudes of free sinusoids
         par_bounds_i += [(None, None) for _ in range(n_sin_g)]  # phases of free sinusoids
         arguments_i = (ts_model.time, residual, ts_model.i_chunks, h_base_map, h_mult)
 

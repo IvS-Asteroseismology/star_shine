@@ -7,9 +7,8 @@ Code written by: Luc IJspeert
 """
 import numpy as np
 
-from star_shine.core import time_series as tms, model as mdl, periodogram as pdg
-from star_shine.core import fitting as fit, goodness_of_fit as gof, frequency_sets as frs
-from star_shine.core import utility as ut
+from star_shine.core import time_series as tms, periodogram as pdg, fitting as fit
+from star_shine.core import frequency_sets as frs, utility as ut
 from star_shine.config.helpers import get_config
 
 
@@ -465,9 +464,9 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         # update the linear pars
         ts_model.update_linear_model()
 
-        # improve frequencies with some strategy
+        # improve sinusoids with some strategy
         if fit_each_step:
-            # fit all frequencies for best improvement
+            # fit all sinusoids for best improvement
             fit.fit_multi_sinusoid_grouped(ts_model, logger=logger)
         else:
             # select only close frequencies for iteration
@@ -660,6 +659,46 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
     if logger is not None:
         n_sin = ts_model.sinusoid.n_sin
         logger.extra(f"N_f= {n_sin}, BIC= {bic_prev:1.2f} - N_h_extracted= {n_sin - n_sin_init}")
+
+    return None
+
+
+def replace_close_sinusoid_pair(ts_model):
+    """Replace pairs of sinusoids that have gotten too close.
+
+    Parameters
+    ----------
+    ts_model: tms.TimeSeriesModel
+        Instance of TimeSeriesModel containing the time series and model parameters.
+    """
+    f_n = ts_model.sinusoid.f_n
+    harmonics = ts_model.sinusoid.harmonics
+
+    # get the pairs of close frequencies
+    i_close = frs.f_close_pairs(f_n, df=ts_model.pd_df)
+
+    # replace each pair, taking harmonics into account
+    for pair in i_close:
+        # exclude the pair
+        ts_model.exclude_sinusoids(pair)
+
+        # check for harmonic
+        if np.any(harmonics[pair]):
+            # if f is a harmonic, don't shift the frequency
+            f_i = f_n[pair][harmonics[pair]]  # select the harmonic
+            a_i, ph_i = pdg.scargle_ampl_phase(ts_model.time, ts_model.residual(), f_i)
+        else:
+            f0 = f_n[pair[0]] - ts_model.pd_df  # pairs are ordered
+            fn = f_n[pair[1]] + ts_model.pd_df  # pairs are ordered
+            f_i, a_i, ph_i = extract_local(ts_model.time, ts_model.residual(), f0=f0, fn=fn)
+
+        # add sinusoid to the model
+        ts_model.add_sinusoids(f_i, a_i, ph_i)
+        # as a last model-refining step, redetermine the constant and slope
+        ts_model.update_linear_model()
+
+    # remove the excluded sinusoids
+    ts_model.remove_excluded()
 
     return None
 

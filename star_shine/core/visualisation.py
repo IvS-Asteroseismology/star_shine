@@ -51,11 +51,11 @@ def plot_pd(time, flux, i_chunks, plot_per_chunk=False, file_name=None, show=Tru
     None
     """
     # make the periodograms
-    freqs, ampls = pdg.astropy_scargle(time, flux)
+    freqs, ampls = pdg.scargle_parallel(time, flux)
     freqs_list, ampls_list = [], []
     if plot_per_chunk:
         for ch in i_chunks:
-            f, a = pdg.astropy_scargle(time[ch[0]:ch[1]], flux[ch[0]:ch[1]])
+            f, a = pdg.scargle_parallel(time[ch[0]:ch[1]], flux[ch[0]:ch[1]])
             freqs_list.append(f)
             ampls_list.append(a)
 
@@ -136,9 +136,9 @@ def plot_pd_single_output(time, flux, flux_err, p_orb, p_err, const, slope, f_n,
     model = model_linear + model_sinusoid
 
     # make periodograms
-    freqs, ampls = pdg.astropy_scargle(time, flux)
+    freqs, ampls = pdg.scargle_parallel(time, flux)
     freq_range = np.ptp(freqs)
-    freqs_r, ampls_r = pdg.astropy_scargle(time, flux - model)
+    freqs_r, ampls_r = pdg.scargle_parallel(time, flux - model)
 
     # get error values
     errors = ut.formal_uncertainties(time, flux - model, flux_err, a_n, i_chunks)
@@ -220,13 +220,13 @@ def plot_pd_full_output(time, flux, flux_err, models, p_orb_i, p_err_i, f_n_i, a
     None
     """
     # make periodograms
-    freqs, ampls = pdg.astropy_scargle(time, flux - np.mean(flux))
+    freqs, ampls = pdg.scargle_parallel(time, flux - np.mean(flux))
     freq_range = np.ptp(freqs)
-    freqs_1, ampls_1 = pdg.astropy_scargle(time, flux - models[0] - np.all(models[0] == 0) * np.mean(flux))
-    freqs_2, ampls_2 = pdg.astropy_scargle(time, flux - models[1] - np.all(models[1] == 0) * np.mean(flux))
-    freqs_3, ampls_3 = pdg.astropy_scargle(time, flux - models[2] - np.all(models[2] == 0) * np.mean(flux))
-    freqs_4, ampls_4 = pdg.astropy_scargle(time, flux - models[3] - np.all(models[3] == 0) * np.mean(flux))
-    freqs_5, ampls_5 = pdg.astropy_scargle(time, flux - models[4] - np.all(models[4] == 0) * np.mean(flux))
+    freqs_1, ampls_1 = pdg.scargle_parallel(time, flux - models[0] - np.all(models[0] == 0) * np.mean(flux))
+    freqs_2, ampls_2 = pdg.scargle_parallel(time, flux - models[1] - np.all(models[1] == 0) * np.mean(flux))
+    freqs_3, ampls_3 = pdg.scargle_parallel(time, flux - models[2] - np.all(models[2] == 0) * np.mean(flux))
+    freqs_4, ampls_4 = pdg.scargle_parallel(time, flux - models[3] - np.all(models[3] == 0) * np.mean(flux))
+    freqs_5, ampls_5 = pdg.scargle_parallel(time, flux - models[4] - np.all(models[4] == 0) * np.mean(flux))
 
     # get error values
     err_1 = ut.formal_uncertainties(time, flux - models[0], flux_err, a_n_i[0], i_chunks)
