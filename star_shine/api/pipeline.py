@@ -226,8 +226,8 @@ class Pipeline:
         t_a = systime.time()
         self.logger.info(f"Iterative prewhitening starting.")
 
-        # start by looking for more harmonics
-        if self.ts_model.sinusoid.n_base != 0:
+        # start by looking for more harmonics - only do this when n_extract set to 0
+        if self.ts_model.sinusoid.n_base != 0 and n_extract == 0:
             ana.extract_harmonics(self.ts_model, config.bic_thr, logger=self.logger)
 
         # extract all frequencies with the iterative scheme
