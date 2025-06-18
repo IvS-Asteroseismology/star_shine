@@ -85,7 +85,64 @@ class Pipeline:
 
         return
 
-    def extract_approx(self, f_approx, ):
+    def add_sinusoid(self, f, a, ph):
+        """Manually add a sinusoid to the model.
+
+        Parameters
+        ----------
+        f: float
+            The frequency of a sinusoid.
+        a: float
+            The amplitude of a sinusoid.
+        ph: float
+            The phase of a sinusoid.
+        """
+        # if identical frequency exists, assume this was unintentional
+        if self.ts_model.sinusoid.n_sin > 0 and np.min(np.abs(f - self.ts_model.sinusoid.f_n)) < self.ts_model.pd_df:
+            self.logger.warning("Existing identical frequency found.")
+            return None
+
+        # add the sinusoid
+        self.ts_model.add_sinusoids(f, a, ph)
+        self.ts_model.update_linear_model()
+
+        # remove any frequencies that end up not making the statistical cut
+        ana.reduce_sinusoids(self.ts_model, logger=self.logger)
+
+        # update the TimeSeriesModel passing masks and uncertainties
+        ana.select_sinusoids(self.ts_model, logger=self.logger)
+
+        # print some useful info
+        self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
+                         f"N_p= {self.ts_model.n_param} - Added f= {f:1.2f}", extra={'update': True})
+
+        return None
+
+    def delete_sinusoids(self, indices):
+        """Manually delete sinusoid(s) from the model.
+
+        Parameters
+        ----------
+        indices: numpy.ndarray[Any, dtype[int]]
+            The indices of the sinusoids to delete.
+        """
+        # remove the sinusoid(s)
+        self.ts_model.remove_sinusoids(indices)
+        self.ts_model.update_linear_model()
+
+        # remove any frequencies that end up not making the statistical cut
+        ana.reduce_sinusoids(self.ts_model, logger=self.logger)
+
+        # update the TimeSeriesModel passing masks and uncertainties
+        ana.select_sinusoids(self.ts_model, logger=self.logger)
+
+        # print some useful info
+        self.logger.info(f"N_f= {self.ts_model.sinusoid.n_sin}, BIC= {self.ts_model.bic():1.2f}, "
+                         f"N_p= {self.ts_model.n_param} - Sinusoid(s) deleted", extra={'update': True})
+
+        return None
+
+    def extract_approx(self, f_approx):
         """Extract a sinusoid from the time series at an approximate frequency.
 
         Parameters

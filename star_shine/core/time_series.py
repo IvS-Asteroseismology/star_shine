@@ -23,6 +23,10 @@ class TimeSeries:
     i_chunks: numpy.ndarray[Any, dtype[int]]
         Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
         the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
+    n_time: int
+        Number of data points in the time series.
+    n_chunks: int
+        Number of time chunks in the time series.
     t_tot: float
         Total time base of observations.
     t_mean: float

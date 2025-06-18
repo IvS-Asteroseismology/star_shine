@@ -207,62 +207,20 @@ class MainWindow(QMainWindow):
         l_col_widget = QWidget()
         l_col_layout = QVBoxLayout(l_col_widget)
 
+        # create a horizontal layout for info fields and buttons
+        l_col_top_widget = QWidget()
+        l_col_top_layout = QHBoxLayout(l_col_top_widget)
+
         # create the info grid
         info_widget = self._create_info_fields()
-        l_col_layout.addWidget(info_widget)
+        l_col_top_layout.addWidget(info_widget, stretch=1)
 
-        # create a horizontal layout with the buttons for each step
-        steps_button_widget = QWidget()
-        steps_button_layout = QHBoxLayout(steps_button_widget)
+        # create the button grid
+        button_widget = self._create_buttons_grid()
+        l_col_top_layout.addWidget(button_widget, stretch=1)
 
-        # Create a spin box for integer input
-        self.spin_box = QSpinBox(self)
-        self.spin_box.setRange(0, 99999)
-        self.spin_box.setValue(0)
-        # Button for starting iterative prewhitening
-        extract_button = QPushButton("Extract")
-        extract_button.clicked.connect(lambda: self.perform_analysis('iterative_prewhitening',
-                                                                     n_extract=self.spin_box.value()))
-        steps_button_layout.addWidget(extract_button)
-        steps_button_layout.addWidget(self.spin_box)  # add the number field after the button
-
-        # Button for starting sinusoid fit
-        optimise_button = QPushButton("Optimise")
-        optimise_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid'))
-        steps_button_layout.addWidget(optimise_button)
-
-        # Button for coupling harmonics
-        couple_harmonic_button = QPushButton("Couple Harmonics")
-        couple_harmonic_button.clicked.connect(functools.partial(self.perform_analysis, 'couple_harmonics'))
-        steps_button_layout.addWidget(couple_harmonic_button)
-
-        # Button for inputting a base harmonic
-        add_harmonic_button = QPushButton("Add Base Harmonic")
-        add_harmonic_button.clicked.connect(self.add_base_harmonic)
-        steps_button_layout.addWidget(add_harmonic_button)
-
-        l_col_layout.addWidget(steps_button_widget)
-
-        # create a horizontal layout with some buttons
-        run_button_widget = QWidget()
-        run_button_layout = QHBoxLayout(run_button_widget)
-
-        # Button for starting analysis
-        analyze_button = QPushButton("Run Full Analyis")
-        analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'run'))
-        run_button_layout.addWidget(analyze_button)
-
-        # Button for starting analysis
-        interrupt_button = QPushButton("Interrupt [WIP]")
-        interrupt_button.clicked.connect(self.stop_analysis)
-        run_button_layout.addWidget(interrupt_button)
-
-        # Button for saving the results
-        save_result_button = QPushButton("Save Result")
-        save_result_button.clicked.connect(self.save_result)
-        run_button_layout.addWidget(save_result_button)
-
-        l_col_layout.addWidget(run_button_widget)
+        # add widget to the left column layout
+        l_col_layout.addWidget(l_col_top_widget)
 
         # Log area
         log_label = QLabel("Log:")
@@ -298,7 +256,6 @@ class MainWindow(QMainWindow):
         self.table_view.setModel(self.table_model)
 
         # Connect the selection changed signal
-        self.selected_rows = []
         self.table_view.selectionModel().selectionChanged.connect(self.update_plots)
 
         # Set the horizontal header's stretch mode for each column
@@ -343,6 +300,72 @@ class MainWindow(QMainWindow):
 
         return r_col_widget
 
+    def _create_buttons_grid(self):
+        """Create and return the left column button grid widget.
+
+        Returns
+        -------
+        QWidget
+            The left column button grid widget.
+        """
+        # create a grid area for labels and read-only text fields
+        button_widget = QWidget()
+        button_layout = QGridLayout(button_widget)
+
+        # Create a spin box for integer input
+        self.spin_box = QSpinBox(self)
+        self.spin_box.setRange(0, 99999)
+        self.spin_box.setValue(0)
+
+        # Button for starting iterative prewhitening
+        extract_button = QPushButton("Extract")
+        extract_button.clicked.connect(lambda: self.perform_analysis('iterative_prewhitening',
+                                                                     n_extract=self.spin_box.value()))
+        button_layout.addWidget(extract_button, 0, 0)
+        button_layout.addWidget(self.spin_box, 0, 1)  # add the number field after the button
+
+        # Button for starting sinusoid fit
+        optimise_button = QPushButton("Optimise")
+        optimise_button.clicked.connect(functools.partial(self.perform_analysis, 'optimise_sinusoid'))
+        button_layout.addWidget(optimise_button, 1, 0)
+
+        # Button for inputting a base harmonic
+        add_harmonic_button = QPushButton("Add Base Harmonic")
+        add_harmonic_button.clicked.connect(self.add_base_harmonic)
+        button_layout.addWidget(add_harmonic_button, 2, 0)
+
+        # Button for coupling harmonics
+        couple_harmonic_button = QPushButton("Couple Harmonics")
+        couple_harmonic_button.clicked.connect(functools.partial(self.perform_analysis, 'couple_harmonics'))
+        button_layout.addWidget(couple_harmonic_button, 2, 1)
+
+        # Button for adding a sinusoid manually
+        add_button = QPushButton("Add Sinusoid")
+        add_button.clicked.connect(self.add_sinusoid)
+        button_layout.addWidget(add_button, 3, 0)
+
+        # Button for deleting a selected sinusoid
+        delete_button = QPushButton("Delete Sinusoid")
+        delete_button.clicked.connect(self.delete_sinusoid)
+        button_layout.addWidget(delete_button, 3, 1)
+
+        # Button for saving the results
+        save_result_button = QPushButton("Save Result")
+        save_result_button.clicked.connect(self.save_result)
+        button_layout.addWidget(save_result_button, 4, 0)
+
+        # Button for starting analysis
+        analyze_button = QPushButton("Run Full Analyis")
+        analyze_button.clicked.connect(functools.partial(self.perform_analysis, 'run'))
+        button_layout.addWidget(analyze_button, 5, 0)
+
+        # Button for starting analysis
+        interrupt_button = QPushButton("Interrupt [WIP]")
+        interrupt_button.clicked.connect(self.stop_analysis)
+        button_layout.addWidget(interrupt_button, 5, 1)
+
+        return button_widget
+
     def _create_info_fields(self):
         """Create and return the left column information grid widget.
 
@@ -374,8 +397,50 @@ class MainWindow(QMainWindow):
         data_id_label = QLabel("Data ID:")
         self.data_id_field = QLineEdit()
         self.data_id_field.setReadOnly(True)
-        info_layout.addWidget(data_id_label, 1, 2)
-        info_layout.addWidget(self.data_id_field, 1, 3)
+        info_layout.addWidget(data_id_label, 2, 0)
+        info_layout.addWidget(self.data_id_field, 2, 1)
+
+        # Number of data points in the time series
+        n_time_label = QLabel("N data points:")
+        self.n_time_field = QLineEdit()
+        self.n_time_field.setReadOnly(True)
+        info_layout.addWidget(n_time_label, 3, 0)
+        info_layout.addWidget(self.n_time_field, 3, 1)
+
+        # Number of time chunks in the time series
+        n_chunks_label = QLabel("N time chunks:")
+        self.n_chunks_field = QLineEdit()
+        self.n_chunks_field.setReadOnly(True)
+        info_layout.addWidget(n_chunks_label, 4, 0)
+        info_layout.addWidget(self.n_chunks_field, 4, 1)
+
+        # Total time base of observations
+        t_tot_label = QLabel("Total time base:")
+        self.t_tot_field = QLineEdit()
+        self.t_tot_field.setReadOnly(True)
+        info_layout.addWidget(t_tot_label, 5, 0)
+        info_layout.addWidget(self.t_tot_field, 5, 1)
+
+        # Time reference (zero) point of the full light curve
+        t_mean_label = QLabel("Time reference:")
+        self.t_mean_field = QLineEdit()
+        self.t_mean_field.setReadOnly(True)
+        info_layout.addWidget(t_mean_label, 6, 0)
+        info_layout.addWidget(self.t_mean_field, 6, 1)
+
+        # Median time step of observations
+        t_step_label = QLabel("Median time step:")
+        self.t_step_field = QLineEdit()
+        self.t_step_field.setReadOnly(True)
+        info_layout.addWidget(t_step_label, 7, 0)
+        info_layout.addWidget(self.t_step_field, 7, 1)
+
+        # Frequency resolution of the time series
+        f_resolution_label = QLabel("Frequency resolution:")
+        self.f_resolution_field = QLineEdit()
+        self.f_resolution_field.setReadOnly(True)
+        info_layout.addWidget(f_resolution_label, 8, 0)
+        info_layout.addWidget(self.f_resolution_field, 8, 1)
 
         return info_widget
 
@@ -388,6 +453,12 @@ class MainWindow(QMainWindow):
         if self.pipeline is not None:
             self.target_id_field.setText(self.pipeline.data.target_id)
             self.data_id_field.setText(self.pipeline.data.data_id)
+            self.n_time_field.setText(str(self.pipeline.ts_model.n_time))
+            self.n_chunks_field.setText(str(self.pipeline.ts_model.n_chunks))
+            self.t_tot_field.setText(str(self.pipeline.ts_model.t_tot))
+            self.t_mean_field.setText(str(self.pipeline.ts_model.t_mean))
+            self.t_step_field.setText(str(self.pipeline.ts_model.t_step))
+            self.f_resolution_field.setText(str(self.pipeline.ts_model.f_resolution))
 
         return None
 
@@ -603,7 +674,7 @@ class MainWindow(QMainWindow):
         """Save data to a file using a dialog window."""
         # check whether data is present
         if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
-            self.logger.error("Input Error: please load data first.")
+            self.logger.error("Input Error: load data first.")
             return None
 
         suggested_path = os.path.join(self.save_dir, self.pipeline.data.target_id + '_data.hdf5')
@@ -622,7 +693,7 @@ class MainWindow(QMainWindow):
         """Load result from a file using a dialog window."""
         # check whether a pipeline is present
         if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
-            self.logger.error("Input Error: please load data first.")
+            self.logger.error("Input Error: load data first.")
             return None
 
         # get the path(s) from a standard file selection screen
@@ -648,7 +719,7 @@ class MainWindow(QMainWindow):
         """Save result to a file using a dialog window."""
         # check whether a result is present
         if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
-            self.logger.error("Input Error: please load data first.")
+            self.logger.error("Input Error: load data first.")
             return None
 
         suggested_path = os.path.join(self.save_dir, self.pipeline.data.target_id + '_result.hdf5')
@@ -678,7 +749,7 @@ class MainWindow(QMainWindow):
         dialog = InputDialog("Add base harmonic frequency", text)
 
         if dialog.exec():
-            value = dialog.get_values()
+            value = dialog.get_values()[0]
 
             try:
                 value = float(value)
@@ -701,7 +772,7 @@ class MainWindow(QMainWindow):
         """Perform analysis on the loaded data and display results."""
         # check whether data is loaded
         if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
-            self.logger.error("Input Error: please provide data files.")
+            self.logger.error("Input Error: provide data files.")
             return None
 
         # start a new thread for the analysis
@@ -719,7 +790,7 @@ class MainWindow(QMainWindow):
     def click_periodogram(self, x, y, button):
         """Handle click events on the periodogram plot."""
         # Guard against empty data
-        if self.pipeline is None:
+        if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
             self.logger.info(f"Plot clicked at coordinates: ({x}, {y})")
             return None
 
@@ -733,9 +804,50 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def select_sinusoid_from_list(self):
-        """When a sinusoid is selected in the list, highlight it."""
+    def add_sinusoid(self):
+        """Manually add a sinusoid to the model."""
+        if self.pipeline is None or len(self.pipeline.data.file_list) == 0:
+            self.logger.error("Input Error: load data first.")
+            return None
 
+        # make the text fields
+        text_1 = "Frequency:"
+        text_2 = "Amplitude:"
+        text_3 = "Phase:"
+
+        # open the dialog
+        dialog = InputDialog("Add sinusoid", text_1, text_2, text_3)
+
+        if dialog.exec():
+            values = dialog.get_values()
+
+            try:
+                value_1 = float(values[0])
+                value_2 = float(values[1])
+                value_3 = float(values[2])
+            except ValueError:
+                QMessageBox.warning(self, "Warning", "Invalid input: not a float.")
+
+                return None
+
+            # add the sinusoid
+            self.pipeline_thread.start_function('add_sinusoid', value_1, value_2, value_3)
+
+        return None
+
+    def delete_sinusoid(self):
+        """Delete the sinusoid(s) selected in the list."""
+        if self.pipeline is None  or len(self.pipeline.data.file_list) == 0:
+            self.logger.error("Input Error: load data first.")
+            return None
+
+        # Get the row numbers of the selected indexes (if any)
+        selected_rows = np.unique([index.row() for index in self.table_view.selectedIndexes()])
+
+        # remove these sinusoids from the model
+        self.pipeline_thread.start_function('delete_sinusoids', selected_rows)
+
+        return None
 
     def show_settings_dialog(self):
         """Show a 'settings' dialog with configuration for the application."""
@@ -765,18 +877,20 @@ class MainWindow(QMainWindow):
 
 
 class InputDialog(QDialog):
-    def __init__(self, title, text1):
+    def __init__(self, title, *texts):
         super().__init__()
-
         self.setWindowTitle(title)
         layout = QFormLayout()
 
-        # Create a label
-        label = QLabel(text1)
+        # List to store the line edits
+        self.line_edits = []
 
-        # Create a QLineEdit for input with double validation
-        self.line_edit = QLineEdit()
-        layout.addRow(label, self.line_edit)
+        # Create a label and line edit for each provided text argument
+        for i, text in enumerate(texts):
+            label = QLabel(text)
+            line_edit = QLineEdit()
+            layout.addRow(label, line_edit)
+            self.line_edits.append(line_edit)
 
         # Create a button to accept input
         ok_button = QPushButton("Accept")
@@ -786,7 +900,7 @@ class InputDialog(QDialog):
         self.setLayout(layout)
 
     def get_values(self):
-        return self.line_edit.text()
+        return [line_edit.text() for line_edit in self.line_edits]
 
 
 def launch_gui():
