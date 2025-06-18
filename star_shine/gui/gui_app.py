@@ -422,7 +422,7 @@ class MainWindow(QMainWindow):
         info_layout.addWidget(self.t_tot_field, 5, 1)
 
         # Time reference (zero) point of the full light curve
-        t_mean_label = QLabel("Time reference:")
+        t_mean_label = QLabel("Time reference point:")
         self.t_mean_field = QLineEdit()
         self.t_mean_field.setReadOnly(True)
         info_layout.addWidget(t_mean_label, 6, 0)
