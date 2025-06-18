@@ -10,8 +10,6 @@ from PySide6.QtCore import QThread, Signal
 
 class PipelineThread(QThread):
     """A QThread subclass to perform analysis in the background."""
-    # Define a signal that emits the log message
-    result_signal = Signal()
 
     def __init__(self, pipeline_instance):
         super().__init__()
@@ -34,9 +32,6 @@ class PipelineThread(QThread):
             # start a thread with the function
             function_to_run = getattr(self.pipeline_instance, self.func_name)
             function_to_run(*self.args, **self.kwargs)
-
-            # Emit the signal
-            self.result_signal.emit()
 
             # except Exception as e:
             #     self.pipeline_instance.logger.error(f"Error during analysis: {e}")

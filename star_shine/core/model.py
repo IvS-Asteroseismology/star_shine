@@ -805,18 +805,36 @@ class SinusoidModel:
         """
         return np.abs(self._f_n - f).argmin()
 
-    def calc_sinusoid_model(self, time):
+    def calc_sinusoid_model(self, time, indices=None):
         """Calculate the current sinusoid model (disregarding include).
+
+        Parameters
+        ----------
+        time: numpy.ndarray[Any, dtype[float]]
+            Timestamps of the time series
+        indices: numpy.ndarray[Any, dtype[int]]
+            Indices for the sinusoids to include.
 
         Returns
         -------
         numpy.ndarray[Any, dtype[float]]
             Time series model of the sinusoids.
         """
-        return sum_sines(time, self.f_n, self.a_n, self.ph_n)
+        if indices is None:
+            model = sum_sines(time, self.f_n, self.a_n, self.ph_n)
+        else:
+            model = sum_sines(time, self.f_n[indices], self.a_n[indices], self.ph_n[indices])
+
+        return model
 
     def _check_removed_h_base(self, indices):
-        """If a harmonic base frequency was removed, remove the whole harmonic series."""
+        """If a harmonic base frequency was removed, remove the whole harmonic series.
+
+        Parameters
+        ----------
+        indices: numpy.ndarray[Any, dtype[int]]
+            Indices for the sinusoids that were removed.
+        """
         if np.any(self._harmonics):
             for i in np.arange(len(self._f_n))[self._h_mult == 1]:
                 if i in indices:

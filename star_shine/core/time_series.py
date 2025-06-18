@@ -220,15 +220,23 @@ class TimeSeriesModel(TimeSeries):
 
         return f, a
 
-    def calc_model(self):
+    def calc_model(self, indices=None):
         """Calculate the full time series model (disregarding include).
+
+        Parameters
+        ----------
+        indices: numpy.ndarray[Any, dtype[int]]
+            Indices for the sinusoids to include.
 
         Returns
         -------
         numpy.ndarray[Any, dtype[float]]
             Combined time series model.
         """
-        return self.linear.calc_linear_model(self.time, self.i_chunks) + self.sinusoid.calc_sinusoid_model(self.time)
+        model_linear = self.linear.calc_linear_model(self.time, self.i_chunks)
+        model_sinusoid = self.sinusoid.calc_sinusoid_model(self.time, indices=indices)
+
+        return model_linear + model_sinusoid
 
     def calc_periodogram(self):
         """Calculate Lomb-Scargle periodogram of the time series (disregarding include).

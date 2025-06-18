@@ -9,6 +9,7 @@ import os
 import sys
 import functools
 
+import numpy as np
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter, QMenuBar
 from PySide6.QtWidgets import QWidget, QLabel, QTextEdit, QLineEdit, QSpinBox, QFileDialog, QMessageBox, QPushButton
 from PySide6.QtWidgets import QTableView, QHeaderView, QDialog, QFormLayout, QCheckBox
@@ -296,6 +297,10 @@ class MainWindow(QMainWindow):
         self.table_model.setHorizontalHeaderLabels(["Frequency", "Amplitude", "Phase"])
         self.table_view.setModel(self.table_model)
 
+        # Connect the selection changed signal
+        self.selected_rows = []
+        self.table_view.selectionModel().selectionChanged.connect(self.update_plots)
+
         # Set the horizontal header's stretch mode for each column
         h_header = self.table_view.horizontalHeader()
         h_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)  # Stretch all columns proportionally
@@ -446,6 +451,9 @@ class MainWindow(QMainWindow):
         time = self.pipeline.ts_model.time
         flux = self.pipeline.ts_model.flux
 
+        # Get the row numbers of the selected indexes (if any)
+        selected_rows = np.unique([index.row() for index in self.table_view.selectedIndexes()])
+
         # upper plot area - time series
         upper_plot_data['scatter_xs'] = [time]
         upper_plot_data['scatter_ys'] = [flux]
@@ -467,6 +475,13 @@ class MainWindow(QMainWindow):
                 upper_plot_data['plot_xs'] = [time]
                 upper_plot_data['plot_ys'] = [model]
                 upper_plot_data['plot_colors'] = ['grey']
+
+                # if highlighted rows
+                if len(selected_rows) > 0:
+                    highlighted_model = self.pipeline.ts_model.calc_model(indices=selected_rows)
+                    upper_plot_data['plot_xs'].append(time)
+                    upper_plot_data['plot_ys'].append(highlighted_model)
+                    upper_plot_data['plot_colors'].append('tab:red')
             else: # only show residual if toggle checked
                 upper_plot_data['scatter_xs'] = [time]
                 upper_plot_data['scatter_ys'] = [residual]
@@ -478,6 +493,12 @@ class MainWindow(QMainWindow):
                 lower_plot_data['vlines_xs'] = [self.pipeline.ts_model.sinusoid.f_n]
                 lower_plot_data['vlines_ys'] = [self.pipeline.ts_model.sinusoid.a_n]
                 lower_plot_data['vlines_colors'] = ['grey']
+
+                # if highlighted rows
+                if len(selected_rows) > 0:
+                    lower_plot_data['vlines_xs'].append(self.pipeline.ts_model.sinusoid.f_n[selected_rows])
+                    lower_plot_data['vlines_ys'].append(self.pipeline.ts_model.sinusoid.a_n[selected_rows])
+                    lower_plot_data['vlines_colors'].append('tab:red')
             else: # only show residual if toggle checked
                 lower_plot_data['plot_xs'] = [freqs]
                 lower_plot_data['plot_ys'] = [ampls]
@@ -496,7 +517,7 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def update_results(self, msg, update=False):
+    def on_result_update(self, msg, update=False):
         """Update the GUI with the results."""
         # show the message in the log area
         self.append_text(msg)
@@ -521,7 +542,7 @@ class MainWindow(QMainWindow):
 
         # custom gui-specific logger
         self.logger = gui_log.get_custom_gui_logger(data.target_id, full_dir)
-        self.logger.log_signal.connect(self.update_results)
+        self.logger.log_signal.connect(self.on_result_update)
 
         # Make ready the pipeline class
         self.pipeline = Pipeline(data=data, save_dir=self.save_dir, logger=self.logger)
@@ -531,6 +552,9 @@ class MainWindow(QMainWindow):
 
         # update the info fields
         self.update_info_fields()
+
+        # display sinusoid parameters in the table
+        self.update_table(display_err=True)
 
         # clear and update the plots
         self.update_plots(new_plot=True)
@@ -710,6 +734,10 @@ class MainWindow(QMainWindow):
             self.pipeline_thread.start_function('remove_approx', x)
 
         return None
+
+    def select_sinusoid_from_list(self):
+        """When a sinusoid is selected in the list, highlight it."""
+
 
     def show_settings_dialog(self):
         """Show a 'settings' dialog with configuration for the application."""
