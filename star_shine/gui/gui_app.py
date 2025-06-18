@@ -517,17 +517,18 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def on_result_update(self, msg, update=False):
+    def on_result_update(self, msg=None, update=False, new_plot=False, display_err=True):
         """Update the GUI with the results."""
         # show the message in the log area
-        self.append_text(msg)
+        if msg is not None:
+            self.append_text(msg)
 
         if update:
             # display sinusoid parameters in the table
-            self.update_table(display_err=True)
+            self.update_table(display_err=display_err)
 
-            # Update the plot area with the results
-            self.update_plots(new_plot=False)
+            # Update the plot area with the results (or clear it first)
+            self.update_plots(new_plot=new_plot)
 
         return None
 
@@ -553,11 +554,8 @@ class MainWindow(QMainWindow):
         # update the info fields
         self.update_info_fields()
 
-        # display sinusoid parameters in the table
-        self.update_table(display_err=True)
-
-        # clear and update the plots
-        self.update_plots(new_plot=True)
+        # display sinusoid parameters in the table and clear and update the plots
+        self.on_result_update(msg=None, update=True, new_plot=True, display_err=True)
 
         return None
 
@@ -641,8 +639,8 @@ class MainWindow(QMainWindow):
         except KeyError as e:
             self.logger.error(f"Incompatible file: {e}")
 
-        # clear and update the plots
-        self.update_plots(new_plot=False)
+        # display sinusoid parameters in the table and clear and update the plots
+        self.on_result_update(msg=None, update=True, new_plot=False, display_err=True)
 
         return None
 
