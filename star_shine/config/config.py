@@ -53,9 +53,6 @@ class Config:
     resolution_factor: float = 1.5
     window_width: float = 1.
 
-    # Optimisation settings
-    optimise_method: str = 'fitter'
-
     # Data and file settings
     overwrite: bool = False
     data_dir: str = ''
@@ -76,6 +73,7 @@ class Config:
     halve_chunks: bool = False
 
     # GUI settings
+    dark_mode: bool = False
     h_size_frac: float = 0.8
     v_size_frac: float = 0.8
 

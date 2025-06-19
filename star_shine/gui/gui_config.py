@@ -5,53 +5,249 @@ This Python module contains the settings dialog for the graphical user interface
 
 Code written by: Luc IJspeert
 """
-from PySide6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QLineEdit, QPushButton, QLabel, QFormLayout
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QLabel, QCheckBox
+from PySide6.QtWidgets import QMessageBox, QFrame
+from star_shine.config import helpers as hlp
+
+
+# load configuration
+config = hlp.get_config()
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, config, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.config = config
         self.setWindowTitle("Settings")
 
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()
+        left_layout = QVBoxLayout()
+
+        # create the data and file settings form
+        left_layout.addWidget(QLabel("Data and File Settings"))
+        data_file_form_layout = self._create_data_file_settings()
+        left_layout.addLayout(data_file_form_layout)
+
+        # Create a horizontal line as a divider
+        h_line = QFrame()
+        h_line.setFrameShape(QFrame.HLine)
+        h_line.setFrameShadow(QFrame.Sunken)
+        left_layout.addWidget(h_line)
+
+        # create the tabulated file settings form
+        left_layout.addWidget(QLabel("Tabulated File Settings"))
+        data_file_form_layout = self._create_tabulated_settings()
+        left_layout.addLayout(data_file_form_layout)
+
+        # Create a horizontal line as a divider
+        h_line = QFrame()
+        h_line.setFrameShape(QFrame.HLine)
+        h_line.setFrameShadow(QFrame.Sunken)
+        left_layout.addWidget(h_line)
+
+        # create the fits file settings form
+        left_layout.addWidget(QLabel("Fits File Settings"))
+        data_file_form_layout = self._create_fits_settings()
+        left_layout.addLayout(data_file_form_layout)
+
+        layout.addLayout(left_layout)
+
+        # Create a vertical line as a divider
+        v_line = QFrame()
+        v_line.setFrameShape(QFrame.VLine)
+        v_line.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(v_line)
+
+        # create the GUI settings on the right side
+        right_layout = QVBoxLayout()
+
+        # create the extraction settings form
+        right_layout.addWidget(QLabel("Extraction Settings"))
+        extraction_form_layout = self._create_extraction_settings()
+        right_layout.addLayout(extraction_form_layout)
+
+        # Create a horizontal line as a divider
+        h_line = QFrame()
+        h_line.setFrameShape(QFrame.HLine)
+        h_line.setFrameShadow(QFrame.Sunken)
+        right_layout.addWidget(h_line)
+
+        # create the GUI settings form
+        right_layout.addWidget(QLabel("GUI Settings"))
+        gui_form_layout = self._create_gui_settings()
+        right_layout.addLayout(gui_form_layout)
+
+        # the save/cancel buttons
+        button_box = QHBoxLayout()
+        apply_button = QPushButton("Apply")
+        apply_button.clicked.connect(self.apply_settings)
+        button_box.addWidget(apply_button)
+
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_settings)
+        button_box.addWidget(save_button)
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        button_box.addWidget(cancel_button)
+
+        right_layout.addLayout(button_box)
+
+        layout.addLayout(right_layout)
+
+        self.setLayout(layout)
+
+    def _create_extraction_settings(self):
+        """Create the settings form for the extraction settings."""
         form_layout = QFormLayout()
 
         # Create input fields for each setting
-        self.data_dir_field = QLineEdit(self.config.data_dir)
-        self.save_dir_field = QLineEdit(self.config.save_dir)
-        self.h_size_frac_field = QLineEdit(str(self.config.h_size_frac))
-        self.v_size_frac_field = QLineEdit(str(self.config.v_size_frac))
+        self.select_next_field = QLineEdit(self.config.select_next)
+        form_layout.addRow(QLabel("Select Next Sinusoid:"), self.select_next_field)
 
-        form_layout.addRow(QLabel("Data Directory:"), self.data_dir_field)
+        self.optimise_step_field = QCheckBox()
+        self.optimise_step_field.setChecked(self.config.optimise_step)
+        form_layout.addRow(QLabel("Optimise Every Step:"), self.optimise_step_field)
+
+        self.replace_step_field = QCheckBox()
+        self.replace_step_field.setChecked(self.config.replace_step)
+        form_layout.addRow(QLabel("Replace Every Step:"), self.replace_step_field)
+
+        self.bic_thr_field = QLineEdit(str(self.config.bic_thr))
+        form_layout.addRow(QLabel("BIC Threshold:"), self.bic_thr_field)
+
+        self.snr_thr_field = QLineEdit(str(self.config.snr_thr))
+        form_layout.addRow(QLabel("SNR Threshold:"), self.snr_thr_field)
+
+        self.nyquist_factor_field = QLineEdit(str(self.config.nyquist_factor))
+        form_layout.addRow(QLabel("Nyquist Factor:"), self.nyquist_factor_field)
+
+        self.resolution_factor_field = QLineEdit(str(self.config.resolution_factor))
+        form_layout.addRow(QLabel("Resolution Factor:"), self.resolution_factor_field)
+
+        self.window_width_field = QLineEdit(str(self.config.window_width))
+        form_layout.addRow(QLabel("Window Width:"), self.window_width_field)
+
+        return form_layout
+
+    def _create_data_file_settings(self):
+        """Create the settings form for the data and file settings."""
+        form_layout = QFormLayout()
+
+        self.overwrite_field = QCheckBox()
+        self.overwrite_field.setChecked(self.config.overwrite)
+        form_layout.addRow(QLabel("Overwrite files:"), self.overwrite_field)
+
+        # data_dir is not used in the gui for simplicity
+
+        self.save_dir_field = QLineEdit(self.config.save_dir)
         form_layout.addRow(QLabel("Save Directory:"), self.save_dir_field)
+
+        self.save_ascii_field = QCheckBox()
+        self.save_ascii_field.setChecked(self.config.save_ascii)
+        form_layout.addRow(QLabel("Save ASCII files:"), self.save_ascii_field)
+
+        return form_layout
+
+    def _create_tabulated_settings(self):
+        """Create the settings form for the tabulated file settings."""
+        form_layout = QFormLayout()
+
+        self.cn_time_field = QLineEdit(self.config.cn_time)
+        form_layout.addRow(QLabel("Column Name For time:"), self.cn_time_field)
+
+        self.cn_flux_field = QLineEdit(self.config.cn_flux)
+        form_layout.addRow(QLabel("Column Name For flux:"), self.cn_flux_field)
+
+        self.cn_flux_err_field = QLineEdit(self.config.cn_flux_err)
+        form_layout.addRow(QLabel("Column Name For flux_err:"), self.cn_flux_err_field)
+
+        return form_layout
+
+    def _create_fits_settings(self):
+        """Create the settings form for the FITS file settings."""
+        form_layout = QFormLayout()
+
+        self.cf_time_field = QLineEdit(self.config.cf_time)
+        form_layout.addRow(QLabel("Column Name For time:"), self.cf_time_field)
+
+        self.cf_flux_field = QLineEdit(self.config.cf_flux)
+        form_layout.addRow(QLabel("Column Name For flux:"), self.cf_flux_field)
+
+        self.cf_flux_err_field = QLineEdit(self.config.cf_flux_err)
+        form_layout.addRow(QLabel("Column Name For flux_err:"), self.cf_flux_err_field)
+
+        self.cf_quality_field = QLineEdit(self.config.cf_quality)
+        form_layout.addRow(QLabel("Column Name For quality:"), self.cf_quality_field)
+
+        self.apply_q_flags_field = QCheckBox()
+        self.apply_q_flags_field.setChecked(self.config.apply_q_flags)
+        form_layout.addRow(QLabel("Apply Quality Flags:"), self.apply_q_flags_field)
+
+        self.halve_chunks_field = QCheckBox()
+        self.halve_chunks_field.setChecked(self.config.halve_chunks)
+        form_layout.addRow(QLabel("Halve Time Chunks:"), self.halve_chunks_field)
+
+        return form_layout
+
+    def _create_gui_settings(self):
+        """Create the settings form for the GUI settings."""
+        form_layout = QFormLayout()
+
+        self.dark_mode_field = QCheckBox()
+        self.dark_mode_field.setChecked(False)
+        form_layout.addRow(QLabel("Dark Mode [WIP]:"), self.dark_mode_field)
+
+        self.h_size_frac_field = QLineEdit(str(self.config.h_size_frac))
         form_layout.addRow(QLabel("Horizontal Size Fraction:"), self.h_size_frac_field)
+
+        self.v_size_frac_field = QLineEdit(str(self.config.v_size_frac))
         form_layout.addRow(QLabel("Vertical Size Fraction:"), self.v_size_frac_field)
 
-        layout.addLayout(form_layout)
+        return form_layout
 
-        button_box = QHBoxLayout()
-        save_button = QPushButton("Save")
-        cancel_button = QPushButton("Cancel")
-
-        save_button.clicked.connect(self.save_settings)
-        cancel_button.clicked.connect(self.reject)
-
-        button_box.addWidget(save_button)
-        button_box.addWidget(cancel_button)
-
-        layout.addLayout(button_box)
-        self.setLayout(layout)
-
-    def save_settings(self):
+    def apply_settings(self):
+        """Apply the settings to the configuration"""
         try:
             # Update the configuration with new values
-            self.config.data_dir = self.data_dir_field.text()
+            self.config.overwrite = self.overwrite_field.isChecked()
             self.config.save_dir = self.save_dir_field.text()
+            self.config.save_ascii = self.save_ascii_field.isChecked()
+
+            self.config.cn_time = self.cn_time_field.text()
+            self.config.cn_flux = self.cn_flux_field.text()
+            self.config.cn_flux_err = self.cn_flux_err_field.text()
+
+            self.config.cf_time = self.cf_time_field.text()
+            self.config.cf_flux = self.cf_flux_field.text()
+            self.config.cf_flux_err = self.cf_flux_err_field.text()
+            self.config.cf_quality = self.cf_quality_field.text()
+            self.config.apply_q_flags = self.apply_q_flags_field.isChecked()
+            self.config.halve_chunks = self.halve_chunks_field.isChecked()
+
+            self.config.select_next = self.select_next_field.text()
+            self.config.optimise_step = self.optimise_step_field.isChecked()
+            self.config.replace_step = self.replace_step_field.isChecked()
+            self.config.bic_thr = float(self.bic_thr_field.text())
+            self.config.snr_thr = float(self.snr_thr_field.text())
+            self.config.nyquist_factor = float(self.nyquist_factor_field.text())
+            self.config.resolution_factor = float(self.resolution_factor_field.text())
+            self.config.window_width = float(self.window_width_field.text())
+
             self.config.h_size_frac = float(self.h_size_frac_field.text())
             self.config.v_size_frac = float(self.v_size_frac_field.text())
-
-            self.accept()  # Close the dialog
         except ValueError:
-            QMessageBox.warning(self, "Input Error", "Invalid input for size fractions. Please enter numbers.")
+            QMessageBox.warning(self, "Input Error", "Invalid input for settings.")
+
+        # Close the dialog
+        self.accept()
+
+    def save_settings(self):
+        """Save the settings form to disk."""
+        self.apply_settings()
+
+        try:
+            # Save the configuration to a file or update it as needed
+            self.config.save_config()
+        except ValueError:
+            QMessageBox.warning(self, "IO Error", "Error while saving config.")

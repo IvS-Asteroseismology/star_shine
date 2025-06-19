@@ -12,7 +12,7 @@ import functools
 import numpy as np
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QGridLayout, QSplitter, QMenuBar
 from PySide6.QtWidgets import QWidget, QLabel, QTextEdit, QLineEdit, QSpinBox, QFileDialog, QMessageBox, QPushButton
-from PySide6.QtWidgets import QTableView, QHeaderView, QDialog, QFormLayout, QCheckBox
+from PySide6.QtWidgets import QTableView, QHeaderView, QDialog, QFormLayout
 from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor, QIcon
 
 from star_shine.core import utility as ut
@@ -49,13 +49,10 @@ class MainWindow(QMainWindow):
         icon_path = os.path.join(hlp.get_images_path(), 'Star_Shine_dark_simple_small_transparent.png')
         self.setWindowIcon(QIcon(icon_path))
 
-        # some things that need a default value
-        self.data_dir = config.data_dir
-        if self.data_dir == '':
-            self.data_dir = os.path.expanduser('~')
-        self.save_dir = config.save_dir
-        if self.save_dir == '':
-            self.save_dir = os.path.expanduser('~')
+        # save dir needs a default value
+        # self.save_dir = config.save_dir
+        if config.save_dir == '':
+            config.save_dir = os.path.expanduser('~')
         self.save_subdir = ''
 
         # Set font size for the entire application
@@ -382,7 +379,7 @@ class MainWindow(QMainWindow):
         current_dir_label = QLabel("Current directory:")
         self.current_dir_field = QLineEdit()
         self.current_dir_field.setReadOnly(True)
-        self.current_dir_field.setText(self.save_dir)
+        self.current_dir_field.setText(config.save_dir)
         info_layout.addWidget(current_dir_label, 0, 0)
         info_layout.addWidget(self.current_dir_field, 0, 1)
 
@@ -447,10 +444,13 @@ class MainWindow(QMainWindow):
     def update_info_fields(self):
         """Update the information field widget."""
         # current directory
-        self.current_dir_field.setText(self.save_dir)
+        self.current_dir_field.setText(config.save_dir)
 
         # if there is a pipeline we can fill in the data attributes
         if self.pipeline is not None:
+            # update any properties in the TimeSeries that might have changed
+            self.pipeline.ts_model.update_properties()
+
             self.target_id_field.setText(self.pipeline.data.target_id)
             self.data_id_field.setText(self.pipeline.data.data_id)
             self.n_time_field.setText(str(self.pipeline.ts_model.n_time))
@@ -608,7 +608,7 @@ class MainWindow(QMainWindow):
         # for saving, make a folder if not there yet
         self.save_subdir = f"{data.target_id}_analysis"
 
-        full_dir = os.path.join(self.save_dir, self.save_subdir)
+        full_dir = os.path.join(config.save_dir, self.save_subdir)
         if not os.path.isdir(full_dir):
             os.mkdir(full_dir)  # create the subdir
 
@@ -617,7 +617,7 @@ class MainWindow(QMainWindow):
         self.logger.log_signal.connect(self.on_result_update)
 
         # Make ready the pipeline class
-        self.pipeline = Pipeline(data=data, save_dir=self.save_dir, logger=self.logger)
+        self.pipeline = Pipeline(data=data, save_dir=config.save_dir, logger=self.logger)
 
         # set up a pipeline thread
         self.pipeline_thread = gui_analysis.PipelineThread(self.pipeline)
@@ -633,11 +633,11 @@ class MainWindow(QMainWindow):
     def set_save_location(self):
         """Open a dialog to select the save location."""
         # Open a directory selection dialog
-        new_dir = QFileDialog.getExistingDirectory(self, caption="Select Save Location", dir=self.save_dir)
+        new_dir = QFileDialog.getExistingDirectory(self, caption="Select Save Location", dir=config.save_dir)
 
         if new_dir:
-            self.save_dir = new_dir
-            self.logger.info(f"Save location set to: {self.save_dir}")
+            config.save_dir = new_dir
+            self.logger.info(f"Save location set to: {config.save_dir}")
 
         # update the current directory info field
         self.update_info_fields()
@@ -647,7 +647,7 @@ class MainWindow(QMainWindow):
     def load_data(self):
         """Read data from a file or multiple files using a dialog window."""
         # get the path(s) from a standard file selection screen
-        file_paths, _ = QFileDialog.getOpenFileNames(self, caption="Read Data", dir=self.save_dir,
+        file_paths, _ = QFileDialog.getOpenFileNames(self, caption="Read Data", dir=config.save_dir,
                                                      filter="All Files (*)")
 
         # do nothing in case no file(s) selected
@@ -663,7 +663,7 @@ class MainWindow(QMainWindow):
             data = Data.load_data(file_list=file_paths, data_dir='', target_id='', data_id='', logger=self.logger)
 
         # set the save dir to the one where we opened the data
-        self.save_dir = os.path.dirname(file_paths[0])
+        config.save_dir = os.path.dirname(file_paths[0])
 
         # set up some things
         self.new_dataset(data)
@@ -677,7 +677,7 @@ class MainWindow(QMainWindow):
             self.logger.error("Input Error: load data first.")
             return None
 
-        suggested_path = os.path.join(self.save_dir, self.pipeline.data.target_id + '_data.hdf5')
+        suggested_path = os.path.join(config.save_dir, self.pipeline.data.target_id + '_data.hdf5')
         file_path, _ = QFileDialog.getSaveFileName(self, caption="Save Data", dir=suggested_path,
                                                    filter="HDF5 Files (*.hdf5);;All Files (*)")
 
@@ -697,7 +697,7 @@ class MainWindow(QMainWindow):
             return None
 
         # get the path(s) from a standard file selection screen
-        file_path, _ = QFileDialog.getOpenFileName(self, caption="Load Result", dir=self.save_dir,
+        file_path, _ = QFileDialog.getOpenFileName(self, caption="Load Result", dir=config.save_dir,
                                                     filter="HDF5 Files (*.hdf5);;All Files (*)")
 
         # do nothing in case no file selected
@@ -722,7 +722,7 @@ class MainWindow(QMainWindow):
             self.logger.error("Input Error: load data first.")
             return None
 
-        suggested_path = os.path.join(self.save_dir, self.pipeline.data.target_id + '_result.hdf5')
+        suggested_path = os.path.join(config.save_dir, self.pipeline.data.target_id + '_result.hdf5')
         file_path, _ = QFileDialog.getSaveFileName(self, caption="Save Data", dir=suggested_path,
                                                    filter="HDF5 Files (*.hdf5);;All Files (*)")
 
@@ -851,7 +851,7 @@ class MainWindow(QMainWindow):
 
     def show_settings_dialog(self):
         """Show a 'settings' dialog with configuration for the application."""
-        dialog = gui_config.SettingsDialog(config=config, parent=self)
+        dialog = gui_config.SettingsDialog(parent=self)
 
         if dialog.exec():
             # Update any dependent components with new configuration values
@@ -860,6 +860,8 @@ class MainWindow(QMainWindow):
             h_size = int(screen_size.width() * config.h_size_frac)  # some fraction of the screen width
             v_size = int(screen_size.height() * config.v_size_frac)  # some fraction of the screen height
             self.setGeometry(100, 50, h_size, v_size)
+
+            self.update_info_fields()
 
         return None
 

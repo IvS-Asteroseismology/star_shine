@@ -590,7 +590,7 @@ def load_light_curve(file_list, apply_flags=True):
 
         # keep track of the data belonging to each time chunk
         chunk_index = [[len(i_chunks), len(i_chunks) + len(ti)]]
-        if config.halve_chunks & (file.endswith('.fits') | file.endswith('.fit')):
+        if config.halve_chunks:
             chunk_index = [[len(i_chunks), len(i_chunks) + len(ti) // 2],
                            [len(i_chunks) + len(ti) // 2, len(i_chunks) + len(ti)]]
 
