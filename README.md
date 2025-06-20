@@ -31,20 +31,23 @@ batches of targets.
 
 The easiest way to install STAR SHINE is to use pip:
 
-    pip install git+https://github.com/LucIJspeert/star_shine@<version_tag>
+    pip install star_shine
 
-Or install the master branch by leaving out the version number. 
 One can then import the package from the python environment it was installed in. 
 Of course one can always still manually download it or make a fork on GitHub. 
 It is recommended to get the latest release from the GitHub page. 
 
-**STAR SHINE has only been tested in Python 3.7**. Using older versions could result in unexpected errors, 
+The GUI is optional functionality, and its dependencies can be included when installing the package:
+
+    pip install star_shine[gui]
+
+**STAR SHINE has only been tested in Python 3.11**. Using older versions could result in unexpected errors, 
 although any Python version >=3.6 is expected to work.
 
 **Package dependencies:** The following package versions have been used in the development of this code, 
 meaning older versions can in principle work, but this is not guaranteed. NumPy 1.20.3, SciPy 1.7.3, Numba 0.55.1, 
-h5py 3.7.0, Astropy 4.3.1, Matplotlib 3.5.3, pyyaml 6.0.2, pymc3 3.11.4 (optional), theano 1.1.2 (optional), 
-Arviz 0.11.4 (optional), fastprogress 1.0.0 (optional).
+h5py 3.7.0, Astropy 4.3.1, Pandas 1.2.3, Matplotlib 3.5.3, pyyaml 6.0.2, pyside6 6.0.0 (optional), 
+pymc3 3.11.4 (optional), theano 1.1.2 (optional), Arviz 0.11.4 (optional), fastprogress 1.0.0 (optional).
 
 Newer versions are expected to work, and it is considered a bug if this is not the case.
 
