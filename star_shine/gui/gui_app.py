@@ -170,6 +170,16 @@ class MainWindow(QMainWindow):
         settings_action.triggered.connect(self.show_settings_dialog)
         file_menu.addAction(settings_action)
 
+        # Add "Settings" action to open the settings dialog
+        export_settings_action = QAction("Export Settings", self)
+        export_settings_action.triggered.connect(self.export_settings)
+        file_menu.addAction(export_settings_action)
+
+        # Add "Settings" action to open the settings dialog
+        import_settings_action = QAction("Import Settings", self)
+        import_settings_action.triggered.connect(self.import_settings)
+        file_menu.addAction(import_settings_action)
+
         # Add a horizontal separator
         file_menu.addSeparator()
 

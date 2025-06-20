@@ -87,7 +87,7 @@ class Config:
         """
         if cls._instance is None:
             cls._instance = super(Config, cls).__new__(cls)
-            cls._load_config()
+            cls._load_config(cls._instance)
 
         return cls._instance
 
@@ -121,8 +121,7 @@ class Config:
 
         return None
 
-    @classmethod
-    def _load_config(cls):
+    def _load_config(self):
         """Loads and validates the configuration from a file.
 
         Notes
@@ -134,20 +133,20 @@ class Config:
         """
         # try to open the config file
         try:
-            with open(cls._config_path, 'r') as file:
+            with open(self._config_path, 'r') as file:
                 config_data = yaml.safe_load(file)
-                cls._validate_config(config_data)
+                self._validate_config(config_data)
                 for key, value in config_data.items():
-                    setattr(cls._instance, key, value)
+                    setattr(self._instance, key, value)
 
         except FileNotFoundError:
-            print(f"Configuration file {cls._config_path} not found. Using default settings.")
+            print(f"Configuration file {self._config_path} not found. Using default settings.")
 
         except yaml.YAMLError as e:
-            print(f"Error parsing YAML from {cls._config_path}: {e}. Using default settings.")
+            print(f"Error parsing YAML from {self._config_path}: {e}. Using default settings.")
 
         except ValueError as e:
-            print(f"Error validating configuration from {cls._config_path}: {e}. Your config file may be out of date. "
+            print(f"Error validating configuration from {self._config_path}: {e}. Your config file may be out of date. "
                   f"Using default settings.")
 
         return None
