@@ -201,6 +201,11 @@ class Config:
         if not new_config_path.endswith('.yaml'):
             new_config_path += '.yaml'
 
+        # if save_dir is usr dir, revert to '' for saving (this is specifically for GUI behaviour)
+        save_dir_value = self.save_dir
+        if self.save_dir == os.path.expanduser('~'):
+            save_dir_value = ''
+
         line_width = 120
 
         with open(new_config_path, 'w') as file:
@@ -257,7 +262,7 @@ class Config:
             file.write(config_item_description("data_dir", self.data_dir, desc))
 
             desc = "Root directory where analysis results will be saved; if empty will use current dir"
-            file.write(config_item_description("save_dir", self.save_dir, desc))
+            file.write(config_item_description("save_dir", save_dir_value, desc))
 
             desc = "Save ascii variants of the HDF5 result files"
             file.write(config_item_description("save_ascii", self.save_ascii, desc))
@@ -363,6 +368,10 @@ def config_item_description(item, value, description):
 
     # add the description
     item_desc += f"# {description}\n"
+
+    # if item is already a string, add ''
+    if type(value) is str:
+        value = "'" + value + "'"
 
     # finally add the item
     item_desc += f"{item}: {value}\n\n"  # empty line at the end

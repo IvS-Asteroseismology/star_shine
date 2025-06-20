@@ -1,15 +1,13 @@
 ########################################################################################################################
 # --------------------------------------------- Star Shine settings file -----------------------------------------------
 ########################################################################################################################
-## ------------------------------------------------ General settings ---------------------------------------------------
+# ------------------------------------------------- General settings ---------------------------------------------------
 # verbose description:
 # Print information during runtime
 verbose: False
 
 # stop_at_stage description:
 # Run the analysis up to and including this stage; 0 means all stages are run
-# [WIP] current steps: 1: 'iterative_prewhitening', 2: 'optimise_sinusoid', 3: 'couple_harmonics',
-#  4: 'iterative_prewhitening', 5: 'optimise_sinusoid_h'
 stop_at_stage: 0
 
 # ----------------------------------------------- Extraction settings --------------------------------------------------
@@ -31,15 +29,15 @@ stop_criterion: 'bic'
 
 # bic_thr description:
 # Delta-BIC threshold for the acceptance of sinusoids
-bic_thr: 2.
+bic_thr: 2.0
 
 # snr_thr description:
 # Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1
-snr_thr: -1.
+snr_thr: -1.0
 
 # nyquist_factor description:
 # The simple Nyquist frequency approximation (1/(2 delta_t_min)) is multiplied by this factor
-nyquist_factor: 1.
+nyquist_factor: 1.0
 
 # resolution_factor description:
 # The frequency resolution (1/T) is multiplied by this factor
@@ -47,10 +45,10 @@ resolution_factor: 1.5
 
 # window_width description:
 # Periodogram spectral noise is calculated over this window width
-window_width: 1.
+window_width: 1.0
 
 ########################################################################################################################
-# ---------------------------------------------- Data and file settings ------------------------------------------------
+# ---------------------------------------------- Data and File settings ------------------------------------------------
 # overwrite description:
 # Overwrite existing result files
 overwrite: False
@@ -67,7 +65,7 @@ save_dir: ''
 # Save ascii variants of the HDF5 result files
 save_ascii: False
 
-# --------------------------------------------- Tabulated file settings ------------------------------------------------
+# --------------------------------------------- Tabulated File settings ------------------------------------------------
 # cn_time description:
 # Column name for the time stamps
 cn_time: 'time'
@@ -80,7 +78,7 @@ cn_flux: 'flux'
 # Column name for the flux measurement errors
 cn_flux_err: 'flux_err'
 
-# ------------------------------------------------ Fits file settings --------------------------------------------------
+# ------------------------------------------------ FITS File settings --------------------------------------------------
 # cf_time description:
 # Column name for the time stamps
 cf_time: 'TIME'
@@ -104,6 +102,7 @@ apply_q_flags: True
 # halve_chunks description:
 # Cut the time chunks in half (TESS data often has a discontinuity mid-sector)
 halve_chunks: False
+
 ########################################################################################################################
 # --------------------------------------------------- GUI settings -----------------------------------------------------
 # dark_mode description:
@@ -117,4 +116,5 @@ h_size_frac: 0.8
 # v_size_frac description:
 # Vertical window size as a fraction of the screen height
 v_size_frac: 0.8
+
 ########################################################################################################################
