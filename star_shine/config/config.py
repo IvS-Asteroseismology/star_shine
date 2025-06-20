@@ -197,6 +197,10 @@ class Config:
         new_config_path: str
             Path to a valid configuration file.
         """
+        # make sure the file has yaml extension
+        if not new_config_path.endswith('.yaml'):
+            new_config_path += '.yaml'
+
         line_width = 120
 
         with open(new_config_path, 'w') as file:

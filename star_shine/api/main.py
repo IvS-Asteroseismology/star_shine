@@ -5,7 +5,7 @@ This Python module contains the main functions that link together all functional
 
 Code written by: Luc IJspeert
 """
-from star_shine.config.helpers import get_config
+from star_shine.config.helpers import get_config, get_config_path
 
 
 # load configuration
@@ -40,5 +40,15 @@ def update_config(file_name='', settings=None):
     # update individual settings
     if settings is not None:
         config.update_from_dict(settings)
+
+    return None
+
+def save_config(file_name=''):
+    """Save the configuration to a file."""
+    # if no file name is supplied, overwrite it in the default place
+    if file_name != '':
+        file_name = get_config_path()
+
+    config.save_to_file(file_name)
 
     return None

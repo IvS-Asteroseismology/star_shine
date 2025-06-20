@@ -16,7 +16,7 @@ from PySide6.QtWidgets import QTableView, QHeaderView, QDialog, QFormLayout
 from PySide6.QtGui import QAction, QFont, QScreen, QStandardItemModel, QStandardItem, QTextCursor, QIcon
 
 from star_shine.core import utility as ut
-from star_shine.api import Data, Pipeline
+from star_shine.api import Data, Pipeline, main
 from star_shine.gui import gui_log, gui_plot, gui_analysis, gui_config
 from star_shine.config import helpers as hlp
 
@@ -854,14 +854,34 @@ class MainWindow(QMainWindow):
         dialog = gui_config.SettingsDialog(parent=self)
 
         if dialog.exec():
-            # Update any dependent components with new configuration values
+            # Update any dependent GUI components with new configuration values
             screen = QApplication.primaryScreen()
             screen_size = screen.availableSize()
             h_size = int(screen_size.width() * config.h_size_frac)  # some fraction of the screen width
             v_size = int(screen_size.height() * config.v_size_frac)  # some fraction of the screen height
             self.setGeometry(100, 50, h_size, v_size)
 
+            # update the displayed information
             self.update_info_fields()
+
+        return None
+
+    def export_settings(self):
+        """Export the configuration file to a user specified location."""
+        suggested_path = os.path.join(config.save_dir, "config.yaml")
+        file_path, _ = QFileDialog.getSaveFileName(self, caption="Export Settings", dir=suggested_path,
+                                                   filter="YAML Files (*.yaml);;All Files (*)")
+
+        main.save_config(file_path)
+
+        return None
+
+    def import_settings(self):
+        """Import the configuration from a user specified file."""
+        file_path, _ = QFileDialog.getOpenFileName(self, caption="Import Settings", dir=config.save_dir,
+                                                    filter="YAML Files (*.yaml);;All Files (*)")
+
+        main.update_config(file_name=file_path)
 
         return None
 

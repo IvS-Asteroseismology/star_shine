@@ -7,11 +7,13 @@ Code written by: Luc IJspeert
 """
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QLabel, QCheckBox
 from PySide6.QtWidgets import QMessageBox, QFrame
-from star_shine.config import helpers as hlp
+
+from star_shine.api.main import update_config, save_config
+from star_shine.config.helpers import get_config
 
 
 # load configuration
-config = hlp.get_config()
+config = get_config()
 
 
 class SettingsDialog(QDialog):
@@ -209,33 +211,39 @@ class SettingsDialog(QDialog):
     def apply_settings(self):
         """Apply the settings to the configuration"""
         try:
+            setting_dict = {}
+
+            # make a settings dictionary
+            setting_dict['overwrite'] = self.overwrite_field.isChecked()
+            setting_dict['save_dir'] = self.save_dir_field.text()
+            setting_dict['save_ascii'] = self.save_ascii_field.isChecked()
+
+            setting_dict['cn_time'] = self.cn_time_field.text()
+            setting_dict['cn_flux'] = self.cn_flux_field.text()
+            setting_dict['cn_flux_err'] = self.cn_flux_err_field.text()
+
+            setting_dict['cf_time'] = self.cf_time_field.text()
+            setting_dict['cf_flux'] = self.cf_flux_field.text()
+            setting_dict['cf_flux_err'] = self.cf_flux_err_field.text()
+            setting_dict['cf_quality'] = self.cf_quality_field.text()
+            setting_dict['apply_q_flags'] = self.apply_q_flags_field.isChecked()
+            setting_dict['halve_chunks'] = self.halve_chunks_field.isChecked()
+
+            setting_dict['select_next'] = self.select_next_field.text()
+            setting_dict['optimise_step'] = self.optimise_step_field.isChecked()
+            setting_dict['replace_step'] = self.replace_step_field.isChecked()
+            setting_dict['bic_thr'] = float(self.bic_thr_field.text())
+            setting_dict['snr_thr'] = float(self.snr_thr_field.text())
+            setting_dict['nyquist_factor'] = float(self.nyquist_factor_field.text())
+            setting_dict['resolution_factor'] = float(self.resolution_factor_field.text())
+            setting_dict['window_width'] = float(self.window_width_field.text())
+
+            setting_dict['dark_mode'] = self.dark_mode_field.isChecked()
+            setting_dict['h_size_frac'] = float(self.h_size_frac_field.text())
+            setting_dict['v_size_frac'] = float(self.v_size_frac_field.text())
+
             # Update the configuration with new values
-            self.config.overwrite = self.overwrite_field.isChecked()
-            self.config.save_dir = self.save_dir_field.text()
-            self.config.save_ascii = self.save_ascii_field.isChecked()
-
-            self.config.cn_time = self.cn_time_field.text()
-            self.config.cn_flux = self.cn_flux_field.text()
-            self.config.cn_flux_err = self.cn_flux_err_field.text()
-
-            self.config.cf_time = self.cf_time_field.text()
-            self.config.cf_flux = self.cf_flux_field.text()
-            self.config.cf_flux_err = self.cf_flux_err_field.text()
-            self.config.cf_quality = self.cf_quality_field.text()
-            self.config.apply_q_flags = self.apply_q_flags_field.isChecked()
-            self.config.halve_chunks = self.halve_chunks_field.isChecked()
-
-            self.config.select_next = self.select_next_field.text()
-            self.config.optimise_step = self.optimise_step_field.isChecked()
-            self.config.replace_step = self.replace_step_field.isChecked()
-            self.config.bic_thr = float(self.bic_thr_field.text())
-            self.config.snr_thr = float(self.snr_thr_field.text())
-            self.config.nyquist_factor = float(self.nyquist_factor_field.text())
-            self.config.resolution_factor = float(self.resolution_factor_field.text())
-            self.config.window_width = float(self.window_width_field.text())
-
-            self.config.h_size_frac = float(self.h_size_frac_field.text())
-            self.config.v_size_frac = float(self.v_size_frac_field.text())
+            update_config(settings=setting_dict)
         except ValueError:
             QMessageBox.warning(self, "Input Error", "Invalid input for settings.")
 
@@ -247,7 +255,7 @@ class SettingsDialog(QDialog):
         self.apply_settings()
 
         try:
-            # Save the configuration to a file or update it as needed
-            self.config.save_config()
+            # Save the configuration to a file
+            save_config()
         except ValueError:
             QMessageBox.warning(self, "IO Error", "Error while saving config.")
