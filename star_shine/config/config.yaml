@@ -94,7 +94,7 @@ cf_flux: 'SAP_FLUX'
 cf_flux_err: 'SAP_FLUX_ERR'
 
 # cf_quality description:
-# Column name for the flux errors
+# Column name for the flux quality flags
 cf_quality: 'QUALITY'
 
 # apply_q_flags description:

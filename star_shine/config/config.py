@@ -100,10 +100,6 @@ class Config:
         config_data: dict
             The loaded configuration data.
 
-        Returns
-        -------
-        None
-
         Raises
         ------
         ValueError
@@ -128,10 +124,6 @@ class Config:
     @classmethod
     def _load_config(cls):
         """Loads and validates the configuration from a file.
-
-        Returns
-        -------
-        None
 
         Notes
         -----
@@ -167,10 +159,6 @@ class Config:
         ----------
         new_config_path: str
             Path to a valid configuration file.
-
-        Returns
-        -------
-        None
         """
         self._config_path = new_config_path
         self._load_config()
@@ -184,10 +172,6 @@ class Config:
         ----------
         settings: dict
             Configuration settings.
-
-        Returns
-        -------
-        None
         """
         # remember invalid items
         invalid = dict()
@@ -204,6 +188,182 @@ class Config:
             print(f"Invalid items that were not updated: {invalid}")
 
         return None
+
+    def save_to_file(self, new_config_path):
+        """Save the configuration to a YAML file manually.
+
+        Parameters
+        ----------
+        new_config_path: str
+            Path to a valid configuration file.
+        """
+        line_width = 120
+
+        with open(new_config_path, 'w') as file:
+            file.write("#" * line_width + "\n")
+            file.write(fill_header_str("Star Shine settings file", line_width, fill_value='-', end='\n'))
+            file.write("#" * line_width + "\n")
+
+            file.write(fill_header_str("General settings", line_width, fill_value='-', end='\n'))
+
+            desc = "Print information during runtime"
+            file.write(config_item_description("verbose", self.verbose, desc))
+
+            desc = "Run the analysis up to and including this stage; 0 means all stages are run"
+            file.write(config_item_description("stop_at_stage", self.stop_at_stage, desc))
+
+            file.write(fill_header_str("Extraction settings", line_width, fill_value='-', end='\n'))
+
+            desc = ("Select the next frequency in iterative extraction based on 'amp', 'snr', "
+                    "or 'hybrid' (first amp then snr)")
+            file.write(config_item_description("select_next", self.select_next, desc))
+
+            desc = "Optimise with a non-linear multi-sinusoid fit at every step (T) or only at the end (F)"
+            file.write(config_item_description("optimise_step", self.optimise_step, desc))
+
+            desc = ("Attempt to replace closely spaced sinusoids by one sinusoid "
+                    "at every step (T) or only at the end (F)")
+            file.write(config_item_description("replace_step", self.replace_step, desc))
+
+            desc = "Stop criterion for the iterative extraction of sinusoids will be based on 'bic', or 'snr'"
+            file.write(config_item_description("stop_criterion", self.stop_criterion, desc))
+
+            desc = "Delta-BIC threshold for the acceptance of sinusoids"
+            file.write(config_item_description("bic_thr", self.bic_thr, desc))
+
+            desc = "Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1"
+            file.write(config_item_description("snr_thr", self.snr_thr, desc))
+
+            desc = "The simple Nyquist frequency approximation (1/(2 delta_t_min)) is multiplied by this factor"
+            file.write(config_item_description("nyquist_factor", self.nyquist_factor, desc))
+
+            desc = "The frequency resolution (1/T) is multiplied by this factor"
+            file.write(config_item_description("resolution_factor", self.resolution_factor, desc))
+
+            desc = "Periodogram spectral noise is calculated over this window width"
+            file.write(config_item_description("window_width", self.window_width, desc))
+
+            file.write("#" * line_width + "\n")
+            file.write(fill_header_str("Data and File settings", line_width, fill_value='-', end='\n'))
+
+            desc = "Overwrite existing result files"
+            file.write(config_item_description("overwrite", self.overwrite, desc))
+
+            desc = "Root directory where the data files to be analysed are located; if empty will use current dir"
+            file.write(config_item_description("data_dir", self.data_dir, desc))
+
+            desc = "Root directory where analysis results will be saved; if empty will use current dir"
+            file.write(config_item_description("save_dir", self.save_dir, desc))
+
+            desc = "Save ascii variants of the HDF5 result files"
+            file.write(config_item_description("save_ascii", self.save_ascii, desc))
+
+            file.write(fill_header_str("Tabulated File settings", line_width, fill_value='-', end='\n'))
+
+            desc = "Column name for the time stamps"
+            file.write(config_item_description("cn_time", self.cn_time, desc))
+
+            desc = "Column name for the flux measurements"
+            file.write(config_item_description("cn_flux", self.cn_flux, desc))
+
+            desc = "Column name for the flux measurement errors"
+            file.write(config_item_description("cn_flux_err", self.cn_flux_err, desc))
+
+            file.write(fill_header_str("FITS File settings", line_width, fill_value='-', end='\n'))
+
+            desc = "Column name for the time stamps"
+            file.write(config_item_description("cf_time", self.cf_time, desc))
+
+            desc = "Column name for the flux [examples: SAP_FLUX, PDCSAP_FLUX, KSPSAP_FLUX]"
+            file.write(config_item_description("cf_flux", self.cf_flux, desc))
+
+            desc = "Column name for the flux errors [examples: SAP_FLUX_ERR, PDCSAP_FLUX_ERR, KSPSAP_FLUX_ERR]"
+            file.write(config_item_description("cf_flux_err", self.cf_flux_err, desc))
+
+            desc = "Column name for the flux quality flags"
+            file.write(config_item_description("cf_quality", self.cf_quality, desc))
+
+            desc = "Apply the quality flags supplied by the data source"
+            file.write(config_item_description("apply_q_flags", self.apply_q_flags, desc))
+
+            desc = "Cut the time chunks in half (TESS data often has a discontinuity mid-sector)"
+            file.write(config_item_description("halve_chunks", self.halve_chunks, desc))
+
+            file.write("#" * line_width + "\n")
+            file.write(fill_header_str("GUI settings", line_width, fill_value='-', end='\n'))
+
+            desc = "Dark mode. [WIP]"
+            file.write(config_item_description("dark_mode", self.dark_mode, desc))
+
+            desc = "Horizontal window size as a fraction of the screen width"
+            file.write(config_item_description("h_size_frac", self.h_size_frac, desc))
+
+            desc = "Vertical window size as a fraction of the screen height"
+            file.write(config_item_description("v_size_frac", self.v_size_frac, desc))
+
+            file.write("#" * line_width + "\n")
+
+        return None
+
+
+def fill_header_str(header, line_width, fill_value='-', end='\n'):
+    """Fill a header string on eiter side with hyphens.
+
+    Parameters
+    ----------
+    header: str
+        Text to put in the centre of the header.
+    line_width: int
+        Width of the final string, excluding `end`.
+    fill_value: str
+        Value used to fill up the line.
+    end: str
+        Something to end the line.
+
+    Returns
+    -------
+    str
+        Filled header string.
+    """
+    # add spaces to the header
+    header = " " + header + " "
+
+    # calculate the space to fill on either side
+    left = (line_width - len(header)) // 2
+    right = line_width - left - len(header)
+
+    header = "# " + fill_value * (left - 2) + header + fill_value * right + end
+
+    return header
+
+
+def config_item_description(item, value, description):
+    """Return a description string for a setting in the config file.
+
+    Parameters
+    ----------
+    item: str
+        The name of the configuration item.
+    value: any
+        The value of the configuration item.
+    description: str
+        A description of what the configuration item does.
+
+    Returns
+    -------
+    str
+        A formatted string that includes the item, its value, and a description.
+    """
+    # start with standardised bit
+    item_desc = f"# {item} description:\n"
+
+    # add the description
+    item_desc += f"# {description}\n"
+
+    # finally add the item
+    item_desc += f"{item}: {value}\n\n"  # empty line at the end
+
+    return item_desc
 
 
 def get_config():
