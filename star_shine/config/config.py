@@ -197,7 +197,7 @@ class Config:
             Path to a valid configuration file.
         """
         # make sure the file has yaml extension
-        if not new_config_path.endswith('.yaml'):
+        if not (new_config_path.endswith('.yaml') or new_config_path.endswith('.yml')):
             new_config_path += '.yaml'
 
         # if save_dir is usr dir, revert to '' for saving (this is specifically for GUI behaviour)
