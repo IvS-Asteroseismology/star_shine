@@ -25,7 +25,7 @@ jobs:
 
       - name: Generate docs with pdoc into /docs
         run: |
-          pdoc star_shine --html --output-dir docs --force
+          pdoc star_shine -o docs
 
       - name: Commit and push updated docs
         run: |
