@@ -53,7 +53,8 @@ Newer versions are expected to work, and it is considered a bug if this is not t
 
 Before first use, it is recommended to run one very short time-series (for example sim_000_lc.dat included in the data 
 folder). This will make sure that the just-in-time compiler can do its magic and make everything run as fast as it can. 
-See the script run_first_use.py.
+See the script `run_first_use.py`. Note that this takes some time, as there are many compiled components in the code, 
+and worry not: this is not indicative of the final runtime.
 
 
 ### Example use
