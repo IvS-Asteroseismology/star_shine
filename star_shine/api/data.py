@@ -62,7 +62,10 @@ class Data:
         return
 
     def __repr__(self):
-        pass # todo: implement repr
+        return (f"Data(target_id={self.target_id!r}, "
+                f"data_id={self.data_id!r}, "
+                f"data_dir={self.data_dir!r}, "
+                f"file_list={self.file_list!r})")
 
     def _check_file_existence(self, logger=None):
         """Checks whether the given file(s) exist.
