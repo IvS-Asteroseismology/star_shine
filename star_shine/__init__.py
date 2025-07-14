@@ -15,4 +15,6 @@ except ImportError:
     print('GUI unavailable, likely missing dependency PySide6.')
     pass
 
+__pdoc__ = {"gui": False}
+
 __all__ = ['gui', 'api', 'core', 'config', 'data']
