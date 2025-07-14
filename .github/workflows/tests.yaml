@@ -25,6 +25,10 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}  # Specify the Python version
 
+    - name: Install Poetry
+      run: |
+        pip install poetry
+
     # Cache Poetry dependencies and virtual environment to speed up builds
     - name: Cache Poetry dependencies
       uses: actions/cache@v3
@@ -48,7 +52,7 @@ jobs:
     # Install dependencies listed in pyproject.toml using Poetry
     - name: Install dependencies using Poetry
       run: |
-        poetry install --no-interaction --no-root
+        poetry install
 
     # Run your test suite using Poetry's virtual environment
     - name: Run tests
