@@ -1,8 +1,0 @@
-numpy
-scipy
-numba
-h5py
-astropy
-pandas
-matplotlib
-pyyaml
