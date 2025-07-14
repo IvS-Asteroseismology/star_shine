@@ -3,11 +3,14 @@
 Code written by: Luc IJspeert
 """
 
-import star_shine.api
+from .api.main import *
+from .api.data import Data
+from .api.result import Result
+from .api.pipeline import Pipeline
 
 try:
     # GUI
-    from star_shine.gui.gui_app import launch_gui
+    from .gui.gui_app import launch_gui
 except ImportError:
     print('GUI unavailable, likely missing dependency PySide6.')
     pass

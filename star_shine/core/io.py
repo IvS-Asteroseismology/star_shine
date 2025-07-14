@@ -622,9 +622,9 @@ def load_light_curve(file_list, apply_flags=True):
 
     # clean up (on time and flux)
     finite = np.isfinite(time) & np.isfinite(flux)
-    time = time[finite].astype(np.float_)
-    flux = flux[finite].astype(np.float_)
-    flux_err = flux_err[finite].astype(np.float_)
+    time = time[finite].astype(np.float64)
+    flux = flux[finite].astype(np.float64)
+    flux_err = flux_err[finite].astype(np.float64)
 
     # median normalise
     flux, flux_err, medians = normalise_counts(flux, flux_err, i_chunks)

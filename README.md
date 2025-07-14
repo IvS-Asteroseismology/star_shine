@@ -25,7 +25,7 @@ batches of targets.
 
 ### Reference Material
 
-* This algorithm has been documented, tested and applied in the publication: [Automated eccentricity measurement from raw eclipsing binary light curves with intrinsic variability](https://ui.adsabs.harvard.edu/abs/2024arXiv240206084I/abstract)
+* The algorithm that this application stems from has been documented, tested and applied in the publication: [Automated eccentricity measurement from raw eclipsing binary light curves with intrinsic variability](https://ui.adsabs.harvard.edu/abs/2024arXiv240206084I/abstract)
 
 ## Getting started
 
@@ -37,7 +37,7 @@ One can then import the package from the python environment it was installed in.
 Of course one can always still manually download it or make a fork on GitHub. 
 It is recommended to get the latest release from the GitHub page. 
 
-The GUI is optional functionality, and its dependencies can be included when installing the package:
+The GUI is optional functionality, and its dependencies can be included when installing the package using:
 
     pip install star_shine[gui]
 
@@ -59,31 +59,30 @@ See the script run_first_use.py.
 ### Example use
 
 Since the main feature of STAR SHINE is its fully automated operation, taking advantage of its functionality is 
-as simple as running one function:
+as simple as running one function. First, set up a `Data` object:
 
     import star_shine as sts
-    # to analyse any light curve from a file: 
-    sts.analyse_lc_from_file(file, p_orb=0, i_sectors=None, stage='all', method='fitter', data_id='none', save_dir=None, overwrite=False, verbose=True)
-    
-    # or to analyse from a set of TESS data product .fits files:
-    sts.analyse_lc_from_tic(tic, all_files, p_orb=0, i_sectors=None, stage='all', method='fitter', data_id=None, save_dir=None, overwrite=False, verbose=True)
+    data = sts.Data.load_data(file_list)
 
-The light curve file is expected to contain a time column, flux measurements (median normalised and non-negative), 
-and flux measurement errors. The normalisation for TESS data products is handled automatically on a per-sector basis. 
-The stage parameter can be set to indicate which parts of the analysis are performed, see the documentation for options.
+Then, use the `Data` object to initialise the `Pipeline`, and simply run it:
 
-If a save_dir is given, the outputs are saved in that directory with either the TIC number or the file name as 
-identifier. If not given, files are saved in a subdirectory of where the light curve file is.
-The 'overwrite' argument can be used to overwrite old data or to continue from a previous save file. The functions can 
-print useful progress information if verbose=True. In the case of eclipsing binaries, if an orbital period is known 
-beforehand, this information will be used to find orbital harmonics in the prewhitened frequencies. If left zero, 
-a period is found through a combination of phase dispersion minimisation, Lomb-Scargle periodogram and extracted 
-frequencies. For the 'analyse_from_tic' function, the files corresponding to the given TIC number are picked out 
-from a list of all available TESS data files, provided by the user, for ease of use.
+    pipeline = sts.Pipeline(data)
+    pipeline.run()
 
-Either function can be used for a set of light curves by using:
+A provided light curve file is expected to contain a time column, flux measurements (non-negative), and flux 
+measurement errors. Astronomical data products in FITS format can also be read by the Data class, provided the 
+correct column names are configured (by default these use standard TESS data product names). The normalisation of the 
+time series handled automatically per time chunk (each separate file is considered a time chunk - e.g. a sector in 
+TESS jargon). The stage parameter can be set to indicate which parts of the analysis will be performed, see the 
+documentation for options.
 
-    sts.analyse_set(target_list, function='analyse_from_tic', n_threads=os.cpu_count() - 2, **kwargs):
+If a save_dir is given, the outputs are saved in that directory with either the given target identifier or the file 
+name of the first data file as identifier. If not given, files are saved in a subdirectory of where the data is.
+The 'overwrite' argument can be used to either overwrite old data, or to continue from a previous save file. 
+The pipeline can print useful progress information if verbose is set to True in the configuration. In the case of 
+harmonic signals such as in eclipsing binaries, and if an orbital period is known beforehand, this information can be 
+used to find orbital harmonics in the prewhitened frequencies. If not provided, a period is found using a 
+combination of phase dispersion minimisation, Lomb-Scargle periodogram amplitude, and the extracted frequencies.
 
 
 ### Explanation of output
@@ -94,24 +93,21 @@ like a reason for early termination.
 
 Currently, there are a total of 5 analysis steps. Normal operation can terminate at several intermediate stages. 
 A log entry is made when this happens containing further information. The analysis can stop if for example no 
-frequencies were extracted, or not enough orbital harmonics are found.
+frequencies were extracted, or not enough (orbital) harmonics are found.
 
 Each step produces at least an .hdf5 file with all the model parameters from that stage of the analysis. 
-The utility module contains a function for reading these files, 'read_parameters_hdf5', which outputs a convenient 
-format for the data (note that reading in these files with H5py directly will not result in formatting that can be used 
-with the functions of STAR SHINE). The .hdf5 files can also be translated into several plain text .csv files with 
-'convert_hdf5_to_ascii'. The .nc4 files (a wrapper for hdf5) contain pymc3 sampling chains.
+The io module contains a function for reading these files, `load_result_hdf5`, which outputs a convenient 
+dictionary. However, the main way to interact with the results is through the Result object, provided by the Pipeline.
+With the Result object, it is also possible to save ascii variants of the results (multiple files are generated due
+to the less efficient manner of data storage).
+
+The .nc4 files (a wrapper for hdf5) contain pymc3 sampling chains.
 
 
 ### Diagnostic plots
 
-There are several plotting functions available that show various diagnostics from throughout the analysis. The function:
-
-    sts.ut.sequential_plotting(times, signal, i_sectors, target_id, load_dir, save_dir=None, show=False)
-
-saves and/or shows most of the available plots for one target. Unfortunately matplotlib plotting only works in
-the main thread, so when processing a whole set of light curves in parallel, this function will have to be run 
-sequentially on the results afterward (hence the name).
+There are several plotting functions available in the visualisation module. A simpler way to visualise the analysis
+is to use the GUI, which shows the data, periodogram, and the state of the model as the analysis progresses.
 
 
 ## Bugs and Issues
@@ -130,4 +126,4 @@ implemented in the source code.
 
 For questions and suggestions, please contact:
 
-**Main developer:** Luc IJspeert (KU Leuven)
+**Main developer:** Luc IJspeert, PhD in astronomy and astrophysics

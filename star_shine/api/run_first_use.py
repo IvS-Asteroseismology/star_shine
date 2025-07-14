@@ -14,9 +14,13 @@ import star_shine as sts
 
 
 # get the path to the test light curve
-data_path = str(importlib.resources.files('star_shine.data'))
-file = os.path.join(data_path, 'sim_000_lc.dat')
+data_path_traversable = importlib.resources.files('star_shine.data')
+target_id = 'sim_000_lc'
+file = data_path_traversable.joinpath(target_id + '.dat').as_posix()
+data_path = os.path.split(file)[0]
+file_list = [file]
 
-# execute the code
-sts.analyse_lc_from_file(file, p_orb=0, i_sectors=None, stage='all', method='fitter', data_id='', save_dir=None,
-                         overwrite=True, verbose=True)
+# initialise the data and pipeline
+data = sts.Data.load_data(file_list, data_dir='', target_id=target_id, data_id='', logger=None)
+pipeline = sts.Pipeline(data, save_dir=data_path, logger=None)
+pipeline.run()
