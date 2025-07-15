@@ -1007,20 +1007,22 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
 <p>Handles the full analysis pipeline of Star Shine.</p>
 
-<h2 id="attributes">Attributes</h2>
+<h6 id="attributes">Attributes</h6>
 
-<p>data: Data
-    Instance of the Data class holding the light curve data.
-result: Result
-    Instance of the Result class holding the parameters of the result.
-ts_model: TimeSeriesModel
-    Instance of the TimeSeriesModel class holding the time series model.
-save_dir: str
-    Root directory where the result files will be stored.
-save_subdir: str
-    Sub-directory that is made to contain the save files.
-logger: Logger
-    Instance of the logging library.</p>
+<ul>
+<li><strong>data</strong> (Data):
+Instance of the Data class holding the light curve data.</li>
+<li><strong>result</strong> (Result):
+Instance of the Result class holding the parameters of the result.</li>
+<li><strong>ts_model</strong> (TimeSeriesModel):
+Instance of the TimeSeriesModel class holding the time series model.</li>
+<li><strong>save_dir</strong> (str):
+Root directory where the result files will be stored.</li>
+<li><strong>save_subdir</strong> (str):
+Sub-directory that is made to contain the save files.</li>
+<li><strong>logger</strong> (Logger):
+Instance of the logging library.</li>
+</ul>
 </div>
 
 
@@ -1080,15 +1082,17 @@ logger: Logger
 
             <div class="docstring"><p>Initialises the Pipeline object.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>data: Data
-    Instance of the Data class with the data to be analysed.
-save_dir: str, optional
-    Root directory where result files will be stored. Added to the file name.
-    If empty, it is loaded from config.</p>
+<ul>
+<li><strong>data</strong> (Data):
+Instance of the Data class with the data to be analysed.</li>
+<li><strong>save_dir</strong> (str, optional):
+Root directory where result files will be stored. Added to the file name.
+If empty, it is loaded from config.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Creates a directory where all the analysis result files will be stored.</p>
 </div>
@@ -1207,10 +1211,12 @@ save_dir: str, optional
 
             <div class="docstring"><p>Extract a sinusoid from the time series at an approximate frequency.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_approx: float
-    Approximate location of the frequency of maximum amplitude.</p>
+<ul>
+<li><strong>f_approx</strong> (float):
+Approximate location of the frequency of maximum amplitude.</li>
+</ul>
 </div>
 
 
@@ -1262,10 +1268,12 @@ save_dir: str, optional
 
             <div class="docstring"><p>Remove a sinusoid from the list at an approximate frequency.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_approx: float
-    Approximate location of the frequency to be removed.</p>
+<ul>
+<li><strong>f_approx</strong> (float):
+Approximate location of the frequency to be removed.</li>
+</ul>
 </div>
 
 
@@ -1335,15 +1343,18 @@ frequencies are better replaced by one frequency.</p>
 
 <p>Continues from last results if frequency list is not empty.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>n_extract: int, optional
-    Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.</p>
+<ul>
+<li><strong>n_extract</strong> (int, optional):
+Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Result
-    Instance of the Result class containing the analysis results</p>
+<ul>
+<li><strong>Result</strong>: Instance of the Result class containing the analysis results</li>
+</ul>
 </div>
 
 
@@ -1415,10 +1426,11 @@ frequencies are better replaced by one frequency.</p>
 
             <div class="docstring"><p>Optimise the parameters of the sinusoid and linear model</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Result
-    Instance of the Result class containing the analysis results</p>
+<ul>
+<li><strong>Result</strong>: Instance of the Result class containing the analysis results</li>
+</ul>
 </div>
 
 
@@ -1534,12 +1546,13 @@ frequencies are better replaced by one frequency.</p>
 
             <div class="docstring"><p>Find the orbital period and couple harmonic frequencies to the orbital period</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Result
-    Instance of the Result class containing the analysis results</p>
+<ul>
+<li><strong>Result</strong>: Instance of the Result class containing the analysis results</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Performs a global search for the base frequency, if unknown. If a frequency is given, it is locally
 refined for better performance. Needs an existing list of extracted sinusoids.</p>
@@ -1687,10 +1700,11 @@ overwriting.</p>
     using groups of frequencies to limit the number of free parameters
     and including the orbital period and the coupled harmonics.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Result
-    Instance of the Result class containing the analysis results</p>
+<ul>
+<li><strong>Result</strong>: Instance of the Result class containing the analysis results</li>
+</ul>
 </div>
 
 
@@ -1726,10 +1740,12 @@ overwriting.</p>
 
             <div class="docstring"><p>Load a result file and update the model.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_name: str
-    File name to load the results from</p>
+<ul>
+<li><strong>file_name</strong> (str):
+File name to load the results from</li>
+</ul>
 </div>
 
 
@@ -1765,10 +1781,12 @@ overwriting.</p>
 
             <div class="docstring"><p>Update the result form model and save.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_name: str
-    File name to load the results from</p>
+<ul>
+<li><strong>file_name</strong> (str):
+File name to load the results from</li>
+</ul>
 </div>
 
 

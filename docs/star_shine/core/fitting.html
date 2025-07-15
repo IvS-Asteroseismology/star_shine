@@ -26,11 +26,6 @@
             <input type="search" placeholder="Search..." role="searchbox" aria-label="search"
                    pattern=".+" required>
 
-            <h2>Contents</h2>
-            <ul>
-  <li><a href="#notes">Notes</a></li>
-</ul>
-
 
 
             <h2>API Documentation</h2>
@@ -81,7 +76,7 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 <p>This Python module contains functions for time series analysis;
 specifically for the fitting of stellar oscillations and harmonic sinusoids.</p>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Minimize methods:
 Nelder-Mead is extensively tested and found robust, while slow.
@@ -690,27 +685,30 @@ See publication appendix for more information.</p>
 
             <div class="docstring"><p>The derivative of a sine wave at times t, where x is on of the parameters.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>two_pi_t: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series times two pi.
-f: float
-    The frequency of a sine wave.
-a: float
-    The amplitude of a sine wave.
-ph: float
-    The phase of a sine wave.
-d: string
-    Which derivative to take. Choose f, a, ph, h (for harmonics).
-f_base: float
-    Base frequency of the harmonic series.</p>
+<ul>
+<li><strong>two_pi_t</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series times two pi.</li>
+<li><strong>f</strong> (float):
+The frequency of a sine wave.</li>
+<li><strong>a</strong> (float):
+The amplitude of a sine wave.</li>
+<li><strong>ph</strong> (float):
+The phase of a sine wave.</li>
+<li><strong>d</strong> (string):
+Which derivative to take. Choose f, a, ph, h (for harmonics).</li>
+<li><strong>f_base</strong> (float):
+Base frequency of the harmonic series.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Model time series of the derivative of a sine wave to f.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Model time series of the derivative of a sine wave to f.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Make sure the phases correspond to the given time zero point.
 If d='h', it is assumed that f is a harmonic and the base frequency f_base is provided</p>
@@ -796,33 +794,36 @@ If d='h', it is assumed that f is a harmonic and the base frequency f_base is pr
 
             <div class="docstring"><p>The objective function to give to scipy.optimize.minimize for a sum of sine waves.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>params: numpy.ndarray[Any, dtype[float]]
-    The parameters of a set of sine waves and linear curve(s)
-    Has to be a flat array and are ordered in the following way:
-    [f_base_1, f_base_2, ..., const_1, const_2, ..., slope_1, slope_2, ...,
-    f_1, f_2, ..., a_1, a_2, ..., p_1, p_2, ...]
-time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-h_base: numpy.ndarray[Any, dtype[int]]
-     Indices of the base frequencies in params.
-h_mult: numpy.ndarray[Any, dtype[int]]
-    Harmonic multiplier of the base frequency for each harmonic.</p>
+<ul>
+<li><strong>params</strong> (numpy.ndarray[Any, dtype[float]]):
+The parameters of a set of sine waves and linear curve(s)
+Has to be a flat array and are ordered in the following way:
+[f_base_1, f_base_2, ..., const_1, const_2, ..., slope_1, slope_2, ...,
+f_1, f_2, ..., a_1, a_2, ..., p_1, p_2, ...]</li>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>h_base</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the base frequencies in params.</li>
+<li><strong>h_mult</strong> (numpy.ndarray[Any, dtype[int]]):
+Harmonic multiplier of the base frequency for each harmonic.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    Minus the (natural)log-likelihood of the residuals</p>
+<ul>
+<li><strong>float</strong>: Minus the (natural)log-likelihood of the residuals</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>linear_curve and sum_sines for the definition of the parameters.</p>
+<p><code>linear_curve</code>, <code>and</code>, <code>sum_sines</code>, <code>for</code>, <code>the</code>, <code>definition</code>, <code>of</code>, <code>the</code>, <code>parameters.</code>  </p>
 </div>
 
 
@@ -947,33 +948,36 @@ h_mult: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>The jacobian function to give to scipy.optimize.minimize for a sum of sine waves.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>params: numpy.ndarray[Any, dtype[float]]
-    The parameters of a set of sine waves and linear curve(s)
-    Has to be a flat array and are ordered in the following way:
-    [f_base_1, f_base_2, ..., const_1, const_2, ..., slope_1, slope_2, ...,
-    f_1, f_2, ..., a_1, a_2, ..., p_1, p_2, ...]
-time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-h_base: numpy.ndarray[Any, dtype[int]]
-     Indices of the base frequencies in params.
-h_mult: numpy.ndarray[Any, dtype[int]]
-    Harmonic multiplier of the base frequency for each harmonic.</p>
+<ul>
+<li><strong>params</strong> (numpy.ndarray[Any, dtype[float]]):
+The parameters of a set of sine waves and linear curve(s)
+Has to be a flat array and are ordered in the following way:
+[f_base_1, f_base_2, ..., const_1, const_2, ..., slope_1, slope_2, ...,
+f_1, f_2, ..., a_1, a_2, ..., p_1, p_2, ...]</li>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>h_base</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the base frequencies in params.</li>
+<li><strong>h_mult</strong> (numpy.ndarray[Any, dtype[int]]):
+Harmonic multiplier of the base frequency for each harmonic.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    The derivative of minus the (natural)log-likelihood of the residuals</p>
+<ul>
+<li><strong>float</strong>: The derivative of minus the (natural)log-likelihood of the residuals</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>objective_sinusoids</p>
+<p><code><a href="#objective_sinusoids">objective_sinusoids</a></code>  </p>
 </div>
 
 
@@ -1045,23 +1049,26 @@ h_mult: numpy.ndarray[Any, dtype[int]]
 
 <p>Also returns weights for each model feature.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-f_base: numpy.ndarray[Any, dtype[float]]
-    Base frequencies of the harmonics (of multiple series).
-h_mult: numpy.ndarray[Any, dtype[int]]
-    Harmonic multiplier of the base frequency for each harmonic.
-t_shift: bool
-    Mean center the time axis.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>f_base</strong> (numpy.ndarray[Any, dtype[float]]):
+Base frequencies of the harmonics (of multiple series).</li>
+<li><strong>h_mult</strong> (numpy.ndarray[Any, dtype[int]]):
+Harmonic multiplier of the base frequency for each harmonic.</li>
+<li><strong>t_shift</strong> (bool):
+Mean center the time axis.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The design matrix. N by M where N = len(time) and M = 1 + 2 len(h_mult).</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The design matrix. N by M where N = len(time) and M = 1 + 2 len(h_mult).</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Based on code from Puffins, by C. Johnston, D.W. Hogg, and N.L. Eisner;
 <a href="https://github.com/colej/puffins/">https://github.com/colej/puffins/</a>
@@ -1118,19 +1125,22 @@ Which is itself based on D. W. Hogg &amp; S. Villar (2021, <a href="https://arxi
 
             <div class="docstring"><p>Generate the weights for the features of a harmonic series.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>h_mult: numpy.ndarray[Any, dtype[int]]
-    Harmonic multiplier of the base frequency for each harmonic (of multiple series).
-s: float
-    The kernel width in Fourier space.</p>
+<ul>
+<li><strong>h_mult</strong> (numpy.ndarray[Any, dtype[int]]):
+Harmonic multiplier of the base frequency for each harmonic (of multiple series).</li>
+<li><strong>s</strong> (float):
+The kernel width in Fourier space.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Harmonic feature weights.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Harmonic feature weights.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Based on code from Puffins, by C. Johnston, D.W. Hogg, and N.L. Eisner;
 <a href="https://github.com/colej/puffins/">https://github.com/colej/puffins/</a>
@@ -1222,24 +1232,27 @@ Which is itself based on D. W. Hogg &amp; S. Villar (2021, <a href="https://arxi
 
             <div class="docstring"><p>Feature weighted least-squares solver.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: numpy.ndarray[(n, p), dtype[float]]
-    Design matrix
-y: numpy.ndarray[(n,), dtype[float]]
-    Target values
-l: numpy.ndarray[(p,), dtype[float]]
-    Feature weights
-w: numpy.ndarray[(n,), dtype[float]]
-    Weights for the targets
-    Assumes matrix with diagonal elements as 1/inverse variance on Y</p>
+<ul>
+<li><strong>x</strong> (numpy.ndarray[(n, p), dtype[float]]):
+Design matrix</li>
+<li><strong>y</strong> (numpy.ndarray[(n,), dtype[float]]):
+Target values</li>
+<li><strong>l</strong> (numpy.ndarray[(p,), dtype[float]]):
+Feature weights</li>
+<li><strong>w</strong> (numpy.ndarray[(n,), dtype[float]]):
+Weights for the targets
+Assumes matrix with diagonal elements as 1/inverse variance on Y</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[(p,), dtype[float]]
-    Solved coefficients (betas)</p>
+<ul>
+<li><strong>numpy.ndarray[(p,), dtype[float]]</strong>: Solved coefficients (betas)</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Implements equations 23 and 24 from D. W. Hogg &amp; S. Villar (2021, <a href="https://arxiv.org/pdf/2101.07256">https://arxiv.org/pdf/2101.07256</a>)
 If weights is not provided, it assumes OLS
@@ -1307,26 +1320,29 @@ W = 1/C^2, where C is the uncertainty on the target values</p>
 
 <p>Also returns the design matrix and feature weights.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series.
-f_base: numpy.ndarray[Any, dtype[float]]
-    Base frequencies of the harmonics (of multiple series).
-h_mult: numpy.ndarray[Any, dtype[int]]
-    Harmonic multiplier of the base frequency for each harmonic.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series.</li>
+<li><strong>f_base</strong> (numpy.ndarray[Any, dtype[float]]):
+Base frequencies of the harmonics (of multiple series).</li>
+<li><strong>h_mult</strong> (numpy.ndarray[Any, dtype[int]]):
+Harmonic multiplier of the base frequency for each harmonic.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    numpy.ndarray[Any, dtype[float]]
-        Harmonic amplitude solutions (cosine and sine amplitudes).
-    numpy.ndarray[Any, dtype[float]]
-        The design matrix. N by M where N = len(time) and M = 1 + 2 len(h_mult).
-    numpy.ndarray[Any, dtype[float]]
-        Harmonic feature weights.</p>
+<ul>
+<li><strong>tuple</strong>: numpy.ndarray[Any, dtype[float]]
+Harmonic amplitude solutions (cosine and sine amplitudes).
+numpy.ndarray[Any, dtype[float]]
+The design matrix. N by M where N = len(time) and M = 1 + 2 len(h_mult).
+numpy.ndarray[Any, dtype[float]]
+Harmonic feature weights.</li>
+</ul>
 </div>
 
 
@@ -1457,18 +1473,20 @@ h_mult: numpy.ndarray[Any, dtype[int]]
 reducing the overall runtime of the NL-LS fit.
 If present, harmonics are always fit simultaneously with each group.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-g_min: int
-    Minimum group size
-g_max: int
-    Maximum group size (g_max &gt; g_min)
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>g_min</strong> (int):
+Minimum group size</li>
+<li><strong>g_max</strong> (int):
+Maximum group size (g_max &gt; g_min)</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>ts_model must have been cleaned up before use here.</p>
 </div>

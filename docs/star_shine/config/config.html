@@ -894,17 +894,18 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>A singleton class that manages application configuration settings.</p>
 
-<h2 id="attributes">Attributes</h2>
+<h6 id="attributes">Attributes</h6>
 
-<p>_instance: Config object, None
-    The single instance of the Config class, or None.
-_config_path: str
-    Path to the configuration file.</p>
+<ul>
+<li><strong>_instance</strong> (Config object, None):
+The single instance of the Config class, or None.</li>
+<li><strong>_config_path</strong> (str):
+Path to the configuration file.</li>
+<li><strong>resolution_factor</strong> (float):
+Number that multiplies the resolution (1/T).</li>
+</ul>
 
-<p>resolution_factor: float
-    Number that multiplies the resolution (1/T).</p>
-
-<h2 id="methods">Methods</h2>
+<h6 id="methods">Methods</h6>
 
 <p>__new__(cls)
     Ensures only one instance of the Config class is created.
@@ -945,10 +946,11 @@ _initialize_default_settings(cls)
 
             <div class="docstring"><p>Ensures that only one instance of the Config class is created.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Config
-    The single instance of the Config class.</p>
+<ul>
+<li><strong>Config</strong>: The single instance of the Config class.</li>
+</ul>
 </div>
 
 
@@ -1305,10 +1307,12 @@ _initialize_default_settings(cls)
 
             <div class="docstring"><p>Updates the settings with a user defined configuration file.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>new_config_path: str
-    Path to a valid configuration file.</p>
+<ul>
+<li><strong>new_config_path</strong> (str):
+Path to a valid configuration file.</li>
+</ul>
 </div>
 
 
@@ -1352,10 +1356,12 @@ _initialize_default_settings(cls)
 
             <div class="docstring"><p>Updates the settings with user defined keyword arguments.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>settings: dict
-    Configuration settings.</p>
+<ul>
+<li><strong>settings</strong> (dict):
+Configuration settings.</li>
+</ul>
 </div>
 
 
@@ -1500,10 +1506,12 @@ _initialize_default_settings(cls)
 
             <div class="docstring"><p>Save the configuration to a YAML file manually.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>new_config_path: str
-    Path to a valid configuration file.</p>
+<ul>
+<li><strong>new_config_path</strong> (str):
+Path to a valid configuration file.</li>
+</ul>
 </div>
 
 
@@ -1554,21 +1562,24 @@ _initialize_default_settings(cls)
 
             <div class="docstring"><p>Fill a header string on eiter side with hyphens.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>header: str
-    Text to put in the centre of the header.
-line_width: int
-    Width of the final string, excluding <code>end</code>.
-fill_value: str
-    Value used to fill up the line.
-end: str
-    Something to end the line.</p>
+<ul>
+<li><strong>header</strong> (str):
+Text to put in the centre of the header.</li>
+<li><strong>line_width</strong> (int):
+Width of the final string, excluding <code>end</code>.</li>
+<li><strong>fill_value</strong> (str):
+Value used to fill up the line.</li>
+<li><strong>end</strong> (str):
+Something to end the line.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    Filled header string.</p>
+<ul>
+<li><strong>str</strong>: Filled header string.</li>
+</ul>
 </div>
 
 
@@ -1620,19 +1631,22 @@ end: str
 
             <div class="docstring"><p>Return a description string for a setting in the config file.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>item: str
-    The name of the configuration item.
-value: any
-    The value of the configuration item.
-description: str
-    A description of what the configuration item does.</p>
+<ul>
+<li><strong>item</strong> (str):
+The name of the configuration item.</li>
+<li><strong>value</strong> (any):
+The value of the configuration item.</li>
+<li><strong>description</strong> (str):
+A description of what the configuration item does.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    A formatted string that includes the item, its value, and a description.</p>
+<ul>
+<li><strong>str</strong>: A formatted string that includes the item, its value, and a description.</li>
+</ul>
 </div>
 
 
@@ -1662,10 +1676,11 @@ description: str
 
             <div class="docstring"><p>Use this function to get the configuration</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Config
-    The singleton instance of Config.</p>
+<ul>
+<li><strong>Config</strong>: The singleton instance of Config.</li>
+</ul>
 </div>
 
 
@@ -1698,10 +1713,11 @@ description: str
 
             <div class="docstring"><p>Get the path to the configuration file</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    Path to the config file</p>
+<ul>
+<li><strong>str</strong>: Path to the config file</li>
+</ul>
 </div>
 
 

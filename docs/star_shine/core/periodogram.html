@@ -1014,19 +1014,22 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>Fold the given time series over the orbital period to transform to phase space.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-p_orb: float
-    The orbital period with which the time series is folded
-zero: float, None
-    Reference zero point in time when the phase equals zero</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>p_orb</strong> (float):
+The orbital period with which the time series is folded</li>
+<li><strong>zero</strong> (float, None):
+Reference zero point in time when the phase equals zero</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Phase array for all timestamps. Phases are between -0.5 and 0.5</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Phase array for all timestamps. Phases are between -0.5 and 0.5</li>
+</ul>
 </div>
 
 
@@ -1087,30 +1090,33 @@ zero: float, None
 
             <div class="docstring"><p>Fold the given time series over the orbital period</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-p_orb: float
-    The orbital period with which the time series is folded
-t_zero: float, None
-    Reference zero point in time (with respect to the time series mean time)
-    when the phase equals zero
-t_ext_1: float
-    Negative time interval to extend the folded time series to the left.
-t_ext_2: float
-    Positive time interval to extend the folded time series to the right.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>p_orb</strong> (float):
+The orbital period with which the time series is folded</li>
+<li><strong>t_zero</strong> (float, None):
+Reference zero point in time (with respect to the time series mean time)
+when the phase equals zero</li>
+<li><strong>t_ext_1</strong> (float):
+Negative time interval to extend the folded time series to the left.</li>
+<li><strong>t_ext_2</strong> (float):
+Positive time interval to extend the folded time series to the right.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    t_extended: numpy.ndarray[Any, dtype[float]]
-        Folded time series array for all timestamps (and possible extensions).
-    ext_left: numpy.ndarray[bool]
-        Mask of points to extend time series to the left (for if t_ext_1!=0)
-    ext_right: numpy.ndarray[bool]
-        Mask of points to extend time series to the right (for if t_ext_2!=0)</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+t_extended: numpy.ndarray[Any, dtype[float]]
+Folded time series array for all timestamps (and possible extensions).
+ext_left: numpy.ndarray[bool]
+Mask of points to extend time series to the left (for if t_ext_1!=0)
+ext_right: numpy.ndarray[bool]
+Mask of points to extend time series to the right (for if t_ext_2!=0)</li>
+</ul>
 </div>
 
 
@@ -1173,22 +1179,25 @@ t_ext_2: float
 
             <div class="docstring"><p>Phase dispersion, as in PDM, without overlapping bins.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>phases: numpy.ndarray[Any, dtype[float]]
-    The phase-folded timestamps of the time series, between -0.5 and 0.5.
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-n_bins: int
-    The number of bins over the orbital phase</p>
+<ul>
+<li><strong>phases</strong> (numpy.ndarray[Any, dtype[float]]):
+The phase-folded timestamps of the time series, between -0.5 and 0.5.</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>n_bins</strong> (int):
+The number of bins over the orbital phase</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    Phase dispersion, or summed variance over the bins divided by
-    the variance of the flux</p>
+<ul>
+<li><strong>float</strong>: Phase dispersion, or summed variance over the bins divided by
+the variance of the flux</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Intentionally does not make use of scipy to enable JIT-ting, which makes this considerably faster.</p>
 </div>
@@ -1266,26 +1275,29 @@ n_bins: int
 
             <div class="docstring"><p>Determine the phase dispersion over a set of periods to find the minimum</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-local: bool
-    If set True, only searches the given frequencies,
-    else also fractions of the frequencies are searched</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>local</strong> (bool):
+If set True, only searches the given frequencies,
+else also fractions of the frequencies are searched</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    periods: numpy.ndarray[Any, dtype[float]]
-        Periods at which the phase dispersion is calculated
-    pd_all: numpy.ndarray[Any, dtype[float]]
-        Phase dispersion at the given periods</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+periods: numpy.ndarray[Any, dtype[float]]
+Periods at which the phase dispersion is calculated
+pd_all: numpy.ndarray[Any, dtype[float]]
+Phase dispersion at the given periods</li>
+</ul>
 </div>
 
 
@@ -1350,23 +1362,26 @@ local: bool
 
             <div class="docstring"><p>Calculate the Lomb-Scargle noise spectrum by a convolution with a flat window of a certain width.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-resid: numpy.ndarray[Any, dtype[float]]
-    Residual measurement values of the time series
-window_width: float
-    The width of the window used to compute the noise spectrum,
-    in inverse unit of the time array (i.e. 1/d if time is in d).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>resid</strong> (numpy.ndarray[Any, dtype[float]]):
+Residual measurement values of the time series</li>
+<li><strong>window_width</strong> (float):
+The width of the window used to compute the noise spectrum,
+in inverse unit of the time array (i.e. 1/d if time is in d).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The noise spectrum calculated as the mean in a frequency window
-    in the residual periodogram</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The noise spectrum calculated as the mean in a frequency window
+in the residual periodogram</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>The values calculated here capture the amount of noise on fitting a
 sinusoid of a certain frequency to all data points.
@@ -1435,23 +1450,26 @@ time series.</p>
             <div class="docstring"><p>Calculate the Lomb-Scargle noise spectrum by a convolution with a flat window of a certain width,
 given an amplitude spectrum.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>freqs: numpy.ndarray[Any, dtype[float]]
-    Frequencies at which the periodogram was calculated
-ampls: numpy.ndarray[Any, dtype[float]]
-    The periodogram spectrum in the chosen units
-window_width: float
-    The width of the window used to compute the noise spectrum,
-    in inverse unit of the time array (i.e. 1/d if time is in d).</p>
+<ul>
+<li><strong>freqs</strong> (numpy.ndarray[Any, dtype[float]]):
+Frequencies at which the periodogram was calculated</li>
+<li><strong>ampls</strong> (numpy.ndarray[Any, dtype[float]]):
+The periodogram spectrum in the chosen units</li>
+<li><strong>window_width</strong> (float):
+The width of the window used to compute the noise spectrum,
+in inverse unit of the time array (i.e. 1/d if time is in d).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The noise spectrum calculated as the mean in a frequency window
-    in the residual periodogram</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The noise spectrum calculated as the mean in a frequency window
+in the residual periodogram</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>The values calculated here capture the amount of noise on fitting a
 sinusoid of a certain frequency to all data points.
@@ -1514,25 +1532,28 @@ time series.</p>
 
             <div class="docstring"><p>Calculate the Lomb-Scargle noise at a given set of frequencies</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>fs: numpy.ndarray[Any, dtype[float]]
-    The frequencies at which to calculate the noise
-time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-resid: numpy.ndarray[Any, dtype[float]]
-    Residual measurement values of the time series
-window_width: float
-    The width of the window used to compute the noise spectrum,
-    in inverse unit of the time array (i.e. 1/d if time is in d).</p>
+<ul>
+<li><strong>fs</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies at which to calculate the noise</li>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>resid</strong> (numpy.ndarray[Any, dtype[float]]):
+Residual measurement values of the time series</li>
+<li><strong>window_width</strong> (float):
+The width of the window used to compute the noise spectrum,
+in inverse unit of the time array (i.e. 1/d if time is in d).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The noise level calculated as the mean in a window around the
-    frequency in the residual periodogram</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The noise level calculated as the mean in a window around the
+frequency in the residual periodogram</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>The values calculated here capture the amount of noise on fitting a
 sinusoid of a certain frequency to all data points.
@@ -1591,19 +1612,22 @@ time series.</p>
             <div class="docstring"><p>Computes the modulus square of the spectral window W_N(f) of a set of
 time points at the given frequencies.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-freqs: numpy.ndarray[Any, dtype[float]]
-    Frequency points to calculate the window. Inverse unit of <code>time</code></p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>freqs</strong> (numpy.ndarray[Any, dtype[float]]):
+Frequency points to calculate the window. Inverse unit of <code>time</code></li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The spectral window at the given frequencies, |W(freqs)|^2</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The spectral window at the given frequencies, |W(freqs)|^2</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>The spectral window is the Fourier transform of the window function
 w_N(t) = 1/N sum(Dirac(t - t_i))
@@ -1714,35 +1738,38 @@ The normalisation is such that 1.0 is returned at frequency 0.</p>
 <p>The time array is mean subtracted to reduce correlation between frequencies and phases.
 The flux array is mean subtracted to avoid a large peak at frequency equal to zero.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-f0: float, optional
-    Starting frequency of the periodogram.
-    If left -1, default is f0 = 1/(100<em>T)
-fn: float, optional
-    Last frequency of the periodogram.
-    If left -1, default is fn = 1/(2</em>np.min(np.diff(time))) = Nyquist frequency
-df: float, optional
-    Frequency sampling space of the periodogram
-    If left -1, default is df = 1/(10*T) = oversampling factor of ten (recommended)
-norm: str, optional
-    Normalisation of the periodogram. Choose from:
-    'amplitude', 'density' or 'distribution'</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>f0</strong> (float, optional):
+Starting frequency of the periodogram.
+If left -1, default is f0 = 1/(100*T)</li>
+<li><strong>fn</strong> (float, optional):
+Last frequency of the periodogram.
+If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency</li>
+<li><strong>df</strong> (float, optional):
+Frequency sampling space of the periodogram
+If left -1, default is df = 1/(10*T) = oversampling factor of ten (recommended)</li>
+<li><strong>norm</strong> (str, optional):
+Normalisation of the periodogram. Choose from:
+'amplitude', 'density' or 'distribution'</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    f1: numpy.ndarray[Any, dtype[float]]
-        Frequencies at which the periodogram was calculated
-    s1: numpy.ndarray[Any, dtype[float]]
-        The periodogram spectrum in the chosen units</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+f1: numpy.ndarray[Any, dtype[float]]
+Frequencies at which the periodogram was calculated
+s1: numpy.ndarray[Any, dtype[float]]
+The periodogram spectrum in the chosen units</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Translated from Fortran (and just as fast when JIT-ted with Numba!)
     Computation of Scargles periodogram without explicit tau
@@ -1869,35 +1896,38 @@ norm: str, optional
 <p>The time array is mean subtracted to reduce correlation between frequencies and phases.
 The flux array is mean subtracted to avoid a large peak at frequency equal to zero.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-f0: float, optional
-    Starting frequency of the periodogram.
-    If left -1, default is f0 = 1/(100<em>T)
-fn: float, optional
-    Last frequency of the periodogram.
-    If left -1, default is fn = 1/(2</em>np.min(np.diff(time))) = Nyquist frequency
-df: float, optional
-    Frequency sampling space of the periodogram
-    If left -1, default is df = 1/(10*T) = oversampling factor of ten (recommended)
-norm: str, optional
-    Normalisation of the periodogram. Choose from:
-    'amplitude', 'density' or 'distribution'</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>f0</strong> (float, optional):
+Starting frequency of the periodogram.
+If left -1, default is f0 = 1/(100*T)</li>
+<li><strong>fn</strong> (float, optional):
+Last frequency of the periodogram.
+If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency</li>
+<li><strong>df</strong> (float, optional):
+Frequency sampling space of the periodogram
+If left -1, default is df = 1/(10*T) = oversampling factor of ten (recommended)</li>
+<li><strong>norm</strong> (str, optional):
+Normalisation of the periodogram. Choose from:
+'amplitude', 'density' or 'distribution'</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    f1: numpy.ndarray[Any, dtype[float]]
-        Frequencies at which the periodogram was calculated
-    s1: numpy.ndarray[Any, dtype[float]]
-        The periodogram spectrum in the chosen units</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+f1: numpy.ndarray[Any, dtype[float]]
+Frequencies at which the periodogram was calculated
+s1: numpy.ndarray[Any, dtype[float]]
+The periodogram spectrum in the chosen units</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Translated from Fortran (and just as fast when JIT-ted with Numba!)
     Computation of Scargles periodogram without explicit tau
@@ -2012,29 +2042,32 @@ norm: str, optional
 <p>The time array is mean subtracted to reduce correlation between frequencies and phases.
 The flux array is mean subtracted to avoid a large peak at frequency equal to zero.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series.
-f: float
-    A frequency to calculate amplitude and phase at.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series.</li>
+<li><strong>f</strong> (float):
+A frequency to calculate amplitude and phase at.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    Two numbers consisting of:
-    float
-        Amplitude at the given frequency.
-    float
-        Phase at the given frequency.</p>
+<ul>
+<li><strong>tuple</strong>: Two numbers consisting of:
+float
+Amplitude at the given frequency.
+float
+Phase at the given frequency.</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>scargle_phase</p>
+<p><code>scargle_phase</code>  </p>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>For the phase calculation:
 Uses a slightly modified version of the function in Hocke 1997
@@ -2160,29 +2193,32 @@ For 2 frequencies it is just as fast, and 3+ it is more efficient.</p>
 <p>The time array is mean subtracted to reduce correlation between frequencies and phases.
 The flux array is mean subtracted to avoid a large peak at frequency equal to zero.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series.
-fs: numpy.ndarray[Any, dtype[float]]
-    A set of frequencies to calculate amplitude and phase at.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series.</li>
+<li><strong>fs</strong> (numpy.ndarray[Any, dtype[float]]):
+A set of frequencies to calculate amplitude and phase at.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    Two arrays consisting of:
-    numpy.ndarray[Any, dtype[float]]
-        Amplitude at the given frequencies
-    numpy.ndarray[Any, dtype[float]]
-        Phase at the given frequencies</p>
+<ul>
+<li><strong>tuple</strong>: Two arrays consisting of:
+numpy.ndarray[Any, dtype[float]]
+Amplitude at the given frequencies
+numpy.ndarray[Any, dtype[float]]
+Phase at the given frequencies</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>scargle_phase</p>
+<p><code>scargle_phase</code>  </p>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>For the phase calculation:
 Uses a slightly modified version of the function in Hocke 1997
@@ -2293,35 +2329,38 @@ Uses a slightly modified version of the function in Hocke 1997
 <p>The time array is mean subtracted to reduce correlation between frequencies and phases.
 The flux array is mean subtracted to avoid a large peak at frequency equal to zero.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-f0: float
-    Starting frequency of the periodogram.
-    If left zero, default is f0 = 1/(100<em>T)
-fn: float
-    Last frequency of the periodogram.
-    If left zero, default is fn = 1/(2</em>np.min(np.diff(time))) = Nyquist frequency
-df: float
-    Frequency sampling space of the periodogram
-    If left zero, default is df = 1/(10*T) = oversampling factor of ten (recommended)
-norm: str
-    Normalisation of the periodogram. Choose from:
-    'amplitude', 'density' or 'distribution'</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>f0</strong> (float):
+Starting frequency of the periodogram.
+If left zero, default is f0 = 1/(100*T)</li>
+<li><strong>fn</strong> (float):
+Last frequency of the periodogram.
+If left zero, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency</li>
+<li><strong>df</strong> (float):
+Frequency sampling space of the periodogram
+If left zero, default is df = 1/(10*T) = oversampling factor of ten (recommended)</li>
+<li><strong>norm</strong> (str):
+Normalisation of the periodogram. Choose from:
+'amplitude', 'density' or 'distribution'</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    f1: numpy.ndarray[Any, dtype[float]]
-        Frequencies at which the periodogram was calculated
-    s1: numpy.ndarray[Any, dtype[float]]
-        The periodogram spectrum in the chosen units</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+f1: numpy.ndarray[Any, dtype[float]]
+Frequencies at which the periodogram was calculated
+s1: numpy.ndarray[Any, dtype[float]]
+The periodogram spectrum in the chosen units</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Approximation using fft, much faster (in mode='fast') than the single threaded scargle (about x10).
 Note that the astropy implementation uses functions under the hood that use the blas package for

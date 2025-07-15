@@ -509,51 +509,54 @@ Markov Chain Monte Carlo (MCMC) with PyMC3</p>
 
             <div class="docstring"><p>NUTS sampling of a linear + sinusoid + eclipse model</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sine waves
-c_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the y-intercepts of a number of sine waves
-sl_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the slopes of a number of sine waves
-f_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the frequencies of a number of sine waves
-a_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the amplitudes of a number of sine waves
-ph_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the phases of a number of sine waves
-noise_level: float
-    The noise level (standard deviation of the residuals)
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sine waves</li>
+<li><strong>c_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the y-intercepts of a number of sine waves</li>
+<li><strong>sl_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the slopes of a number of sine waves</li>
+<li><strong>f_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the frequencies of a number of sine waves</li>
+<li><strong>a_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the amplitudes of a number of sine waves</li>
+<li><strong>ph_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the phases of a number of sine waves</li>
+<li><strong>noise_level</strong> (float):
+The noise level (standard deviation of the residuals)</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    inf_data: object
-        Arviz inference data object
-    par_means: list[float]
-        Parameter mean values in the following order:
-        const, slope, f_n, a_n, ph_n
-    par_hdi: list[float]
-        Parameter HDI error values, same order as par_means</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+inf_data: object
+Arviz inference data object
+par_means: list[float]
+Parameter mean values in the following order:
+const, slope, f_n, a_n, ph_n
+par_hdi: list[float]
+Parameter HDI error values, same order as par_means</li>
+</ul>
 </div>
 
 
@@ -730,55 +733,58 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>NUTS sampling of a linear + sinusoid + eclipse model</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-p_orb: float
-    Orbital period of the eclipsing binary in days
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sine waves
-p_err: float
-    Uncertainty in the orbital period
-c_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the y-intercepts of a number of sine waves
-sl_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the slopes of a number of sine waves
-f_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the frequencies of a number of sine waves
-a_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the amplitudes of a number of sine waves
-ph_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the phases of a number of sine waves
-noise_level: float
-    The noise level (standard deviation of the residuals)
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>p_orb</strong> (float):
+Orbital period of the eclipsing binary in days</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sine waves</li>
+<li><strong>p_err</strong> (float):
+Uncertainty in the orbital period</li>
+<li><strong>c_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the y-intercepts of a number of sine waves</li>
+<li><strong>sl_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the slopes of a number of sine waves</li>
+<li><strong>f_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the frequencies of a number of sine waves</li>
+<li><strong>a_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the amplitudes of a number of sine waves</li>
+<li><strong>ph_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the phases of a number of sine waves</li>
+<li><strong>noise_level</strong> (float):
+The noise level (standard deviation of the residuals)</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    inf_data: object
-        Arviz inference data object
-    par_means: list[float]
-        Parameter mean values in the following order:
-        p_orb, const, slope, f_n, a_n, ph_n
-    par_hdi: list[float]
-        Parameter HDI error values, same order as par_means</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+inf_data: object
+Arviz inference data object
+par_means: list[float]
+Parameter mean values in the following order:
+p_orb, const, slope, f_n, a_n, ph_n
+par_hdi: list[float]
+Parameter HDI error values, same order as par_means</li>
+</ul>
 </div>
 
 

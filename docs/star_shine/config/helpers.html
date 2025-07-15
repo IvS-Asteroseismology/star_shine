@@ -341,15 +341,17 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>Get the version of the code from the metadata, or the project file if that fails.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    The version of the code</p>
+<ul>
+<li><strong>str</strong>: The version of the code</li>
+</ul>
 
-<h2 id="raises">Raises</h2>
+<h6 id="raises">Raises</h6>
 
-<p>FileNotFoundError
-    In case the package metadata is not set and subsequently the pyproject.toml was not found</p>
+<ul>
+<li><strong>FileNotFoundError</strong>: In case the package metadata is not set and subsequently the pyproject.toml was not found</li>
+</ul>
 </div>
 
 
@@ -379,10 +381,11 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>Use this function to get the configuration</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Config
-    The singleton instance of Config.</p>
+<ul>
+<li><strong>Config</strong>: The singleton instance of Config.</li>
+</ul>
 </div>
 
 
@@ -415,10 +418,11 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>Get the path to the configuration file</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    Path to the config file</p>
+<ul>
+<li><strong>str</strong>: Path to the config file</li>
+</ul>
 </div>
 
 
@@ -451,10 +455,11 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>Get the path to the data/images folder</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    Path to the data/images folder</p>
+<ul>
+<li><strong>str</strong>: Path to the data/images folder</li>
+</ul>
 </div>
 
 
@@ -487,10 +492,11 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>Get the path to the matplotlib stylesheet</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    Path to the matplotlib stylesheet</p>
+<ul>
+<li><strong>str</strong>: Path to the matplotlib stylesheet</li>
+</ul>
 </div>
 
 
@@ -581,7 +587,7 @@ raise an <code>AttributeError</code> if the level name is already an attribute o
 
 <p><a href="http://stackoverflow.com/q/2183233/2988730">http://stackoverflow.com/q/2183233/2988730</a></p>
 
-<h2 id="example">Example</h2>
+<h6 id="example">Example</h6>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">addLoggingLevel</span><span class="p">(</span><span class="s1">&#39;TRACE&#39;</span><span class="p">,</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span> <span class="o">-</span> <span class="mi">5</span><span class="p">)</span>
@@ -661,19 +667,22 @@ raise an <code>AttributeError</code> if the level name is already an attribute o
 
             <div class="docstring"><p>Create a custom logger for logging to file and to stdout</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>target_id: str
-    Identifier to use for the log file.
-save_dir: str
-    Folder to save the log file. If empty, no saving happens.
-verbose: bool
-    If set to True, information will be printed by the logger.</p>
+<ul>
+<li><strong>target_id</strong> (str):
+Identifier to use for the log file.</li>
+<li><strong>save_dir</strong> (str):
+Folder to save the log file. If empty, no saving happens.</li>
+<li><strong>verbose</strong> (bool):
+If set to True, information will be printed by the logger.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>logging.Logger
-    Customised logger object</p>
+<ul>
+<li><strong>logging.Logger</strong>: Customised logger object</li>
+</ul>
 </div>
 
 

@@ -1013,25 +1013,29 @@ specifically for visualising the analysis of stellar variability and harmonic si
 
             <div class="docstring"><p>Plot the periodogram of the data.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-plot_per_chunk: bool
-    If True, plot the periodogram of all time chunks in one plot.
-file_name: str, optional
-    File path to save the plot
-show: bool, optional
-    If True, display the plot</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>plot_per_chunk</strong> (bool):
+If True, plot the periodogram of all time chunks in one plot.</li>
+<li><strong>file_name</strong> (str, optional):
+File path to save the plot</li>
+<li><strong>show</strong> (bool, optional):
+If True, display the plot</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -1146,41 +1150,45 @@ show: bool, optional
 
             <div class="docstring"><p>Plot the periodogram with one output of the analysis recipe.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-flux_err: numpy.ndarray[Any, dtype[float]]
-    Errors in the measurement values
-p_orb: float
-    Orbital period
-p_err: float
-    Error associated with the orbital period
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sine waves
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-annotate: bool, optional
-    If True, annotate the plot with the frequencies.
-file_name: str, optional
-    File path to save the plot
-show: bool, optional
-    If True, display the plot</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>flux_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Errors in the measurement values</li>
+<li><strong>p_orb</strong> (float):
+Orbital period</li>
+<li><strong>p_err</strong> (float):
+Error associated with the orbital period</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sine waves</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>annotate</strong> (bool, optional):
+If True, annotate the plot with the frequencies.</li>
+<li><strong>file_name</strong> (str, optional):
+File path to save the plot</li>
+<li><strong>show</strong> (bool, optional):
+If True, display the plot</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -1313,37 +1321,41 @@ show: bool, optional
 
             <div class="docstring"><p>Plot the periodogram with the full output of the analysis recipe.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-flux_err: numpy.ndarray[Any, dtype[float]]
-    Errors in the measurement values
-models: list[numpy.ndarray[Any, dtype[float]]]
-    List of model fluxs for different stages of the analysis
-p_orb_i: list[float]
-    Orbital periods for different stages of the analysis
-p_err_i: list[float]
-    Errors associated with the orbital periods
-    for different stages of the analysis
-f_n_i: list[numpy.ndarray[Any, dtype[float]]]
-    List of extracted frequencies for different stages of the analysis
-a_n_i: list[numpy.ndarray[Any, dtype[float]]]
-    List of amplitudes corresponding to the extracted frequencies
-    for different stages of the analysis
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-file_name: str, optional
-    File path to save the plot
-show: bool, optional
-    If True, display the plot</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>flux_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Errors in the measurement values</li>
+<li><strong>models</strong> (list[numpy.ndarray[Any, dtype[float]]]):
+List of model fluxs for different stages of the analysis</li>
+<li><strong>p_orb_i</strong> (list[float]):
+Orbital periods for different stages of the analysis</li>
+<li><strong>p_err_i</strong> (list[float]):
+Errors associated with the orbital periods
+for different stages of the analysis</li>
+<li><strong>f_n_i</strong> (list[numpy.ndarray[Any, dtype[float]]]):
+List of extracted frequencies for different stages of the analysis</li>
+<li><strong>a_n_i</strong> (list[numpy.ndarray[Any, dtype[float]]]):
+List of amplitudes corresponding to the extracted frequencies
+for different stages of the analysis</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>file_name</strong> (str, optional):
+File path to save the plot</li>
+<li><strong>show</strong> (bool, optional):
+If True, display the plot</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -1410,25 +1422,29 @@ show: bool, optional
 
             <div class="docstring"><p>Shows the light curve data</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-flux_err: numpy.ndarray[Any, dtype[float]]
-    Errors in the measurement values
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-file_name: str, optional
-    File path to save the plot
-show: bool, optional
-    If True, display the plot</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>flux_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Errors in the measurement values</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>file_name</strong> (str, optional):
+File path to save the plot</li>
+<li><strong>show</strong> (bool, optional):
+If True, display the plot</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -1510,33 +1526,37 @@ show: bool, optional
 
             <div class="docstring"><p>Shows the separated harmonics in several ways</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sine waves
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-file_name: str, optional
-    File path to save the plot
-show: bool, optional
-    If True, display the plot</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sine waves</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>file_name</strong> (str, optional):
+File path to save the plot</li>
+<li><strong>show</strong> (bool, optional):
+If True, display the plot</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -1630,37 +1650,41 @@ show: bool, optional
 
             <div class="docstring"><p>Shows the separated harmonics in several ways</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-p_orb: float
-    Orbital period of the system
-p_err: float
-    Error in the orbital period
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sine waves
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-file_name: str, optional
-    File path to save the plot
-show: bool, optional
-    If True, display the plot</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>p_orb</strong> (float):
+Orbital period of the system</li>
+<li><strong>p_err</strong> (float):
+Error in the orbital period</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sine waves</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>file_name</strong> (str, optional):
+File path to save the plot</li>
+<li><strong>show</strong> (bool, optional):
+If True, display the plot</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -1710,24 +1734,28 @@ show: bool, optional
 
             <div class="docstring"><p>Show the pymc3 sampling results in a trace plot</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>inf_data: InferenceData object
-    Arviz inference data object
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sine waves</p>
+<ul>
+<li><strong>inf_data</strong> (InferenceData object):
+Arviz inference data object</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sine waves</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -1800,30 +1828,34 @@ ph_n: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Show the pymc3 sampling results in several pair plots</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>inf_data: object
-    Arviz inference data object
-p_orb: float
-    Orbital period
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sine waves
-save_file: str, optional
-    File path to save the plot
-show: bool, optional
-    If True, display the plot</p>
+<ul>
+<li><strong>inf_data</strong> (object):
+Arviz inference data object</li>
+<li><strong>p_orb</strong> (float):
+Orbital period</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sine waves</li>
+<li><strong>save_file</strong> (str, optional):
+File path to save the plot</li>
+<li><strong>show</strong> (bool, optional):
+If True, display the plot</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -1879,26 +1911,30 @@ show: bool, optional
 
             <div class="docstring"><p>Show the pymc3 sampling results in a trace plot</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>inf_data: InferenceData object
-    Arviz inference data object
-p_orb: float
-    Orbital period
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sine waves</p>
+<ul>
+<li><strong>inf_data</strong> (InferenceData object):
+Arviz inference data object</li>
+<li><strong>p_orb</strong> (float):
+Orbital period</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sine waves</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -2071,35 +2107,39 @@ ph_n: numpy.ndarray[Any, dtype[float]]
             <div class="docstring"><p>Due to plotting not working under multiprocessing this function is
 made to make plots after running the analysis in parallel.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-flux_err: numpy.ndarray[Any, dtype[float]]
-    Errors in the measurement values
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-target_id: int, str
-    In case of using analyse_from_tic:
-    The TESS Input Catalog number
-    In case of user-defined light curve files (analyse_from_file):
-    Should be the same as the name of the light curve file.
-load_dir: str
-    Path to a directory for loading analysis results.
-    Will append <target_id> + _analysis automatically
-save_dir: str, None
-    Path to a directory for saving the plots.
-    Will append <target_id> + _analysis automatically
-    Directory is created if it doesn't exist yet
-show: bool
-    Whether to show the plots or not.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>flux_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Errors in the measurement values</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>target_id</strong> (int, str):
+In case of using analyse_from_tic:
+The TESS Input Catalog number
+In case of user-defined light curve files (analyse_from_file):
+Should be the same as the name of the light curve file.</li>
+<li><strong>load_dir</strong> (str):
+Path to a directory for loading analysis results.
+Will append <target_id> + _analysis automatically</li>
+<li><strong>save_dir</strong> (str, None):
+Path to a directory for saving the plots.
+Will append <target_id> + _analysis automatically
+Directory is created if it doesn't exist yet</li>
+<li><strong>show</strong> (bool):
+Whether to show the plots or not.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -2163,29 +2203,33 @@ show: bool
 
             <div class="docstring"><p>Plot all diagnostic plots of the results for a given light curve file</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_name: str
-    Path to a file containing the light curve data, with
-    timestamps, normalised flux, error values as the
-    first three columns, respectively.
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-load_dir: str
-    Path to a directory for loading analysis results.
-    Will append <target_id> + _analysis automatically.
-    Assumes the same directory as file_name if None.
-save_dir: str, None
-    Path to a directory for saving the plots.
-    Will append <target_id> + _analysis automatically.
-    Directory is created if it doesn't exist yet.
-show: bool
-    Whether to show the plots or not.</p>
+<ul>
+<li><strong>file_name</strong> (str):
+Path to a file containing the light curve data, with
+timestamps, normalised flux, error values as the
+first three columns, respectively.</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>load_dir</strong> (str):
+Path to a directory for loading analysis results.
+Will append <target_id> + _analysis automatically.
+Assumes the same directory as file_name if None.</li>
+<li><strong>save_dir</strong> (str, None):
+Path to a directory for saving the plots.
+Will append <target_id> + _analysis automatically.
+Directory is created if it doesn't exist yet.</li>
+<li><strong>show</strong> (bool):
+Whether to show the plots or not.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
@@ -2242,28 +2286,32 @@ show: bool
 
             <div class="docstring"><p>Plot all diagnostic plots of the results for a given light curve file</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>tic: int
-    The TESS Input Catalog (TIC) number for loading/saving the data
-    and later reference.
-all_files: list[str]
-    List of all the TESS data product '.fits' files. The files
-    with the corresponding TIC number are selected.
-load_dir: str
-    Path to a directory for loading analysis results.
-    Will append <tic> + _analysis automatically.
-    Assumes the same directory as all_files if None.
-save_dir: str, None
-    Path to a directory for saving the plots.
-    Will append <tic> + _analysis automatically.
-    Directory is created if it doesn't exist yet.
-show: bool
-    Whether to show the plots or not.</p>
+<ul>
+<li><strong>tic</strong> (int):
+The TESS Input Catalog (TIC) number for loading/saving the data
+and later reference.</li>
+<li><strong>all_files</strong> (list[str]):
+List of all the TESS data product '.fits' files. The files
+with the corresponding TIC number are selected.</li>
+<li><strong>load_dir</strong> (str):
+Path to a directory for loading analysis results.
+Will append <tic> + _analysis automatically.
+Assumes the same directory as all_files if None.</li>
+<li><strong>save_dir</strong> (str, None):
+Path to a directory for saving the plots.
+Will append <tic> + _analysis automatically.
+Directory is created if it doesn't exist yet.</li>
+<li><strong>show</strong> (bool):
+Whether to show the plots or not.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>None</p>
+<ul>
+<li><strong>None</strong></li>
+</ul>
 </div>
 
 
