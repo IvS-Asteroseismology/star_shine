@@ -18,12 +18,32 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install pdoc
-        run: |
-          pip install pdoc
-
       - name: Install Poetry
         uses: snok/install-poetry@v1
+
+      - name: Add pdoc to Poetry dev dependencies
+        run: |
+          poetry add --group dev pdoc
+
+      # Cache Poetry dependencies and virtual environment to speed up builds
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.virtualenvs
+          key: poetry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-${{ matrix.python-version }}-
+
+      # Report whether the cache was hit or missed
+      - name: Report cache usage
+        run: |
+          if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
+            echo "Poetry cache was HIT."
+          else
+            echo "Poetry cache was MISSED. Dependencies will be freshly installed."
+          fi
 
       - name: Install dependencies with Poetry
         run: |
