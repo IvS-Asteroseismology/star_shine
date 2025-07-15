@@ -51,7 +51,7 @@ jobs:
     # Install dependencies listed in pyproject.toml using Poetry
     - name: Install dependencies using Poetry
       run: |
-        poetry install --without gui
+        poetry install
 
     # Run your test suite using Poetry's virtual environment
     - name: Run tests

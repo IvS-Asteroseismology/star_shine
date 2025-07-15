@@ -27,7 +27,7 @@ jobs:
 
       - name: Install dependencies with Poetry
         run: |
-          poetry install --without gui
+          poetry install
 
       - name: Generate docs with pdoc into /docs
         run: |
