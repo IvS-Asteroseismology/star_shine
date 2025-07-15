@@ -23,8 +23,7 @@ jobs:
           pip install pdoc
 
       - name: Install Poetry
-        run: |
-          pip install poetry
+        uses: snok/install-poetry@v1
 
       - name: Install dependencies with Poetry
         run: |

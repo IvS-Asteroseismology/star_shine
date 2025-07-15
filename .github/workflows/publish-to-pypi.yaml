@@ -24,8 +24,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install Poetry
-        run: |
-          pip install poetry
+        uses: snok/install-poetry@v1
 
       - name: Build package
         run: |

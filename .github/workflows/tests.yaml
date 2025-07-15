@@ -26,8 +26,7 @@ jobs:
         python-version: ${{ matrix.python-version }}  # Specify the Python version
 
     - name: Install Poetry
-      run: |
-        pip install poetry
+      uses: snok/install-poetry@v1
 
     # Cache Poetry dependencies and virtual environment to speed up builds
     - name: Cache Poetry dependencies
