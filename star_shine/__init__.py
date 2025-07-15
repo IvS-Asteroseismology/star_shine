@@ -11,7 +11,8 @@ from .api.pipeline import Pipeline
 try:
     # GUI
     from .gui.gui_app import launch_gui
-except ImportError:
+except ImportError as e:
+    print(e)
     print('GUI unavailable, likely missing dependency PySide6.')
     pass
 
