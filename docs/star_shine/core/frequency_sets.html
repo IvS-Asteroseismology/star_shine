@@ -950,19 +950,22 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
             <div class="docstring"><p>Selects a chain of frequencies within the Rayleigh criterion from each other
 around the chosen frequency.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>i: int
-    Index of the frequency around which to search
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-rayleigh: float
-    The appropriate frequency resolution (usually 1.5/T)</p>
+<ul>
+<li><strong>i</strong> (int):
+Index of the frequency around which to search</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>rayleigh</strong> (float):
+The appropriate frequency resolution (usually 1.5/T)</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[int]]
-    Indices of close frequencies in the chain</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[int]]</strong>: Indices of close frequencies in the chain</li>
+</ul>
 </div>
 
 
@@ -1015,21 +1018,24 @@ rayleigh: float
 
             <div class="docstring"><p>Find all chains of frequencies within each other's Rayleigh criterion.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-rayleigh: float
-    The appropriate frequency resolution (usually 1.5/T)</p>
+<ul>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>rayleigh</strong> (float):
+The appropriate frequency resolution (usually 1.5/T)</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>list[numpy.ndarray[Any, dtype[int]]]
-    Indices of close frequencies in all found chains</p>
+<ul>
+<li><strong>list[numpy.ndarray[Any, dtype[int]]]</strong>: Indices of close frequencies in all found chains</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>f_within_rayleigh</p>
+<p><code><a href="#f_within_rayleigh">f_within_rayleigh</a></code>  </p>
 </div>
 
 
@@ -1114,19 +1120,22 @@ rayleigh: float
 
 <p>Only retains the pair with the closest distance if a chain occurs.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-df: float
-    The threshold difference below which two frequencies are considered too close.</p>
+<ul>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>df</strong> (float):
+The threshold difference below which two frequencies are considered too close.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>list of lists
-    A list where each sublist contains the indices of two frequencies from <code>f_n</code> that are closer than <code>df</code>.</p>
+<ul>
+<li><strong>list of lists</strong>: A list where each sublist contains the indices of two frequencies from <code>f_n</code> that are closer than <code>df</code>.</li>
+</ul>
 
-<h2 id="examples">Examples</h2>
+<h6 id="examples">Examples</h6>
 
 <p>In this example, the frequencies at indices 0 and 2 (i.e., 10.5 and 11.2), and at 1 and 3 are closer than 1.0.</p>
 
@@ -1214,26 +1223,29 @@ df: float
 <p>Frequencies with an amplitude less than sigma times the error are removed, as well as those that have
 an overlapping frequency error and are lower amplitude than any of the overlapped frequencies.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-f_n_err: numpy.ndarray[Any, dtype[float]]
-    Formal errors in the frequencies
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-a_n_err: numpy.ndarray[Any, dtype[float]]
-    Formal errors in the amplitudes
-sigma_a: float
-    Number of times the error to use for check of significant amplitude
-sigma_f: float
-    Number of times the error to use for check of significant
-    frequency separation</p>
+<ul>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>f_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Formal errors in the frequencies</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>a_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Formal errors in the amplitudes</li>
+<li><strong>sigma_a</strong> (float):
+Number of times the error to use for check of significant amplitude</li>
+<li><strong>sigma_f</strong> (float):
+Number of times the error to use for check of significant
+frequency separation</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[bool]]
-    Boolean mask of frequencies deemed insignificant</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[bool]]</strong>: Boolean mask of frequencies deemed insignificant</li>
+</ul>
 </div>
 
 
@@ -1288,21 +1300,24 @@ sigma_f: float
 
             <div class="docstring"><p>Removes insufficiently significant frequencies in terms of S/N.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-noise_at_f: numpy.ndarray[Any, dtype[float]]
-    The noise level at each frequency</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>noise_at_f</strong> (numpy.ndarray[Any, dtype[float]]):
+The noise level at each frequency</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[int]]
-    Indices of frequencies deemed insignificant</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[int]]</strong>: Indices of frequencies deemed insignificant</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Frequencies with an amplitude less than the S/N threshold are removed,
 using a threshold appropriate for TESS as function of the number of
@@ -1387,23 +1402,26 @@ time series.</p>
 
             <div class="docstring"><p>Groups sinusoids into sets of g_min to g_max for multi-sine fitting</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-g_min: int
-    Minimum group size
-g_max: int
-    Maximum group size (g_max &gt; g_min)
-indices: numpy.ndarray[Any, dtype[int]]
-    Alternate sinusoid indices to use.</p>
+<ul>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>g_min</strong> (int):
+Minimum group size</li>
+<li><strong>g_max</strong> (int):
+Maximum group size (g_max &gt; g_min)</li>
+<li><strong>indices</strong> (numpy.ndarray[Any, dtype[int]]):
+Alternate sinusoid indices to use.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>list[numpy.ndarray[Any, dtype[int]]]
-    List of sets of indices indicating the groups</p>
+<ul>
+<li><strong>list[numpy.ndarray[Any, dtype[int]]]</strong>: List of sets of indices indicating the groups</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>To make the task of fitting more manageable, the free parameters are binned into groups, in which
 the remaining parameters are kept fixed. Sinusoids of similar amplitude are grouped together,
@@ -1476,23 +1494,26 @@ of similar amplitude have a similar amount of influence on each other.</p>
 
             <div class="docstring"><p>Find the orbital harmonics from a set of frequencies, given the base frequency.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-f_n_err: numpy.ndarray[Any, dtype[float]]
-    Formal errors in the frequencies
-f_base: float
-    Base frequency of the harmonic series.
-sigma: float
-    Number of times the error to use for check of significance</p>
+<ul>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>f_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Formal errors in the frequencies</li>
+<li><strong>f_base</strong> (float):
+Base frequency of the harmonic series.</li>
+<li><strong>sigma</strong> (float):
+Number of times the error to use for check of significance</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[bool]
-    Indices of frequencies that are harmonics of p_orb</p>
+<ul>
+<li><strong>numpy.ndarray[bool]</strong>: Indices of frequencies that are harmonics of p_orb</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Only includes those frequencies that are within sigma * error of an orbital harmonic.
 If multiple frequencies correspond to one harmonic, only the closest is kept.</p>
@@ -1545,22 +1566,25 @@ If multiple frequencies correspond to one harmonic, only the closest is kept.</p
 
             <div class="docstring"><p>create a range of harmonic frequencies given the base frequency.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_0: float
-    Base frequency in the range, from where the rest of the pattern is built.
-domain: list[float], numpy.ndarray[2, dtype[float]]
-    Two values that give the borders of the range.
-    Sensible values could be the Rayleigh criterion and the Nyquist frequency</p>
+<ul>
+<li><strong>f_0</strong> (float):
+Base frequency in the range, from where the rest of the pattern is built.</li>
+<li><strong>domain</strong> (list[float], numpy.ndarray[2, dtype[float]]):
+Two values that give the borders of the range.
+Sensible values could be the Rayleigh criterion and the Nyquist frequency</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    harmonics: numpy.ndarray[Any, dtype[float]]
-        Frequencies of the harmonic series in the domain
-    n_range: numpy.ndarray[Any, dtype[int]]
-        Corresponding harmonic numbers (base frequency is 1)</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+harmonics: numpy.ndarray[Any, dtype[float]]
+Frequencies of the harmonic series in the domain
+n_range: numpy.ndarray[Any, dtype[int]]
+Corresponding harmonic numbers (base frequency is 1)</li>
+</ul>
 </div>
 
 
@@ -1640,25 +1664,28 @@ domain: list[float], numpy.ndarray[2, dtype[float]]
 
             <div class="docstring"><p>Get the indices of the frequencies matching closest to the harmonics.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-f_base: float
-    Base frequency of the harmonic series.
-f_tol: float
-    Tolerance in the frequency for accepting harmonics</p>
+<ul>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>f_base</strong> (float):
+Base frequency of the harmonic series.</li>
+<li><strong>f_tol</strong> (float):
+Tolerance in the frequency for accepting harmonics</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    harmonics: numpy.ndarray[Any, dtype[int]]
-        Indices of the frequencies in f_n that are deemed harmonics
-    harmonic_n: numpy.ndarray[Any, dtype[int]]
-        Corresponding harmonic numbers (base frequency is 1)</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+harmonics: numpy.ndarray[Any, dtype[int]]
+Indices of the frequencies in f_n that are deemed harmonics
+harmonic_n: numpy.ndarray[Any, dtype[int]]
+Corresponding harmonic numbers (base frequency is 1)</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>A frequency is only accepted as harmonic if it is within 1e-9 of the pattern
 (by default). This can now be user defined for more flexibility.</p>
@@ -1725,25 +1752,28 @@ f_tol: float
 
             <div class="docstring"><p>Get the indices of the frequencies matching within a tolerance to the harmonics.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-f_base: float
-    Base frequency of the harmonic series.
-f_tol: float
-    Tolerance in the frequency for accepting harmonics</p>
+<ul>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>f_base</strong> (float):
+Base frequency of the harmonic series.</li>
+<li><strong>f_tol</strong> (float):
+Tolerance in the frequency for accepting harmonics</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    harmonics: numpy.ndarray[Any, dtype[int]]
-        Indices of the frequencies in f_n that are deemed harmonics
-    harmonic_n: numpy.ndarray[Any, dtype[int]]
-        Corresponding harmonic numbers (base frequency is 1)</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+harmonics: numpy.ndarray[Any, dtype[int]]
+Indices of the frequencies in f_n that are deemed harmonics
+harmonic_n: numpy.ndarray[Any, dtype[int]]
+Corresponding harmonic numbers (base frequency is 1)</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>A frequency is only accepted as harmonic if it is within some relative error.
 This can be user defined for flexibility.</p>
@@ -1817,30 +1847,33 @@ This can be user defined for flexibility.</p>
 
             <div class="docstring"><p>Selects only those frequencies that are probably harmonics</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-f_n_err: numpy.ndarray[Any, dtype[float]]
-    Formal errors in the frequencies
-f_base: float
-    Base frequency of the harmonic series.
-f_tol: float
-    Tolerance in the frequency for accepting harmonics
-sigma_f: float
-    Number of times the error to use for check of significant
-    frequency separation</p>
+<ul>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>f_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Formal errors in the frequencies</li>
+<li><strong>f_base</strong> (float):
+Base frequency of the harmonic series.</li>
+<li><strong>f_tol</strong> (float):
+Tolerance in the frequency for accepting harmonics</li>
+<li><strong>sigma_f</strong> (float):
+Number of times the error to use for check of significant
+frequency separation</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-     harmonics_passed: numpy.ndarray[Any, dtype[int]]
-        Indices of the frequencies in f_n that are harmonics
-     harmonic_n: numpy.ndarray[Any, dtype[int]]
-        Corresponding harmonic numbers (base frequency is 1)</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+harmonics_passed: numpy.ndarray[Any, dtype[int]]
+   Indices of the frequencies in f_n that are harmonics
+harmonic_n: numpy.ndarray[Any, dtype[int]]
+   Corresponding harmonic numbers (base frequency is 1)</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>A frequency is only accepted as harmonic if it is within the
 frequency resolution of the pattern, and if it is within <sigma_f> sigma
@@ -1911,25 +1944,28 @@ of the frequency uncertainty</p>
 
             <div class="docstring"><p>Find linear combinations from a set of frequencies.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_n: list[float], numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-f_n_err: numpy.ndarray[Any, dtype[float]]
-    Formal errors on the frequencies
-sigma: float
-    Number of times the error to use for check of significance</p>
+<ul>
+<li><strong>f_n</strong> (list[float], numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>f_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Formal errors on the frequencies</li>
+<li><strong>sigma</strong> (float):
+Number of times the error to use for check of significance</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    final_o2: dict[int]
-        Dictionary containing the indices of combinations of order 2
-    final_o3: dict[int]
-        Dictionary containing the indices of combinations of order 3</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+final_o2: dict[int]
+Dictionary containing the indices of combinations of order 2
+final_o3: dict[int]
+Dictionary containing the indices of combinations of order 3</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Only includes those frequencies that are within sigma * error of a linear combination.
 Does 2nd and 3rd order combinations. The number of sigma tolerance can be specified.</p>
@@ -2102,26 +2138,29 @@ Does 2nd and 3rd order combinations. The number of sigma tolerance can be specif
 
             <div class="docstring"><p>Try to find harmonic series of unknown base frequency</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-f_n_err: numpy.ndarray[Any, dtype[float]]
-    Formal errors on the frequencies
-sigma: float
-    Number of times the error to use for check of significance
-n_max: int
-    Maximum divisor for each frequency in search of a base harmonic
-f_tol: None, float
-    Tolerance in the frequency for accepting harmonics
-    If None, use sigma matching instead of pattern matching</p>
+<ul>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>f_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Formal errors on the frequencies</li>
+<li><strong>sigma</strong> (float):
+Number of times the error to use for check of significance</li>
+<li><strong>n_max</strong> (int):
+Maximum divisor for each frequency in search of a base harmonic</li>
+<li><strong>f_tol</strong> (None, float):
+Tolerance in the frequency for accepting harmonics
+If None, use sigma matching instead of pattern matching</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>dict[int]
-    Dictionary containing dictionaries with the indices of harmonic series</p>
+<ul>
+<li><strong>dict[int]</strong>: Dictionary containing dictionaries with the indices of harmonic series</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>The first layer of the dictionary has the indices of frequencies as keys,
 the second layer uses n as keys and values are the indices of the harmonics
@@ -2190,27 +2229,30 @@ first layer) is divided to get the base frequency of the series.</p>
 
             <div class="docstring"><p>Find the number of harmonics that a set of frequencies has</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_test: numpy.ndarray[Any, dtype[float]]
-    Frequencies to test at
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sine waves
-freq_res: float
-    Frequency resolution
-f_max: float
-    Highest allowed frequency at which signals are extracted</p>
+<ul>
+<li><strong>f_test</strong> (numpy.ndarray[Any, dtype[float]]):
+Frequencies to test at</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sine waves</li>
+<li><strong>freq_res</strong> (float):
+Frequency resolution</li>
+<li><strong>f_max</strong> (float):
+Highest allowed frequency at which signals are extracted</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    n_harm: numpy.ndarray[Any, dtype[float]]
-        Number of harmonics per pattern
-    completeness: numpy.ndarray[Any, dtype[float]]
-        Completeness factor of each pattern
-    distance: numpy.ndarray[Any, dtype[float]]
-        Sum of squared distances between harmonics</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+n_harm: numpy.ndarray[Any, dtype[float]]
+Number of harmonics per pattern
+completeness: numpy.ndarray[Any, dtype[float]]
+Completeness factor of each pattern
+distance: numpy.ndarray[Any, dtype[float]]
+Sum of squared distances between harmonics</li>
+</ul>
 </div>
 
 

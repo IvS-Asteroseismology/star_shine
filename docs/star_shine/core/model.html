@@ -1581,26 +1581,29 @@ sum of sinusoids, and harmonics.</p>
             <div class="docstring"><p>Returns a piece-wise linear curve for the given time points
 with slopes and y-intercepts.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-t_shift: bool
-    Mean center the time axis</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>t_shift</strong> (bool):
+Mean center the time axis</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The model time series of a (set of) straight line(s)</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The model time series of a (set of) straight line(s)</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Assumes the constants and slopes are determined with respect to the sector mean time as zero point.</p>
 </div>
@@ -1674,26 +1677,29 @@ t_shift: bool
 
             <div class="docstring"><p>Calculate the slopes and y-intercepts of a linear trend with the MLE.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    y_inter: numpy.ndarray[Any, dtype[float]]
-        The y-intercepts of a piece-wise linear curve
-    slope: numpy.ndarray[Any, dtype[float]]
-        The slopes of a piece-wise linear curve</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+y_inter: numpy.ndarray[Any, dtype[float]]
+The y-intercepts of a piece-wise linear curve
+slope: numpy.ndarray[Any, dtype[float]]
+The slopes of a piece-wise linear curve</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Source: <a href="https://towardsdatascience.com/linear-regression-91eeae7d6a2e">https://towardsdatascience.com/linear-regression-91eeae7d6a2e</a>
 Determines the constants and slopes with respect to the sector mean time as zero point to avoid correlations.</p>
@@ -1758,25 +1764,28 @@ Determines the constants and slopes with respect to the sector mean time as zero
 
 <p>Single threaded version. Better for one to a few sinusoids.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sinusoids
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sinusoids
-t_shift: bool
-    Mean center the time axis</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sinusoids</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sinusoids</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sinusoids</li>
+<li><strong>t_shift</strong> (bool):
+Mean center the time axis</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Model time series of a sum of sinusoids. Varies around 0.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Model time series of a sum of sinusoids. Varies around 0.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Assumes the phases are determined with respect to the mean time as zero point by default.</p>
 </div>
@@ -1836,25 +1845,28 @@ t_shift: bool
 
             <div class="docstring"><p>A sum of sinusoids at times t, given the frequencies, amplitudes and phases.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sinusoids
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sinusoids
-t_shift: bool
-    Mean center the time axis</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sinusoids</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sinusoids</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sinusoids</li>
+<li><strong>t_shift</strong> (bool):
+Mean center the time axis</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Model time series of a sum of sinusoids. Varies around 0.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Model time series of a sum of sinusoids. Varies around 0.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Assumes the phases are determined with respect to the mean time as zero point by default.</p>
 </div>
@@ -1923,27 +1935,30 @@ t_shift: bool
 
             <div class="docstring"><p>The time derivative of a sum of sinusoids at times t.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-f_n: list[float], numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sinusoids
-a_n: list[float], numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids
-ph_n: list[float], numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sinusoids
-deriv: int
-    Number of time derivatives taken (&gt;= 1)
-t_shift: bool
-    Mean center the time axis</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>f_n</strong> (list[float], numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sinusoids</li>
+<li><strong>a_n</strong> (list[float], numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sinusoids</li>
+<li><strong>ph_n</strong> (list[float], numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sinusoids</li>
+<li><strong>deriv</strong> (int):
+Number of time derivatives taken (&gt;= 1)</li>
+<li><strong>t_shift</strong> (bool):
+Mean center the time axis</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Model time series of a sum of sinusoid derivatives. Varies around 0.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Model time series of a sum of sinusoid derivatives. Varies around 0.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Assumes the phases are determined with respect to the mean time as zero point by default.</p>
 </div>
@@ -2163,18 +2178,20 @@ t_shift: bool
 
             <div class="docstring"><p>This class handles the linear model.</p>
 
-<h2 id="attributes">Attributes</h2>
+<h6 id="attributes">Attributes</h6>
 
-<p>_const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve.
-_slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve.
-_const_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the constant for each time chunk.
-_slope_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the slope for each time chunk.
-_linear_model: numpy.ndarray[Any, dtype[float]]
-    Time series model of the piece-wise linear curve.</p>
+<ul>
+<li><strong>_const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve.</li>
+<li><strong>_slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve.</li>
+<li><strong>_const_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the constant for each time chunk.</li>
+<li><strong>_slope_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the slope for each time chunk.</li>
+<li><strong>_linear_model</strong> (numpy.ndarray[Any, dtype[float]]):
+Time series model of the piece-wise linear curve.</li>
+</ul>
 </div>
 
 
@@ -2214,10 +2231,12 @@ _linear_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Initialises the Result object.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>n_time: int
-    Number of points in the time series.</p>
+<ul>
+<li><strong>n_time</strong> (int):
+Number of points in the time series.</li>
+</ul>
 </div>
 
 
@@ -2257,10 +2276,11 @@ _linear_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get the current model constants.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The y-intercepts of a piece-wise linear curve.</li>
+</ul>
 </div>
 
 
@@ -2289,10 +2309,11 @@ _linear_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get the current model slopes.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The slopes of a piece-wise linear curve.</li>
+</ul>
 </div>
 
 
@@ -2321,10 +2342,11 @@ _linear_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get the current model constants.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The y-intercepts of a piece-wise linear curve.</li>
+</ul>
 </div>
 
 
@@ -2353,10 +2375,11 @@ _linear_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get the current model slopes.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The slopes of a piece-wise linear curve.</li>
+</ul>
 </div>
 
 
@@ -2385,10 +2408,11 @@ _linear_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get the current linear model.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Time series model of the piece-wise linear curve.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Time series model of the piece-wise linear curve.</li>
+</ul>
 </div>
 
 
@@ -2463,10 +2487,11 @@ _linear_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current linear parameters.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    Consisting of two numpy.ndarray[Any, dtype[float]] for const, slope.</p>
+<ul>
+<li><strong>tuple</strong>: Consisting of two numpy.ndarray[Any, dtype[float]] for const, slope.</li>
+</ul>
 </div>
 
 
@@ -2504,18 +2529,21 @@ _linear_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Calculate the current linear model.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Time series model of the piece-wise linear curve.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Time series model of the piece-wise linear curve.</li>
+</ul>
 </div>
 
 
@@ -2562,17 +2590,19 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Set the linear model according to the new parameters.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-const_new: numpy.ndarray[Any, dtype[float]]
-    New y-intercepts.
-slope_new: numpy.ndarray[Any, dtype[float]]
-    New slopes.
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>const_new</strong> (numpy.ndarray[Any, dtype[float]]):
+New y-intercepts.</li>
+<li><strong>slope_new</strong> (numpy.ndarray[Any, dtype[float]]):
+New slopes.</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 </div>
 
 
@@ -2613,15 +2643,17 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Update the linear model using the residual flux.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-residual: numpy.ndarray[Any, dtype[float]]
-    Residual flux (flux minus model).
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>residual</strong> (numpy.ndarray[Any, dtype[float]]):
+Residual flux (flux minus model).</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 </div>
 
 
@@ -2658,15 +2690,17 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Update the linear model parameter errors using the residual flux.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-residual: numpy.ndarray[Any, dtype[float]]
-    Residual flux (flux minus model).
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>residual</strong> (numpy.ndarray[Any, dtype[float]]):
+Residual flux (flux minus model).</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 </div>
 
 
@@ -3526,48 +3560,50 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>This class handles the sinusoid model.</p>
 
-<h2 id="attributes">Attributes</h2>
+<h6 id="attributes">Attributes</h6>
 
-<p>_f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sinusoids.
-_a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids.
-_ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sinusoids.
-_include: numpy.ndarray[Any, dtype[bool]]
-    Include state of the sinusoids in the model.
-_harmonics: numpy.ndarray[Any, dtype[bool]]
-    Boolean mask indicating harmonics in _f_n. False indicates a free sinusoid.
-_h_base: numpy.ndarray[Any, dtype[int]]
-    Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.
-_h_mult: numpy.ndarray[Any, dtype[int]]
-    Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.
-_combinations: dict[int, list[int]]
-    Indices of the child frequencies in _f_n, and the corresponding parents.
-_combination_n: dict[int, numpy.ndarray[Any, dtype[int]]]
-    Indices of the child frequencies in _f_n, and the corresponding parent multiplier.
-_f_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the frequency for each sinusoid.
-_a_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the amplitude for each sinusoid (these are identical).
-_ph_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the phase for each sinusoid.
-_f_h_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the frequency for each harmonic sinusoid.
-_passing_sigma: numpy.ndarray[Any, dtype[bool]]
-    Sinusoids that passed the sigma check.
-_passing_snr: numpy.ndarray[Any, dtype[bool]]
-    Sinusoids that passed the signal-to-noise check.
-_passing_harmonic: numpy.ndarray[Any, dtype[bool]]
-    Sinusoids that passed the harmonic check.
-n_sin: int
-    Number of sinusoids (including harmonics).
-n_harm: int
-    Number of harmonic sinusoids.
-n_base: int
-    Number of harmonic series/base frequencies.
-_sinusoid_model: numpy.ndarray[Any, dtype[float]]
-    Current time series model of the sinusoids.</p>
+<ul>
+<li><strong>_f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sinusoids.</li>
+<li><strong>_a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sinusoids.</li>
+<li><strong>_ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sinusoids.</li>
+<li><strong>_include</strong> (numpy.ndarray[Any, dtype[bool]]):
+Include state of the sinusoids in the model.</li>
+<li><strong>_harmonics</strong> (numpy.ndarray[Any, dtype[bool]]):
+Boolean mask indicating harmonics in _f_n. False indicates a free sinusoid.</li>
+<li><strong>_h_base</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.</li>
+<li><strong>_h_mult</strong> (numpy.ndarray[Any, dtype[int]]):
+Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</li>
+<li><strong>_combinations</strong> (dict[int, list[int]]):
+Indices of the child frequencies in _f_n, and the corresponding parents.</li>
+<li><strong>_combination_n</strong> (dict[int, numpy.ndarray[Any, dtype[int]]]):
+Indices of the child frequencies in _f_n, and the corresponding parent multiplier.</li>
+<li><strong>_f_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the frequency for each sinusoid.</li>
+<li><strong>_a_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the amplitude for each sinusoid (these are identical).</li>
+<li><strong>_ph_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the phase for each sinusoid.</li>
+<li><strong>_f_h_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the frequency for each harmonic sinusoid.</li>
+<li><strong>_passing_sigma</strong> (numpy.ndarray[Any, dtype[bool]]):
+Sinusoids that passed the sigma check.</li>
+<li><strong>_passing_snr</strong> (numpy.ndarray[Any, dtype[bool]]):
+Sinusoids that passed the signal-to-noise check.</li>
+<li><strong>_passing_harmonic</strong> (numpy.ndarray[Any, dtype[bool]]):
+Sinusoids that passed the harmonic check.</li>
+<li><strong>n_sin</strong> (int):
+Number of sinusoids (including harmonics).</li>
+<li><strong>n_harm</strong> (int):
+Number of harmonic sinusoids.</li>
+<li><strong>n_base</strong> (int):
+Number of harmonic series/base frequencies.</li>
+<li><strong>_sinusoid_model</strong> (numpy.ndarray[Any, dtype[float]]):
+Current time series model of the sinusoids.</li>
+</ul>
 </div>
 
 
@@ -3631,10 +3667,12 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Initialises the Result object.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>n_time: int
-    Number of points in the time series.</p>
+<ul>
+<li><strong>n_time</strong> (int):
+Number of points in the time series.</li>
+</ul>
 </div>
 
 
@@ -3696,10 +3734,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current model frequencies (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sinusoids.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The frequencies of a number of sinusoids.</li>
+</ul>
 </div>
 
 
@@ -3728,10 +3767,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current model amplitudes (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The amplitudes of a number of sinusoids.</li>
+</ul>
 </div>
 
 
@@ -3760,10 +3800,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current model phases (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sinusoids.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The phases of a number of sinusoids.</li>
+</ul>
 </div>
 
 
@@ -3792,10 +3833,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current include state of the sinusoids.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[bool]]
-    Include state of the sinusoids in the model.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[bool]]</strong>: Include state of the sinusoids in the model.</li>
+</ul>
 </div>
 
 
@@ -3845,10 +3887,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current model harmonics (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[bool]]
-    Boolean mask indicating harmonics in _f_n. False indicates a free sinusoid.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[bool]]</strong>: Boolean mask indicating harmonics in _f_n. False indicates a free sinusoid.</li>
+</ul>
 </div>
 
 
@@ -3877,10 +3920,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current model harmonic base frequency indices (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[int]]
-    Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[int]]</strong>: Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.</li>
+</ul>
 </div>
 
 
@@ -3909,10 +3953,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current model harmonic multiplier numbers (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[int]]
-    Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[int]]</strong>: Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</li>
+</ul>
 </div>
 
 
@@ -3941,10 +3986,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get the current model base frequencies (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The base frequencies of the harmonic model.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The base frequencies of the harmonic model.</li>
+</ul>
 </div>
 
 
@@ -3977,12 +4023,13 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the model frequency errors (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The errors in the frequencies of a number of sinusoids.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The errors in the frequencies of a number of sinusoids.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>These need to be updated manually (with update_sinusoid_uncertainties).</p>
 </div>
@@ -4017,12 +4064,13 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the model amplitude errors (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The errors in the amplitudes of a number of sinusoids.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The errors in the amplitudes of a number of sinusoids.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>These need to be updated manually (with update_sinusoid_uncertainties).</p>
 </div>
@@ -4057,12 +4105,13 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the model phase errors (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The errors in the phases of a number of sinusoids.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The errors in the phases of a number of sinusoids.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>These need to be updated manually (with update_sinusoid_uncertainties).</p>
 </div>
@@ -4097,12 +4146,13 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the model harmonic frequency errors (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    The errors in the frequencies of a number of (harmonic) sinusoids.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: The errors in the frequencies of a number of (harmonic) sinusoids.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>These need to be updated manually (with update_sinusoid_uncertainties_harmonic).</p>
 </div>
@@ -4137,12 +4187,13 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the passing sigma mask (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[bool]]
-    Sinusoids that passed the sigma check.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[bool]]</strong>: Sinusoids that passed the sigma check.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>These need to be updated manually (with update_sinusoid_passing_sigma).</p>
 </div>
@@ -4173,10 +4224,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the passing snr mask (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[bool]]
-    Sinusoids that passed the signal-to-noise check.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[bool]]</strong>: Sinusoids that passed the signal-to-noise check.</li>
+</ul>
 </div>
 
 
@@ -4205,10 +4257,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the passing harmonic mask (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[bool]]
-    Sinusoids that passed the harmonic check.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[bool]]</strong>: Sinusoids that passed the harmonic check.</li>
+</ul>
 </div>
 
 
@@ -4237,10 +4290,11 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current sinusoid model.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Time series model of the sinusoids.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Time series model of the sinusoids.</li>
+</ul>
 </div>
 
 
@@ -4327,15 +4381,18 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current sinusoid parameters.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>exclude: bool
-    Exclude the sinusoids intended for removal.</p>
+<ul>
+<li><strong>exclude</strong> (bool):
+Exclude the sinusoids intended for removal.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    Consisting of three numpy.ndarray[Any, dtype[float]] for f_n, a_n, ph_n.</p>
+<ul>
+<li><strong>tuple</strong>: Consisting of three numpy.ndarray[Any, dtype[float]] for f_n, a_n, ph_n.</li>
+</ul>
 </div>
 
 
@@ -4376,15 +4433,18 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get a copy of the current harmonic parameters.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>exclude: bool
-    Exclude the sinusoids intended for removal.</p>
+<ul>
+<li><strong>exclude</strong> (bool):
+Exclude the sinusoids intended for removal.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    Consisting of three numpy.ndarray[Any, dtype[float]] for f_n, a_n, ph_n.</p>
+<ul>
+<li><strong>tuple</strong>: Consisting of three numpy.ndarray[Any, dtype[float]] for f_n, a_n, ph_n.</li>
+</ul>
 </div>
 
 
@@ -4417,13 +4477,14 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get the indices of each base harmonic frequency and a map to recreate h_base[harmonics].</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    numpy.ndarray[Any, dtype[int]]
-        Indices of the base harmonic frequencies in _f_n.
-    numpy.ndarray[Any, dtype[int]]
-        Map of harmonics to base frequencies.</p>
+<ul>
+<li><strong>tuple</strong>: numpy.ndarray[Any, dtype[int]]
+Indices of the base harmonic frequencies in _f_n.
+numpy.ndarray[Any, dtype[int]]
+Map of harmonics to base frequencies.</li>
+</ul>
 </div>
 
 
@@ -4458,15 +4519,18 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Get the index in f_n of a given frequency.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f: float
-    Frequency to get the index of.</p>
+<ul>
+<li><strong>f</strong> (float):
+Frequency to get the index of.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>int
-    Index of f in f_n.</p>
+<ul>
+<li><strong>int</strong>: Index of f in f_n.</li>
+</ul>
 </div>
 
 
@@ -4508,17 +4572,20 @@ _sinusoid_model: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Calculate the current sinusoid model (disregarding include).</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-indices: numpy.ndarray[Any, dtype[int]]
-    Indices for the sinusoids to include.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>indices</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices for the sinusoids to include.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Time series model of the sinusoids.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Time series model of the sinusoids.</li>
+</ul>
 </div>
 
 
@@ -4623,20 +4690,22 @@ assigned to. Optionally performs a linear fit of the amplitudes and phases [wip]
 
             <div class="docstring"><p>Set the current sinusoid model with the new parameters.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-f_n_new: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sinusoids.
-a_n_new: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids.
-ph_n_new: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sinusoids.
-h_base_new: numpy.ndarray[Any, dtype[int]], optional
-    Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.
-h_mult_new: numpy.ndarray[Any, dtype[int]], optional
-    Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>f_n_new</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sinusoids.</li>
+<li><strong>a_n_new</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sinusoids.</li>
+<li><strong>ph_n_new</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sinusoids.</li>
+<li><strong>h_base_new</strong> (numpy.ndarray[Any, dtype[int]], optional):
+Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.</li>
+<li><strong>h_mult_new</strong> (numpy.ndarray[Any, dtype[int]], optional):
+Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</li>
+</ul>
 </div>
 
 
@@ -4718,20 +4787,22 @@ h_mult_new: numpy.ndarray[Any, dtype[int]], optional
 <p>Meant for adding a limited number of sinusoids, less efficient for large numbers.
 For that case, see set_sinusoids.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-f_n_new: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sinusoids.
-a_n_new: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids.
-ph_n_new: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sinusoids.
-h_base_new: numpy.ndarray[Any, dtype[int]], optional
-    Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.
-h_mult_new: numpy.ndarray[Any, dtype[int]], optional
-    Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>f_n_new</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sinusoids.</li>
+<li><strong>a_n_new</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sinusoids.</li>
+<li><strong>ph_n_new</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sinusoids.</li>
+<li><strong>h_base_new</strong> (numpy.ndarray[Any, dtype[int]], optional):
+Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.</li>
+<li><strong>h_mult_new</strong> (numpy.ndarray[Any, dtype[int]], optional):
+Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</li>
+</ul>
 </div>
 
 
@@ -4827,22 +4898,24 @@ h_mult_new: numpy.ndarray[Any, dtype[int]], optional
 <p>Meant for updating a limited number of sinusoids, less efficient for large numbers.
 For that case, see set_sinusoids.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-f_n_new: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sinusoids.
-a_n_new: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids.
-ph_n_new: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sinusoids.
-indices: numpy.ndarray[Any, dtype[int]]
-    Indices for the sinusoids to update.
-h_base_new: numpy.ndarray[Any, dtype[int]], optional
-    Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.
-h_mult_new: numpy.ndarray[Any, dtype[int]], optional
-    Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>f_n_new</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sinusoids.</li>
+<li><strong>a_n_new</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sinusoids.</li>
+<li><strong>ph_n_new</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sinusoids.</li>
+<li><strong>indices</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices for the sinusoids to update.</li>
+<li><strong>h_base_new</strong> (numpy.ndarray[Any, dtype[int]], optional):
+Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.</li>
+<li><strong>h_mult_new</strong> (numpy.ndarray[Any, dtype[int]], optional):
+Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</li>
+</ul>
 </div>
 
 
@@ -4911,12 +4984,14 @@ h_mult_new: numpy.ndarray[Any, dtype[int]], optional
 <p>Meant for updating a limited number of sinusoids, less efficient for large numbers.
 For that case, see set_sinusoids.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-indices: numpy.ndarray[Any, dtype[int]]
-    Indices of the sinusoids to remove.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>indices</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the sinusoids to remove.</li>
+</ul>
 </div>
 
 
@@ -4971,12 +5046,14 @@ indices: numpy.ndarray[Any, dtype[int]]
 <p>Meant for updating a limited number of sinusoids, less efficient for large numbers.
 For that case, see set_sinusoids.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-indices: numpy.ndarray[Any, dtype[int]]
-    Indices of the sinusoids to include.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>indices</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the sinusoids to include.</li>
+</ul>
 </div>
 
 
@@ -5033,12 +5110,14 @@ indices: numpy.ndarray[Any, dtype[int]]
 Meant for updating a limited number of sinusoids, less efficient for large numbers.
 For that case, see set_sinusoids.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-indices: numpy.ndarray[Any, dtype[int]]
-    Indices of the sinusoids to exclude.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>indices</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the sinusoids to exclude.</li>
+</ul>
 </div>
 
 
@@ -5130,17 +5209,19 @@ indices: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Update the sinusoid model parameter errors using the residual flux.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-residual: numpy.ndarray[Any, dtype[float]]
-    Residual flux (flux minus model).
-flux_err: numpy.ndarray[Any, dtype[float]]
-    Errors in the measurement values.
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>residual</strong> (numpy.ndarray[Any, dtype[float]]):
+Residual flux (flux minus model).</li>
+<li><strong>flux_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Errors in the measurement values.</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 </div>
 
 
@@ -5245,14 +5326,16 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Update the passing status of the sinusoids for the sigma criterion.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-residual: numpy.ndarray[Any, dtype[float]]
-    Residual flux (flux minus model).
-window_width: float
-    The width of the window used to compute the noise spectrum.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>residual</strong> (numpy.ndarray[Any, dtype[float]]):
+Residual flux (flux minus model).</li>
+<li><strong>window_width</strong> (float):
+The width of the window used to compute the noise spectrum.</li>
+</ul>
 </div>
 
 
@@ -5289,10 +5372,12 @@ window_width: float
 
             <div class="docstring"><p>Update the passing status of the sinusoids for the sigma criterion.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_resolution: float
-    Frequency resolution of the time series</p>
+<ul>
+<li><strong>f_resolution</strong> (float):
+Frequency resolution of the time series</li>
+</ul>
 </div>
 
 

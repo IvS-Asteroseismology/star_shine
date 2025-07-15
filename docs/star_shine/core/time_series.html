@@ -642,41 +642,43 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>This class handles the time series.</p>
 
-<h2 id="attributes">Attributes</h2>
+<h6 id="attributes">Attributes</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series.
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).
-n_time: int
-    Number of data points in the time series.
-n_chunks: int
-    Number of time chunks in the time series.
-t_tot: float
-    Total time base of observations.
-t_mean: float
-    Time reference (zero) point of the full light curve.
-t_mean_chunk: numpy.ndarray[Any, dtype[float]]
-    Time reference (zero) point per chunk.
-t_step: float
-    Median time step of observations.
-pd_f0: float
-    Starting frequency of the periodogram.
-pd_fn: float
-    Last frequency of the periodogram.
-pd_df: float
-    Frequency sampling space of the periodogram
-pd_freqs: numpy.ndarray[Any, dtype[float]]
-    Frequencies at which the periodogram was calculated
-pd_ampls: numpy.ndarray[Any, dtype[float]]
-    The periodogram amplitudes.
-f_resolution: float
-    Frequency resolution of the time series
-snr_threshold: float
-    Signal-to-noise threshold for this data set.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series.</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+<li><strong>n_time</strong> (int):
+Number of data points in the time series.</li>
+<li><strong>n_chunks</strong> (int):
+Number of time chunks in the time series.</li>
+<li><strong>t_tot</strong> (float):
+Total time base of observations.</li>
+<li><strong>t_mean</strong> (float):
+Time reference (zero) point of the full light curve.</li>
+<li><strong>t_mean_chunk</strong> (numpy.ndarray[Any, dtype[float]]):
+Time reference (zero) point per chunk.</li>
+<li><strong>t_step</strong> (float):
+Median time step of observations.</li>
+<li><strong>pd_f0</strong> (float):
+Starting frequency of the periodogram.</li>
+<li><strong>pd_fn</strong> (float):
+Last frequency of the periodogram.</li>
+<li><strong>pd_df</strong> (float):
+Frequency sampling space of the periodogram</li>
+<li><strong>pd_freqs</strong> (numpy.ndarray[Any, dtype[float]]):
+Frequencies at which the periodogram was calculated</li>
+<li><strong>pd_ampls</strong> (numpy.ndarray[Any, dtype[float]]):
+The periodogram amplitudes.</li>
+<li><strong>f_resolution</strong> (float):
+Frequency resolution of the time series</li>
+<li><strong>snr_threshold</strong> (float):
+Signal-to-noise threshold for this data set.</li>
+</ul>
 </div>
 
 
@@ -740,17 +742,19 @@ snr_threshold: float
 
             <div class="docstring"><p>Initialises the Result object.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series.
-flux_err: numpy.ndarray[Any, dtype[float]]
-    Errors in the measurement values.
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series.</li>
+<li><strong>flux_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Errors in the measurement values.</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 </div>
 
 
@@ -1196,12 +1200,14 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>This class handles the full time series model.</p>
 
-<h2 id="attributes">Attributes</h2>
+<h6 id="attributes">Attributes</h6>
 
-<p>linear: star_shine.core.time_series.LinearModel
-    Model of the piece-wise linear curve.
-sinusoid: star_shine.core.time_series.SinusoidModel
-    Model of the sinusoids.</p>
+<ul>
+<li><strong>linear</strong> (star_shine.core.time_series.LinearModel):
+Model of the piece-wise linear curve.</li>
+<li><strong>sinusoid</strong> (star_shine.core.time_series.SinusoidModel):
+Model of the sinusoids.</li>
+</ul>
 </div>
 
 
@@ -1241,17 +1247,19 @@ sinusoid: star_shine.core.time_series.SinusoidModel
 
             <div class="docstring"><p>Initialises the Result object.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series.
-flux_err: numpy.ndarray[Any, dtype[float]]
-    Errors in the measurement values.
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series.</li>
+<li><strong>flux_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Errors in the measurement values.</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 </div>
 
 
@@ -1327,10 +1335,11 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Return the number of parameters of the time series model.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>int
-    Number of free parameters in the model.</p>
+<ul>
+<li><strong>int</strong>: Number of free parameters in the model.</li>
+</ul>
 </div>
 
 
@@ -1360,10 +1369,11 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Get the current model parameters.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    Consisting of five numpy.ndarray[Any, dtype[float]] for const, slope, f_n, a_n, ph_n.</p>
+<ul>
+<li><strong>tuple</strong>: Consisting of five numpy.ndarray[Any, dtype[float]] for const, slope, f_n, a_n, ph_n.</li>
+</ul>
 </div>
 
 
@@ -1393,10 +1403,11 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>The full time series model.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Combined time series model.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Combined time series model.</li>
+</ul>
 </div>
 
 
@@ -1426,10 +1437,11 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>The residual of the flux minus the model.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Flux minus the current time series model.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Flux minus the current time series model.</li>
+</ul>
 </div>
 
 
@@ -1459,10 +1471,11 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Calculate the BIC of the residual.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    BIC of the current time series model.</p>
+<ul>
+<li><strong>float</strong>: BIC of the current time series model.</li>
+</ul>
 </div>
 
 
@@ -1508,16 +1521,19 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
 <p>Uses the cached values for the original data, if the model is subtracted the periodogram is always recomputed.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>subtract_model: bool
-    Subtract the time series model from the data.</p>
+<ul>
+<li><strong>subtract_model</strong> (bool):
+Subtract the time series model from the data.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    Contains the frequencies numpy.ndarray[Any, dtype[float]]
-    and the spectrum numpy.ndarray[Any, dtype[float]]</p>
+<ul>
+<li><strong>tuple</strong>: Contains the frequencies numpy.ndarray[Any, dtype[float]]
+and the spectrum numpy.ndarray[Any, dtype[float]]</li>
+</ul>
 </div>
 
 
@@ -1555,15 +1571,18 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Calculate the full time series model (disregarding include).</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>indices: numpy.ndarray[Any, dtype[int]]
-    Indices for the sinusoids to include.</p>
+<ul>
+<li><strong>indices</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices for the sinusoids to include.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Combined time series model.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Combined time series model.</li>
+</ul>
 </div>
 
 
@@ -1597,11 +1616,12 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
             <div class="docstring"><p>Calculate Lomb-Scargle periodogram of the time series (disregarding include).</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    Contains the frequencies numpy.ndarray[Any, dtype[float]]
-    and the spectrum numpy.ndarray[Any, dtype[float]]</p>
+<ul>
+<li><strong>tuple</strong>: Contains the frequencies numpy.ndarray[Any, dtype[float]]
+and the spectrum numpy.ndarray[Any, dtype[float]]</li>
+</ul>
 </div>
 
 
