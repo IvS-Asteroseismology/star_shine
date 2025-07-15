@@ -749,18 +749,20 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>A class to handle light curve data.</p>
 
-<h2 id="attributes">Attributes</h2>
+<h6 id="attributes">Attributes</h6>
 
-<p>file_list: list[str]
-    List of ascii light curve files or (TESS) data product '.fits' files.
-data_dir: str
-    Root directory where the data files to be analysed are located.
-target_id: str
-    User defined identification integer for the target under investigation.
-data_id: str
-    User defined identification for the dataset used.
-flux_counts_medians: numpy.ndarray[Any, dtype[float]]
-    Median flux counts per chunk.</p>
+<ul>
+<li><strong>file_list</strong> (list[str]):
+List of ascii light curve files or (TESS) data product '.fits' files.</li>
+<li><strong>data_dir</strong> (str):
+Root directory where the data files to be analysed are located.</li>
+<li><strong>target_id</strong> (str):
+User defined identification integer for the target under investigation.</li>
+<li><strong>data_id</strong> (str):
+User defined identification for the dataset used.</li>
+<li><strong>flux_counts_medians</strong> (numpy.ndarray[Any, dtype[float]]):
+Median flux counts per chunk.</li>
+</ul>
 </div>
 
 
@@ -808,13 +810,15 @@ flux_counts_medians: numpy.ndarray[Any, dtype[float]]
 <p>The data is loaded from the given file(s) and some basic processing is done.
 Either a file name, or target id plus file list must be given.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>target_id: str, optional
-    User defined identification number or name for the target under investigation. If empty, the file name
-    of the first file in file_list is used.
-data_id: str, optional
-    User defined identification name for the dataset used.</p>
+<ul>
+<li><strong>target_id</strong> (str, optional):
+User defined identification number or name for the target under investigation. If empty, the file name
+of the first file in file_list is used.</li>
+<li><strong>data_id</strong> (str, optional):
+User defined identification name for the dataset used.</li>
+</ul>
 </div>
 
 
@@ -939,10 +943,12 @@ data_id: str, optional
 
 <p>Primarily for saving to file.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>data_dict: dict
-    Dictionary of the data attributes and fields</p>
+<ul>
+<li><strong>data_dict</strong> (dict):
+Dictionary of the data attributes and fields</li>
+</ul>
 </div>
 
 
@@ -1037,26 +1043,29 @@ data_id: str, optional
 
             <div class="docstring"><p>Load light curve data from the file list.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_list: list[str]
-    List of ascii light curve files or (TESS) data product '.fits' files. Exclude the path given to 'data_dir'.
-    If only one file is given, its file name is used for target_id (if 'none').
-data_dir: str, optional
-    Root directory where the data files to be analysed are located. Added to the file name.
-    If empty, it is loaded from config.
-target_id: str, optional
-    User defined identification number or name for the target under investigation. If empty, the file name
-    of the first file in file_list is used.
-data_id: str, optional
-    User defined identification name for the dataset used.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>file_list</strong> (list[str]):
+List of ascii light curve files or (TESS) data product '.fits' files. Exclude the path given to 'data_dir'.
+If only one file is given, its file name is used for target_id (if 'none').</li>
+<li><strong>data_dir</strong> (str, optional):
+Root directory where the data files to be analysed are located. Added to the file name.
+If empty, it is loaded from config.</li>
+<li><strong>target_id</strong> (str, optional):
+User defined identification number or name for the target under investigation. If empty, the file name
+of the first file in file_list is used.</li>
+<li><strong>data_id</strong> (str, optional):
+User defined identification name for the dataset used.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Data
-    Instance of the Data class with the loaded data.</p>
+<ul>
+<li><strong>Data</strong>: Instance of the Data class with the loaded data.</li>
+</ul>
 </div>
 
 
@@ -1130,23 +1139,26 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>Load a data file in hdf5 format.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_name: str
-    File name to load the data from
-data_dir: str, optional
-    Root directory where the data files to be analysed are located. Added to the file name.
-    If empty, it is loaded from config.
-h5py_file_kwargs: dict, optional
-    Keyword arguments for opening the h5py file.
-    Example: {'locking': False}, for a drive that does not support locking.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>file_name</strong> (str):
+File name to load the data from</li>
+<li><strong>data_dir</strong> (str, optional):
+Root directory where the data files to be analysed are located. Added to the file name.
+If empty, it is loaded from config.</li>
+<li><strong>h5py_file_kwargs</strong> (dict, optional):
+Keyword arguments for opening the h5py file.
+Example: {'locking': False}, for a drive that does not support locking.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Data
-    Instance of the Data class with the loaded data.</p>
+<ul>
+<li><strong>Data</strong>: Instance of the Data class with the loaded data.</li>
+</ul>
 </div>
 
 
@@ -1182,10 +1194,12 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>Save the data to a file in hdf5 format.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_name: str
-    File name to save the data to</p>
+<ul>
+<li><strong>file_name</strong> (str):
+File name to save the data to</li>
+</ul>
 </div>
 
 
@@ -1220,12 +1234,14 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>Plot the time series data.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_name: str, optional
-    File path to save the plot
-show: bool, optional
-    If True, display the plot</p>
+<ul>
+<li><strong>file_name</strong> (str, optional):
+File path to save the plot</li>
+<li><strong>show</strong> (bool, optional):
+If True, display the plot</li>
+</ul>
 </div>
 
 
@@ -1262,14 +1278,16 @@ show: bool, optional
 
             <div class="docstring"><p>Plot the periodogram of the time series.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>plot_per_chunk: bool
-    If True, plot the periodogram of each separate time chunk in one plot.
-file_name: str, optional
-    File path to save the plot
-show: bool, optional
-    If True, display the plot</p>
+<ul>
+<li><strong>plot_per_chunk</strong> (bool):
+If True, plot the periodogram of each separate time chunk in one plot.</li>
+<li><strong>file_name</strong> (str, optional):
+File path to save the plot</li>
+<li><strong>show</strong> (bool, optional):
+If True, display the plot</li>
+</ul>
 </div>
 
 

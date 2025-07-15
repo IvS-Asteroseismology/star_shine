@@ -291,15 +291,18 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 <p>snr_thr = 1.201 * np.sqrt(1.05 * np.log(len(time)) + 7.184)
 Plus 0.25 in case of gaps &gt; 27 days</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    Signal-to-noise threshold for this data set.</p>
+<ul>
+<li><strong>float</strong>: Signal-to-noise threshold for this data set.</li>
+</ul>
 </div>
 
 
@@ -342,15 +345,18 @@ Plus 0.25 in case of gaps &gt; 27 days</p>
 <p>Equation: factor / T, where T is the total time base of observations.
 Recommended factor: 1.5. Common choices are 1, 1.5 (conservative), 2.5 (very conservative).</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    Frequency resolution of the time series</p>
+<ul>
+<li><strong>float</strong>: Frequency resolution of the time series</li>
+</ul>
 </div>
 
 
@@ -422,21 +428,24 @@ Recommended factor: 1.5. Common choices are 1, 1.5 (conservative), 2.5 (very con
 
             <div class="docstring"><p>Calculate the Nyquist sum based on Koen (2006).</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>n: int
-    The number of terms in the series.
-time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-delta_t_min: float
-    Minimum time interval between observations.</p>
+<ul>
+<li><strong>n</strong> (int):
+The number of terms in the series.</li>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>delta_t_min</strong> (float):
+Minimum time interval between observations.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>int
-    Result of the sum of squares calculation.</p>
+<ul>
+<li><strong>int</strong>: Result of the sum of squares calculation.</li>
+</ul>
 
-<h2 id="examples">Examples</h2>
+<h6 id="examples">Examples</h6>
 
 <h1 id="iterate-n-until-this-sum-returns-zero-to-get-to-the-true-nyquist-frequency">Iterate n until this sum returns zero to get to the true Nyquist frequency.</h1>
 
@@ -454,7 +463,7 @@ delta_t_min: float
 </code></pre>
 </div>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>The principle exploited by Koen (2006) is that the real Nyquist frequency of a time series with uneven sampling,
 where the sampling is also not a simple multiple of some small value, is a multiple of the simple approximation
@@ -511,15 +520,18 @@ The rigorous method implements equation 5 from Koen 2006.
 
 <p>Currently limited to 20 times classical Nyquist for performance considerations.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    Nyquist frequency of the time series</p>
+<ul>
+<li><strong>float</strong>: Nyquist frequency of the time series</li>
+</ul>
 </div>
 
 

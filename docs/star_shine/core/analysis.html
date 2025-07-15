@@ -1245,35 +1245,38 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 <p>The extracted frequency is based on the highest amplitude or signal-to-noise in the periodogram.
 The highest peak is oversampled by a factor 100 to get a precise measurement.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-f0: float, optional
-    Lowest allowed frequency for extraction.
-    If left -1, default is f0 = 1/(100<em>T)
-fn: float, optional
-    Highest allowed frequency for extraction.
-    If left -1, default is fn = 1/(2</em>np.min(np.diff(time))) = Nyquist frequency
-select: str, optional
-    Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>f0</strong> (float, optional):
+Lowest allowed frequency for extraction.
+If left -1, default is f0 = 1/(100*T)</li>
+<li><strong>fn</strong> (float, optional):
+Highest allowed frequency for extraction.
+If left -1, default is fn = 1/(2*np.min(np.diff(time))) = Nyquist frequency</li>
+<li><strong>select</strong> (str, optional):
+Select the next frequency based on amplitude 'a' or signal-to-noise 'sn'</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    f_final: float
-        Frequency of the extracted sinusoid
-    a_final: float
-        Amplitude of the extracted sinusoid
-    ph_final: float
-        Phase of the extracted sinusoid</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+f_final: float
+Frequency of the extracted sinusoid
+a_final: float
+Amplitude of the extracted sinusoid
+ph_final: float
+Phase of the extracted sinusoid</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>scargle, scargle_phase_single</p>
+<p><code>scargle,</code>, <code>scargle_phase_single</code>  </p>
 </div>
 
 
@@ -1356,31 +1359,34 @@ select: str, optional
 <p>The extracted frequency is based on the highest amplitude in the periodogram.
 The highest peak is oversampled by a factor 100 to get a precise measurement.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-f0: float
-    Lowest allowed frequency for extraction.
-fn: float
-    Highest allowed frequency for extraction.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>f0</strong> (float):
+Lowest allowed frequency for extraction.</li>
+<li><strong>fn</strong> (float):
+Highest allowed frequency for extraction.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    f_final: float
-        Frequency of the extracted sinusoid
-    a_final: float
-        Amplitude of the extracted sinusoid
-    ph_final: float
-        Phase of the extracted sinusoid</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+f_final: float
+Frequency of the extracted sinusoid
+a_final: float
+Amplitude of the extracted sinusoid
+ph_final: float
+Phase of the extracted sinusoid</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>scargle, scargle_phase_single</p>
+<p><code>scargle,</code>, <code>scargle_phase_single</code>  </p>
 </div>
 
 
@@ -1452,25 +1458,28 @@ fn: float
 
 <p>Follows the periodogram upwards to the nearest peak. The periodogram is oversampled for a more precise result.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-f_approx: float
-    Approximate location of the frequency of maximum amplitude.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>f_approx</strong> (float):
+Approximate location of the frequency of maximum amplitude.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    f_final: float
-        Frequency of the extracted sinusoid
-    a_final: float
-        Amplitude of the extracted sinusoid
-    ph_final: float
-        Phase of the extracted sinusoid</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+f_final: float
+Frequency of the extracted sinusoid
+a_final: float
+Amplitude of the extracted sinusoid
+ph_final: float
+Phase of the extracted sinusoid</li>
+</ul>
 </div>
 
 
@@ -1567,18 +1576,20 @@ taking into account (and not changing the frequencies of) harmonics if present.<
 
 <p>Intended as a sub-loop within another extraction routine (extract_sinusoids), can work standalone too.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-close_f: numpy.ndarray[Any, dtype[int]]
-    Indices of the subset of frequencies to be refined
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>close_f</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the subset of frequencies to be refined</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>extract_sinusoids</p>
+<p><code><a href="#extract_sinusoids">extract_sinusoids</a></code>  </p>
 </div>
 
 
@@ -1697,20 +1708,22 @@ taking into account (and not changing the frequencies of) harmonics if present.<
 
 <p>Intended as a sub-loop within another extraction routine (extract_sinusoids), can work standalone too.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-close_f: numpy.ndarray[Any, dtype[int]]
-    Indices of the subset of frequencies to be (subdivided and) replaced.
-final_remove: bool, optional
-    Remove the excluded frequencies at the end.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>close_f</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the subset of frequencies to be (subdivided and) replaced.</li>
+<li><strong>final_remove</strong> (bool, optional):
+Remove the excluded frequencies at the end.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>extract_sinusoids</p>
+<p><code><a href="#extract_sinusoids">extract_sinusoids</a></code>  </p>
 </div>
 
 
@@ -1884,32 +1897,34 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>Extract all the frequencies from a periodic flux.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-bic_thr: float, optional
-    The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
-snr_thr: float, optional
-    Threshold for signal-to-noise ratio for a signal to be considered significant.
-stop_crit: str, optional
-    Use the BIC as stopping criterion or the SNR, choose from 'bic', or 'snr'
-select: str, optional
-    Select the next frequency based on amplitude ('a'),
-    signal-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).
-n_extract: int, optional
-    Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.
-fit_each_step: bool
-    If set to True, a non-linear least-squares fit of all extracted sinusoids in groups is performed at each
-    iteration. While this increases the quality of the extracted signals, it drastically slows down the code.
-    Generally gives a better quality of the extraction than only doing this all the way at the end.
-replace_each_step: bool
-    If set to True, close frequecies are attempted to be replaced by a single sinusoid at each iteration.
-    May increase the quality of the extraction more than only doing this all the way at the end.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>bic_thr</strong> (float, optional):
+The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.</li>
+<li><strong>snr_thr</strong> (float, optional):
+Threshold for signal-to-noise ratio for a signal to be considered significant.</li>
+<li><strong>stop_crit</strong> (str, optional):
+Use the BIC as stopping criterion or the SNR, choose from 'bic', or 'snr'</li>
+<li><strong>select</strong> (str, optional):
+Select the next frequency based on amplitude ('a'),
+signal-to-noise ('sn'), or hybrid ('hybrid') (first a then sn).</li>
+<li><strong>n_extract</strong> (int, optional):
+Maximum number of frequencies to extract. The stop criterion is still leading. Zero means as many as possible.</li>
+<li><strong>fit_each_step</strong> (bool):
+If set to True, a non-linear least-squares fit of all extracted sinusoids in groups is performed at each
+iteration. While this increases the quality of the extracted signals, it drastically slows down the code.
+Generally gives a better quality of the extraction than only doing this all the way at the end.</li>
+<li><strong>replace_each_step</strong> (bool):
+If set to True, close frequecies are attempted to be replaced by a single sinusoid at each iteration.
+May increase the quality of the extraction more than only doing this all the way at the end.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Spits out frequencies and amplitudes in the same units as the input,
 and phases that are measured with respect to the first time point.
@@ -2020,14 +2035,16 @@ sinusoid fit at each iteration.</p>
 
 <p>Surrounding frequencies are also removed (within the frequency resolution).</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-f_base: float
-    Base frequency to couple the harmonics to.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>f_base</strong> (float):
+Base frequency to couple the harmonics to.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 </div>
 
 
@@ -2127,20 +2144,22 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>Tries to extract more harmonics from the flux</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-bic_thr: float
-    The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>bic_thr</strong> (float):
+The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="see-also">See Also</h2>
+<h6 id="see-also">See Also</h6>
 
-<p>fix_harmonic_frequency</p>
+<p><code>fix_harmonic_frequency</code>  </p>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).
 Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.</p>
@@ -2202,10 +2221,12 @@ Assumes the harmonics are already fixed multiples of f_base as can be achieved w
 
             <div class="docstring"><p>Replace pairs of sinusoids that have gotten too close.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+</ul>
 </div>
 
 
@@ -2283,12 +2304,14 @@ Assumes the harmonics are already fixed multiples of f_base as can be achieved w
 
 <p>Checks whether the BIC can be improved by removing a sinusoid. Harmonics are taken into account.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 </div>
 
 
@@ -2363,12 +2386,14 @@ logger: logging.Logger, optional
 <p>Checks whether the BIC can be improved by replacing a group of frequencies by only one.
 Harmonics are never removed.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 </div>
 
 
@@ -2411,14 +2436,16 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>Attempt to reduce the number of frequencies taking into account any harmonics if present.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Checks whether the BIC can be improved by removing a frequency. Special attention is given to frequencies
 that are within the Rayleigh criterion of each other. It is attempted to replace these by a single frequency.</p>
@@ -2481,14 +2508,16 @@ that are within the Rayleigh criterion of each other. It is attempted to replace
 
             <div class="docstring"><p>Selects the credible frequencies from the given set</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Harmonic frequencies that are said to be passing the criteria are in fact passing the criteria for
 individual frequencies, not those for a set of harmonics (which would be a looser constraint).</p>
@@ -2549,19 +2578,22 @@ individual frequencies, not those for a set of harmonics (which would be a loose
 
             <div class="docstring"><p>Refine the base frequency for a harmonic sinusoid model.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>f_base: float
-    Base frequency of the harmonic series to refine.
-ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.</p>
+<ul>
+<li><strong>f_base</strong> (float):
+Base frequency of the harmonic series to refine.</li>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    Base frequency of the harmonic series.</p>
+<ul>
+<li><strong>float</strong>: Base frequency of the harmonic series.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Uses the sum of distances between the harmonics and their
 theoretical positions to refine the orbital period.</p>
@@ -2711,17 +2743,20 @@ theoretical positions to refine the orbital period.</p>
 
             <div class="docstring"><p>Find the most likely base frequency for a harmonic sinusoid model.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    Base frequency of the harmonic series.</p>
+<ul>
+<li><strong>float</strong>: Base frequency of the harmonic series.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Uses a combination of phase dispersion minimisation and Lomb-Scargle periodogram (see Saha &amp; Vivas 2017),
 and some refining steps to get the best frequency.</p>

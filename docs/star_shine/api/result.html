@@ -834,60 +834,62 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>A class to handle analysis results.</p>
 
-<h2 id="attributes">Attributes</h2>
+<h6 id="attributes">Attributes</h6>
 
-<p>target_id: str
-    User defined identification number or name for the target under investigation.
-data_id: str
-    User defined identification name for the dataset used.
-n_param: int
-    Number of free parameters in the model.
-bic: float
-    Bayesian Information Criterion of the residuals.
-noise_level: float
-    The noise level (standard deviation of the residuals).
-const: numpy.ndarray[Any, dtype[float]]
-    The y-intercepts of a piece-wise linear curve.
-const_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the constant for each time chunk.
-const_hdi: numpy.ndarray[Any, dtype[float]]
-    HDI bounds for the constant for each time chunk.
-slope: numpy.ndarray[Any, dtype[float]]
-    The slopes of a piece-wise linear curve.
-slope_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the slope for each time chunk.
-slope_hdi: numpy.ndarray[Any, dtype[float]]
-    HDI bounds for the slope for each time chunk.
-f_n: numpy.ndarray[Any, dtype[float]]
-    The frequencies of a number of sinusoids.
-f_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the frequency for each sinusoid.
-f_n_hdi: numpy.ndarray[Any, dtype[float]]
-    HDI bounds for the frequency for each sinusoid.
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids.
-a_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the amplitude for each sinusoid (these are identical).
-a_n_hdi: numpy.ndarray[Any, dtype[float]]
-    HDI bounds for the amplitude for each sinusoid.
-ph_n: numpy.ndarray[Any, dtype[float]]
-    The phases of a number of sinusoids.
-ph_n_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the phase for each sinusoid.
-ph_n_hdi: numpy.ndarray[Any, dtype[float]]
-    HDI bounds for the phase for each sinusoid.
-passing_sigma: numpy.ndarray[Any, dtype[bool]]
-    Sinusoids that passed the sigma check.
-passing_snr: numpy.ndarray[Any, dtype[bool]]
-    Sinusoids that passed the signal-to-noise check.
-h_base: numpy.ndarray[Any, dtype[int]]
-    Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.
-h_mult: numpy.ndarray[Any, dtype[int]]
-    Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.
-f_h_err: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the frequency for each harmonic sinusoid.
-passing_harmonic: numpy.ndarray[Any, dtype[bool]]
-    Sinusoids that passed the harmonic check.</p>
+<ul>
+<li><strong>target_id</strong> (str):
+User defined identification number or name for the target under investigation.</li>
+<li><strong>data_id</strong> (str):
+User defined identification name for the dataset used.</li>
+<li><strong>n_param</strong> (int):
+Number of free parameters in the model.</li>
+<li><strong>bic</strong> (float):
+Bayesian Information Criterion of the residuals.</li>
+<li><strong>noise_level</strong> (float):
+The noise level (standard deviation of the residuals).</li>
+<li><strong>const</strong> (numpy.ndarray[Any, dtype[float]]):
+The y-intercepts of a piece-wise linear curve.</li>
+<li><strong>const_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the constant for each time chunk.</li>
+<li><strong>const_hdi</strong> (numpy.ndarray[Any, dtype[float]]):
+HDI bounds for the constant for each time chunk.</li>
+<li><strong>slope</strong> (numpy.ndarray[Any, dtype[float]]):
+The slopes of a piece-wise linear curve.</li>
+<li><strong>slope_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the slope for each time chunk.</li>
+<li><strong>slope_hdi</strong> (numpy.ndarray[Any, dtype[float]]):
+HDI bounds for the slope for each time chunk.</li>
+<li><strong>f_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The frequencies of a number of sinusoids.</li>
+<li><strong>f_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the frequency for each sinusoid.</li>
+<li><strong>f_n_hdi</strong> (numpy.ndarray[Any, dtype[float]]):
+HDI bounds for the frequency for each sinusoid.</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sinusoids.</li>
+<li><strong>a_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the amplitude for each sinusoid (these are identical).</li>
+<li><strong>a_n_hdi</strong> (numpy.ndarray[Any, dtype[float]]):
+HDI bounds for the amplitude for each sinusoid.</li>
+<li><strong>ph_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The phases of a number of sinusoids.</li>
+<li><strong>ph_n_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the phase for each sinusoid.</li>
+<li><strong>ph_n_hdi</strong> (numpy.ndarray[Any, dtype[float]]):
+HDI bounds for the phase for each sinusoid.</li>
+<li><strong>passing_sigma</strong> (numpy.ndarray[Any, dtype[bool]]):
+Sinusoids that passed the sigma check.</li>
+<li><strong>passing_snr</strong> (numpy.ndarray[Any, dtype[bool]]):
+Sinusoids that passed the signal-to-noise check.</li>
+<li><strong>h_base</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the base frequencies in _f_n for each of _f_n. -1 indicates a free sinusoid.</li>
+<li><strong>h_mult</strong> (numpy.ndarray[Any, dtype[int]]):
+Harmonic multiplier of the base frequency for each of _f_n. 0 indicates a free sinusoid.</li>
+<li><strong>f_h_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the frequency for each harmonic sinusoid.</li>
+<li><strong>passing_harmonic</strong> (numpy.ndarray[Any, dtype[bool]]):
+Sinusoids that passed the harmonic check.</li>
+</ul>
 </div>
 
 
@@ -1316,10 +1318,11 @@ passing_harmonic: numpy.ndarray[Any, dtype[bool]]
 
 <p>Primarily for saving to file.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>dict
-    Dictionary of the result attributes and fields</p>
+<ul>
+<li><strong>dict</strong>: Dictionary of the result attributes and fields</li>
+</ul>
 </div>
 
 
@@ -1353,10 +1356,11 @@ passing_harmonic: numpy.ndarray[Any, dtype[bool]]
 
             <div class="docstring"><p>Fill in the attributes with results in a dictionary (or keyword arguments).</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>kwargs:
-    Accepts any of the class attributes as keyword input and sets them accordingly.</p>
+<ul>
+<li><strong>kwargs:</strong>: Accepts any of the class attributes as keyword input and sets them accordingly.</li>
+</ul>
 </div>
 
 
@@ -1410,14 +1414,16 @@ passing_harmonic: numpy.ndarray[Any, dtype[bool]]
 
             <div class="docstring"><p>Fill in the Result attributes with results from a TimeSeriesModel.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.
-target_id: str
-    User defined identification number or name for the target under investigation.
-data_id: str
-    User defined identification name for the dataset used.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+<li><strong>target_id</strong> (str):
+User defined identification number or name for the target under investigation.</li>
+<li><strong>data_id</strong> (str):
+User defined identification name for the dataset used.</li>
+</ul>
 </div>
 
 
@@ -1475,20 +1481,23 @@ data_id: str
 
             <div class="docstring"><p>Load a result file in hdf5 format.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_name: str
-    File name to load the results from
-h5py_file_kwargs: dict, optional
-    Keyword arguments for opening the h5py file.
-    Example: {'locking': False}, for a drive that does not support locking.
-logger: logging.Logger, optional
-    Instance of the logging library.</p>
+<ul>
+<li><strong>file_name</strong> (str):
+File name to load the results from</li>
+<li><strong>h5py_file_kwargs</strong> (dict, optional):
+Keyword arguments for opening the h5py file.
+Example: {'locking': False}, for a drive that does not support locking.</li>
+<li><strong>logger</strong> (logging.Logger, optional):
+Instance of the logging library.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>Result
-    Instance of the Result class with the loaded results.</p>
+<ul>
+<li><strong>Result</strong>: Instance of the Result class with the loaded results.</li>
+</ul>
 </div>
 
 
@@ -1550,15 +1559,18 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>Copy the parameters into an existing TimeSeriesModel instance.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>ts_model: tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.</p>
+<ul>
+<li><strong>ts_model</strong> (tms.TimeSeriesModel):
+Instance of TimeSeriesModel containing the time series and model parameters.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tms.TimeSeriesModel
-    Instance of TimeSeriesModel containing the time series and model parameters.</p>
+<ul>
+<li><strong>tms.TimeSeriesModel</strong>: Instance of TimeSeriesModel containing the time series and model parameters.</li>
+</ul>
 </div>
 
 
@@ -1598,10 +1610,12 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>Save the results to a file in hdf5 format.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_name: str
-    File name to save the results to</p>
+<ul>
+<li><strong>file_name</strong> (str):
+File name to save the results to</li>
+</ul>
 </div>
 
 
@@ -1637,10 +1651,12 @@ logger: logging.Logger, optional
 
             <div class="docstring"><p>Write multiple ascii csv files for human readability.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>file_name: str
-    File name to save the results to</p>
+<ul>
+<li><strong>file_name</strong> (str):
+File name to save the results to</li>
+</ul>
 </div>
 
 

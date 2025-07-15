@@ -902,10 +902,11 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
             <div class="docstring"><p>Return datetime string without microseconds.</p>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    Date and time without microseconds</p>
+<ul>
+<li><strong>str</strong>: Date and time without microseconds</li>
+</ul>
 </div>
 
 
@@ -951,17 +952,20 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
             <div class="docstring"><p>Determine the number of decimal figures to print given a target
 number of significant figures</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: float
-    Value to determine the number of decimals for.
-n_sf: int
-    Number of significant figures to compute.</p>
+<ul>
+<li><strong>x</strong> (float):
+Value to determine the number of decimals for.</li>
+<li><strong>n_sf</strong> (int):
+Number of significant figures to compute.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>int
-    Number of decimal places to round to.</p>
+<ul>
+<li><strong>int</strong>: Number of decimal places to round to.</li>
+</ul>
 </div>
 
 
@@ -1005,17 +1009,20 @@ n_sf: int
 
             <div class="docstring"><p>Convert float to string for Numba up to some decimal place</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: float
-    Value to convert
-dec: int
-    Number of decimals (be careful with large numbers here)</p>
+<ul>
+<li><strong>x</strong> (float):
+Value to convert</li>
+<li><strong>dec</strong> (int):
+Number of decimals (be careful with large numbers here)</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    String with the value x</p>
+<ul>
+<li><strong>str</strong>: String with the value x</li>
+</ul>
 </div>
 
 
@@ -1077,21 +1084,24 @@ dec: int
 <p>Uses two significant figures by default as no distinction is made between having a 1, 2 or higher number
 in the error value.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: float
-    Value to determine the number of decimals for.
-x_err: float
-    Value to determine the number of decimals for.
-error: bool, optional
-    Include the error value.
-brackets: bool, optional
-    Place the error value in brackets.</p>
+<ul>
+<li><strong>x</strong> (float):
+Value to determine the number of decimals for.</li>
+<li><strong>x_err</strong> (float):
+Value to determine the number of decimals for.</li>
+<li><strong>error</strong> (bool, optional):
+Include the error value.</li>
+<li><strong>brackets</strong> (bool, optional):
+Place the error value in brackets.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>str
-    Formatted string conversion.</p>
+<ul>
+<li><strong>str</strong>: Formatted string conversion.</li>
+</ul>
 </div>
 
 
@@ -1132,17 +1142,20 @@ brackets: bool, optional
 
             <div class="docstring"><p>Weighted mean since Numba doesn't support numpy.average</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: numpy.ndarray[Any, dtype[float]]
-    Values to calculate the mean over
-w: numpy.ndarray[Any, dtype[float]]
-    Weights corresponding to each value</p>
+<ul>
+<li><strong>x</strong> (numpy.ndarray[Any, dtype[float]]):
+Values to calculate the mean over</li>
+<li><strong>w</strong> (numpy.ndarray[Any, dtype[float]]):
+Weights corresponding to each value</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    Mean of x weighted by w</p>
+<ul>
+<li><strong>float</strong>: Mean of x weighted by w</li>
+</ul>
 </div>
 
 
@@ -1190,17 +1203,20 @@ w: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Unbiased standard deviation</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: numpy.ndarray[Any, dtype[float]]
-    Values to calculate the std over
-n: int
-    Number of degrees of freedom</p>
+<ul>
+<li><strong>x</strong> (numpy.ndarray[Any, dtype[float]]):
+Values to calculate the std over</li>
+<li><strong>n</strong> (int):
+Number of degrees of freedom</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>float
-    Unbiased standard deviation</p>
+<ul>
+<li><strong>float</strong>: Unbiased standard deviation</li>
+</ul>
 </div>
 
 
@@ -1240,15 +1256,18 @@ n: int
 
             <div class="docstring"><p>Creates all consecutive subsets of the given list.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: list[Any], numpy.ndarray[Any, dtype[Any]]
-    A list of values.</p>
+<ul>
+<li><strong>x</strong> (list[Any], numpy.ndarray[Any, dtype[Any]]):
+A list of values.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>list
-    The list of consecutive subsets ordered by size and with length two or more.</p>
+<ul>
+<li><strong>list</strong>: The list of consecutive subsets ordered by size and with length two or more.</li>
+</ul>
 </div>
 
 
@@ -1296,17 +1315,20 @@ n: int
 the indices x_adj that indicate the same items in y_reduced. Assumes that none of the removed items
 are indicated by indices in x.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: iterable[int], numpy.ndarray[Any, dtype[int]]
-    A list of indices that slice another array, y.
-removed: iterable[int], numpy.ndarray[Any, dtype[int]]
-    A second list of indices indicating removals from y.</p>
+<ul>
+<li><strong>x</strong> (iterable[int], numpy.ndarray[Any, dtype[int]]):
+A list of indices that slice another array, y.</li>
+<li><strong>removed</strong> (iterable[int], numpy.ndarray[Any, dtype[int]]):
+A second list of indices indicating removals from y.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>list[int]
-    Adjusted indices that can be used with the reduced y.</p>
+<ul>
+<li><strong>list[int]</strong>: Adjusted indices that can be used with the reduced y.</li>
+</ul>
 </div>
 
 
@@ -1367,17 +1389,20 @@ removed: iterable[int], numpy.ndarray[Any, dtype[int]]
 <p>The array <code>x</code> must be sorted in ascending order. This function identifies local maxima in the <code>y</code> array
 and returns the corresponding indeces.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>y: numpy.ndarray[Any, dtype[float]]
-    1D array of y-values corresponding to the x-values.</p>
+<ul>
+<li><strong>y</strong> (numpy.ndarray[Any, dtype[float]]):
+1D array of y-values corresponding to the x-values.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[int]]
-    Indeces of the <code>x</code> values corresponding to the local maxima.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[int]]</strong>: Indeces of the <code>x</code> values corresponding to the local maxima.</li>
+</ul>
 
-<h2 id="examples">Examples</h2>
+<h6 id="examples">Examples</h6>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -1463,21 +1488,24 @@ and returns the corresponding indeces.</p>
 <p>The array <code>x</code> must be sorted in ascending order. This function identifies local maxima in the <code>y</code> array
 and returns the index of the <code>x</code> value corresponding to the local maximum uphill from <code>x_approx</code>.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: numpy.ndarray[Any, dtype[float]]
-    1D array of x-values, which must be sorted in ascending order.
-y: numpy.ndarray[Any, dtype[float]]
-    1D array of y-values corresponding to the x-values.
-x_approx: numpy.ndarray[Any, dtype[float]]
-    The x-value(s) around which to find the nearest local maximum.</p>
+<ul>
+<li><strong>x</strong> (numpy.ndarray[Any, dtype[float]]):
+1D array of x-values, which must be sorted in ascending order.</li>
+<li><strong>y</strong> (numpy.ndarray[Any, dtype[float]]):
+1D array of y-values corresponding to the x-values.</li>
+<li><strong>x_approx</strong> (numpy.ndarray[Any, dtype[float]]):
+The x-value(s) around which to find the nearest local maximum.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[int]]
-    Index of the <code>x</code> value(s) corresponding to the nearest local maximum to <code>x_approx</code>.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[int]]</strong>: Index of the <code>x</code> value(s) corresponding to the nearest local maximum to <code>x_approx</code>.</li>
+</ul>
 
-<h2 id="examples">Examples</h2>
+<h6 id="examples">Examples</h6>
 
 <div class="pdoc-code codehilite">
 <pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -1530,17 +1558,20 @@ x_approx: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Mask out everything except the parts between the given timestamps</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: numpy.ndarray[Any, dtype[float]]
-    Time series to be masked.
-locations: numpy.ndarray[Any, dtype[float]]
-    Pairs of points in the time series. Everything but the space between points is masked.</p>
+<ul>
+<li><strong>x</strong> (numpy.ndarray[Any, dtype[float]]):
+Time series to be masked.</li>
+<li><strong>locations</strong> (numpy.ndarray[Any, dtype[float]]):
+Pairs of points in the time series. Everything but the space between points is masked.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[bool]
-    Boolean mask that is True between the locations.</p>
+<ul>
+<li><strong>numpy.ndarray[bool]</strong>: Boolean mask that is True between the locations.</li>
+</ul>
 </div>
 
 
@@ -1589,17 +1620,21 @@ locations: numpy.ndarray[Any, dtype[float]]
 
             <div class="docstring"><p>Mark gaps in a time series.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>x: numpy.ndarray[Any, dtype[float]]
-    Time series with gaps.
-min_gap: float, optional
-    Minimum width for a gap (in time units).</p>
+<ul>
+<li><strong>x</strong> (numpy.ndarray[Any, dtype[float]]):
+Time series with gaps.</li>
+<li><strong>min_gap</strong> (float, optional):
+Minimum width for a gap (in time units).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>gaps: numpy.ndarray[Any, dtype[float]]
-    Gap timestamps in pairs.</p>
+<ul>
+<li><strong>gaps</strong> (numpy.ndarray[Any, dtype[float]]):
+Gap timestamps in pairs.</li>
+</ul>
 </div>
 
 
@@ -1685,23 +1720,26 @@ min_gap: float, optional
 
             <div class="docstring"><p>Correct the flux for flux contribution of a third source</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-crowdsap: list[float], numpy.ndarray[Any, dtype[float]]
-    Light contamination parameter (1-third_light) listed per sector
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>crowdsap</strong> (list[float], numpy.ndarray[Any, dtype[float]]):
+Light contamination parameter (1-third_light) listed per sector</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series corrected for
-    contaminating light</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Measurement values of the time series corrected for
+contaminating light</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Uses the parameter CROWDSAP included with some TESS data.
 flux_corrected = (flux - (1 - crowdsap)) / crowdsap
@@ -1759,22 +1797,25 @@ from the (non-median-normalised) flux measurements.</p>
 
             <div class="docstring"><p>Incorporate flux contribution of a third source into the flux</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>flux: numpy.ndarray[Any, dtype[float]]
-    Measurement values of the time series
-crowdsap: list[float], numpy.ndarray[Any, dtype[float]]
-    Light contamination parameter (1-third_light) listed per sector
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>flux</strong> (numpy.ndarray[Any, dtype[float]]):
+Measurement values of the time series</li>
+<li><strong>crowdsap</strong> (list[float], numpy.ndarray[Any, dtype[float]]):
+Light contamination parameter (1-third_light) listed per sector</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Model of the flux incorporating light contamination</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Model of the flux incorporating light contamination</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Does the opposite as correct_for_crowdsap, to be able to model the effect of
 third light to some degree (can only achieve an upper bound on CROWDSAP).</p>
@@ -1853,26 +1894,29 @@ third light to some degree (can only achieve an upper bound on CROWDSAP).</p>
             <div class="docstring"><p>Calculates the corrected uncorrelated (formal) uncertainties for the
 parameters constant and slope.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-residuals: numpy.ndarray[Any, dtype[float]]
-    Residual is flux - model
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>residuals</strong> (numpy.ndarray[Any, dtype[float]]):
+Residual is flux - model</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    sigma_const: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the constant for each sector
-    sigma_slope: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the slope for each sector</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+sigma_const: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the constant for each sector
+sigma_slope: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the slope for each sector</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>Errors in const and slope:
 <a href="https://pages.mtu.edu/~fmorriso/cm3215/UncertaintySlopeInterceptOfLeastSquaresFit.pdf">https://pages.mtu.edu/~fmorriso/cm3215/UncertaintySlopeInterceptOfLeastSquaresFit.pdf</a></p>
@@ -1965,32 +2009,35 @@ i_chunks: numpy.ndarray[Any, dtype[int]]
 
 <p>Harmonics are not taken into account.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-residuals: numpy.ndarray[Any, dtype[float]]
-    Residual is flux - model
-flux_err: numpy.ndarray[Any, dtype[float]]
-    Errors in the measurement values
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sinusoids
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>residuals</strong> (numpy.ndarray[Any, dtype[float]]):
+Residual is flux - model</li>
+<li><strong>flux_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Errors in the measurement values</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sinusoids</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    sigma_f: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the frequency for each sinusoid.
-    sigma_a: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the amplitude for each sinusoid (these are identical).
-    sigma_ph: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the phase for each sinusoid.</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+sigma_f: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the frequency for each sinusoid.
+sigma_a: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the amplitude for each sinusoid (these are identical).
+sigma_ph: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the phase for each sinusoid.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>As in Aerts 2021, <a href="https://ui.adsabs.harvard.edu/abs/2021RvMP...93a5001A/abstract">https://ui.adsabs.harvard.edu/abs/2021RvMP...93a5001A/abstract</a>
 The sigma value in the formulae is approximated by taking the maximum of the
@@ -2054,19 +2101,22 @@ uncertainties using a simple weighted average.</p>
 The other uncertainties follow as:
 σ_hn = n * σ_h1</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>sigma_f: numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the frequency for each sinusoid.
-h_base: numpy.ndarray[Any, dtype[int]]
-    Indices of the base frequencies in f_n for each of f_n.
-h_mult: numpy.ndarray[Any, dtype[int]]
-    Harmonic multiplier of the base frequency for each of f_n.</p>
+<ul>
+<li><strong>sigma_f</strong> (numpy.ndarray[Any, dtype[float]]):
+Uncertainty in the frequency for each sinusoid.</li>
+<li><strong>h_base</strong> (numpy.ndarray[Any, dtype[int]]):
+Indices of the base frequencies in f_n for each of f_n.</li>
+<li><strong>h_mult</strong> (numpy.ndarray[Any, dtype[int]]):
+Harmonic multiplier of the base frequency for each of f_n.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>numpy.ndarray[Any, dtype[float]]
-    Uncertainty in the harmonic frequencies.</p>
+<ul>
+<li><strong>numpy.ndarray[Any, dtype[float]]</strong>: Uncertainty in the harmonic frequencies.</li>
+</ul>
 </div>
 
 
@@ -2167,36 +2217,39 @@ parameters (constant, slope, frequencies, amplitudes and phases).</p>
 
 <p>Harmonics are not taken into account.</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series
-residuals: numpy.ndarray[Any, dtype[float]]
-    Residual is flux - model
-flux_err: numpy.ndarray[Any, dtype[float]]
-    Errors in the measurement values
-a_n: numpy.ndarray[Any, dtype[float]]
-    The amplitudes of a number of sine waves
-i_chunks: numpy.ndarray[Any, dtype[int]]
-    Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
-    the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series</li>
+<li><strong>residuals</strong> (numpy.ndarray[Any, dtype[float]]):
+Residual is flux - model</li>
+<li><strong>flux_err</strong> (numpy.ndarray[Any, dtype[float]]):
+Errors in the measurement values</li>
+<li><strong>a_n</strong> (numpy.ndarray[Any, dtype[float]]):
+The amplitudes of a number of sine waves</li>
+<li><strong>i_chunks</strong> (numpy.ndarray[Any, dtype[int]]):
+Pair(s) of indices indicating time chunks within the light curve, separately handled in cases like
+the piecewise-linear curve. If only a single curve is wanted, set to np.array([[0, len(time)]]).</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    sigma_const: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the constant for each sector
-    sigma_slope: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the slope for each sector
-    sigma_f: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the frequency for each sine wave
-    sigma_a: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the amplitude for each sine wave (these are identical)
-    sigma_ph: numpy.ndarray[Any, dtype[float]]
-        Uncertainty in the phase for each sine wave</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+sigma_const: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the constant for each sector
+sigma_slope: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the slope for each sector
+sigma_f: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the frequency for each sine wave
+sigma_a: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the amplitude for each sine wave (these are identical)
+sigma_ph: numpy.ndarray[Any, dtype[float]]
+Uncertainty in the phase for each sine wave</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>As in Aerts 2021, <a href="https://ui.adsabs.harvard.edu/abs/2021RvMP...93a5001A/abstract">https://ui.adsabs.harvard.edu/abs/2021RvMP...93a5001A/abstract</a>
 The sigma value in the formulae is approximated by taking the maximum of the
@@ -2283,27 +2336,30 @@ Errors in const and slope:
 
             <div class="docstring"><p>Calculates the linear regression errors on period and t_zero</p>
 
-<h2 id="parameters">Parameters</h2>
+<h6 id="parameters">Parameters</h6>
 
-<p>time: numpy.ndarray[Any, dtype[float]]
-    Timestamps of the time series.
-p_orb: float
-    Orbital period in days.
-sigma_t: float
-    Error in the individual time measurements.</p>
+<ul>
+<li><strong>time</strong> (numpy.ndarray[Any, dtype[float]]):
+Timestamps of the time series.</li>
+<li><strong>p_orb</strong> (float):
+Orbital period in days.</li>
+<li><strong>sigma_t</strong> (float):
+Error in the individual time measurements.</li>
+</ul>
 
-<h2 id="returns">Returns</h2>
+<h6 id="returns">Returns</h6>
 
-<p>tuple
-    A tuple containing the following elements:
-    p_err: float
-        Error in the period.
-    t_err: float
-        Error in t_zero.
-    p_t_corr: float
-        Covariance between the period and t_zero.</p>
+<ul>
+<li><strong>tuple</strong>: A tuple containing the following elements:
+p_err: float
+Error in the period.
+t_err: float
+Error in t_zero.
+p_t_corr: float
+Covariance between the period and t_zero.</li>
+</ul>
 
-<h2 id="notes">Notes</h2>
+<h6 id="notes">Notes</h6>
 
 <p>The number of eclipses, computed from the period and
 time base, is taken to be a contiguous set.
