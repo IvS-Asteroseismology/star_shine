@@ -42,7 +42,7 @@ The GUI is optional functionality, and its dependencies can be included when ins
     pip install star_shine[gui]
 
 **STAR SHINE has only been tested in Python 3.11**. Using older versions could result in unexpected errors, 
-although any Python version >=3.6 is expected to work.
+although any Python version >=3.8 is expected to work.
 
 **Package dependencies:** The following package versions have been used in the development of this code, 
 meaning older versions can in principle work, but this is not guaranteed. NumPy 1.20.3, SciPy 1.7.3, Numba 0.55.1, 
