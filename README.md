@@ -5,6 +5,7 @@
 ![Language Badge](https://img.shields.io/badge/Language-Python-blue.svg)
 <a href="./LICENCE.md"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License Badge"/></a>
 [![Tests](https://github.com/LucIJspeert/star_shine/actions/workflows/tests.yaml/badge.svg)](https://github.com/LucIJspeert/star_shine/actions/workflows/tests.yaml)
+[![Docs](https://img.shields.io/badge/docs-online-blue.svg)](https://lucijspeert.github.io/star_shine/)
 
 [//]: # (<a href="https://github.com/LucIJspeert/star_shine/blob/master/LICENCE.md"><img src="https://img.shields.io/github/license/LucIJspeert/star_shine" alt="License Badge"/></a>)
 
@@ -25,6 +26,7 @@ batches of targets.
 
 ### Reference Material
 
+* Documentation pages: https://lucijspeert.github.io/star_shine/
 * The algorithm that this application stems from has been documented, tested and applied in the publication: [Automated eccentricity measurement from raw eclipsing binary light curves with intrinsic variability](https://ui.adsabs.harvard.edu/abs/2024arXiv240206084I/abstract)
 
 ## Getting started

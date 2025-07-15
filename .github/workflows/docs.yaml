@@ -51,7 +51,7 @@ jobs:
 
       - name: Generate docs with pdoc into /docs
         run: |
-          poetry run pdoc star_shine !star_shine.gui -o docs
+          poetry run pdoc star_shine !star_shine.gui -o docs --docformat numpy
 
       - name: Commit and push updated docs
         env:
