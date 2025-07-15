@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - master  # Trigger on pushes to the main branch
+      - development  # Trigger on pushes to the development branch
   pull_request:
     branches:
       - master  # Trigger on pull requests to the main branch
+      - development  # Trigger on pull requests to the development branch
 
 jobs:
   build:
