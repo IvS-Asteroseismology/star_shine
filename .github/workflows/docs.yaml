@@ -56,7 +56,7 @@ jobs:
       # This is where pdoc does the work (called with poetry to run in the right env)
       - name: Generate docs with pdoc into /docs
         run: |
-          poetry run pdoc pages/ star_shine !star_shine.gui -o docs --docformat numpy
+          poetry run pdoc pages/*.md star_shine !star_shine.gui -o docs --docformat numpy
 
       - name: Commit and push updated docs
         env:
