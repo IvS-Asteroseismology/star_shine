@@ -57,10 +57,12 @@ pymc3 3.11.4 (optional), theano 1.1.2 (optional), Arviz 0.11.4 (optional), fastp
 
 Newer versions are expected to work, and it is considered a bug if this is not the case.
 
-Before first use, it is recommended to run one very short time-series (for example sim_000_lc.dat included in the data 
-folder). This will make sure that the just-in-time compiler can do its magic and make everything run as fast as it can. 
-See the script `run_first_use.py`. Note that this takes some time, as there are many compiled components in the code, 
-and worry not: this is not indicative of the final runtime.
+**Important:** STAR SHINE makes use of just-in-time compilation and caching of the compiled functions for fast operation.
+Before first use, it is recommended to run the script `run_first_use.py`. This runs a very short time-series 
+(sim_000_lc.dat included in the data folder) and will make sure that the just-in-time compiler can do its magic to 
+make everything run as fast as it can. Just-in-time compilation can result in more optimised machine code than 
+ahead-of-time compilation. Note that compilation takes time, but this only applies to the first time each function is 
+used. In short: first time use is not indicative of the final runtime.
 
 
 ### Example use

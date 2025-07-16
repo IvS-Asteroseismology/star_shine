@@ -49,9 +49,14 @@ jobs:
         run: |
           poetry install
 
+      - name: Copy README into custom docs folder (and making it the index page)
+        run: |
+          cp README.md pages/index.md
+
+      # This is where pdoc does the work (called with poetry to run in the right env)
       - name: Generate docs with pdoc into /docs
         run: |
-          poetry run pdoc star_shine !star_shine.gui -o docs --docformat numpy
+          poetry run pdoc pages/ star_shine !star_shine.gui -o docs --docformat numpy
 
       - name: Commit and push updated docs
         env:

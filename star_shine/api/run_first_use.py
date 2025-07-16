@@ -25,6 +25,13 @@ def first_use_script():
     data = sts.Data.load_data(file_list, data_dir='', target_id=target_id, data_id='', logger=None)
     pipeline = sts.Pipeline(data, save_dir=data_path, logger=None)
 
+    # first only extract 10 sinusoids
+    pipeline.iterative_prewhitening(n_extract=10)
+    pipeline.optimise_sinusoid()
+
+    # start new pipeline for the second part
+    pipeline = sts.Pipeline(data, save_dir=data_path, logger=None)
+
     # do a first run without fitting every step and lower group size
     sts.update_config(settings={'optimise_step': False, 'min_group': 15, 'max_group': 20})
     pipeline.run()
