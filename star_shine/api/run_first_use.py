@@ -23,4 +23,12 @@ file_list = [file]
 # initialise the data and pipeline
 data = sts.Data.load_data(file_list, data_dir='', target_id=target_id, data_id='', logger=None)
 pipeline = sts.Pipeline(data, save_dir=data_path, logger=None)
+
+# do a first run without fitting every step
+sts.update_config(settings={'optimise_step': False})
 pipeline.run()
+
+# do a second run with fitting every step
+sts.update_config(settings={'optimise_step': True})
+pipeline.run()
+

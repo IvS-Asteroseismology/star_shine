@@ -4,7 +4,7 @@
 # ------------------------------------------------- General settings ---------------------------------------------------
 # verbose description:
 # Print information during runtime
-verbose: False
+verbose: True
 
 # stop_at_stage description:
 # Run the analysis up to and including this stage; 0 means all stages are run
@@ -46,6 +46,15 @@ resolution_factor: 1.5
 # window_width description:
 # Periodogram spectral noise is calculated over this window width
 window_width: 1.0
+
+# ---------------------------------------------- Optimisation settings -------------------------------------------------
+# min_group description:
+# Minimum group size for the multi-sinusoid non-linear fit
+min_group: 45
+
+# max_group description:
+# Maximum group size for the multi-sinusoid non-linear fit (max_group > min_group)
+max_group: 50
 
 ########################################################################################################################
 # ---------------------------------------------- Data and File settings ------------------------------------------------

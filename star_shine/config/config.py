@@ -53,6 +53,10 @@ class Config:
     resolution_factor: float = 1.5
     window_width: float = 1.
 
+    # optimisation settings
+    min_group: int = 45
+    max_group: int = 50
+
     # Data and file settings
     overwrite: bool = False
     data_dir: str = ''
@@ -212,6 +216,7 @@ class Config:
             file.write(fill_header_str("Star Shine settings file", line_width, fill_value='-', end='\n'))
             file.write("#" * line_width + "\n")
 
+            # General settings
             file.write(fill_header_str("General settings", line_width, fill_value='-', end='\n'))
 
             desc = "Print information during runtime"
@@ -220,6 +225,7 @@ class Config:
             desc = "Run the analysis up to and including this stage; 0 means all stages are run"
             file.write(config_item_description("stop_at_stage", self.stop_at_stage, desc))
 
+            # Extraction settings
             file.write(fill_header_str("Extraction settings", line_width, fill_value='-', end='\n'))
 
             desc = ("Select the next frequency in iterative extraction based on 'amp', 'snr', "
@@ -251,7 +257,17 @@ class Config:
             desc = "Periodogram spectral noise is calculated over this window width"
             file.write(config_item_description("window_width", self.window_width, desc))
 
+            # Optimisation settings
+            file.write(fill_header_str("Optimisation settings", line_width, fill_value='-', end='\n'))
+
+            desc = "Minimum group size for the multi-sinusoid non-linear fit"
+            file.write(config_item_description("min_group", self.min_group, desc))
+
+            desc = "Maximum group size for the multi-sinusoid non-linear fit (max_group > min_group)"
+            file.write(config_item_description("max_group", self.max_group, desc))
+
             file.write("#" * line_width + "\n")
+            # Data and File settings
             file.write(fill_header_str("Data and File settings", line_width, fill_value='-', end='\n'))
 
             desc = "Overwrite existing result files"
@@ -266,6 +282,7 @@ class Config:
             desc = "Save ascii variants of the HDF5 result files"
             file.write(config_item_description("save_ascii", self.save_ascii, desc))
 
+            # Tabulated File settings
             file.write(fill_header_str("Tabulated File settings", line_width, fill_value='-', end='\n'))
 
             desc = "Column name for the time stamps"
@@ -277,6 +294,7 @@ class Config:
             desc = "Column name for the flux measurement errors"
             file.write(config_item_description("cn_flux_err", self.cn_flux_err, desc))
 
+            # FITS File settings
             file.write(fill_header_str("FITS File settings", line_width, fill_value='-', end='\n'))
 
             desc = "Column name for the time stamps"
@@ -298,6 +316,7 @@ class Config:
             file.write(config_item_description("halve_chunks", self.halve_chunks, desc))
 
             file.write("#" * line_width + "\n")
+            # GUI settings
             file.write(fill_header_str("GUI settings", line_width, fill_value='-', end='\n'))
 
             desc = "Dark mode. [WIP]"
