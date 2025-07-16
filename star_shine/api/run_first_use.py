@@ -32,12 +32,8 @@ def first_use_script():
     # start new pipeline for the second part
     pipeline = sts.Pipeline(data, save_dir=data_path, logger=None)
 
-    # do a first run without fitting every step and lower group size
+    # do a full run without fitting every step and lower group size
     sts.update_config(settings={'optimise_step': False, 'min_group': 15, 'max_group': 20})
-    pipeline.run()
-
-    # do a second run with fitting every step
-    sts.update_config(settings={'optimise_step': True})
     pipeline.run()
 
 
