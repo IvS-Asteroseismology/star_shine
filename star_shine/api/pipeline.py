@@ -176,8 +176,8 @@ class Pipeline:
         # extract all frequencies with the iterative scheme
         ana.extract_sinusoids(self.ts_model, bic_thr=config.bic_thr, snr_thr=config.snr_thr,
                               stop_crit=config.stop_criterion, select=config.select_next,  n_extract=n_extract,
-                              fit_each_step=config.optimise_step, replace_each_step=config.replace_step,
-                              logger=self.logger)
+                              fit_each_step=config.optimise_step, g_min=config.min_group, g_max=config.max_group,
+                              replace_each_step=config.replace_step, logger=self.logger)
 
         # remove any frequencies that end up not making the statistical cut
         ana.reduce_sinusoids(self.ts_model, logger=self.logger)
@@ -205,7 +205,8 @@ class Pipeline:
         self.logger.info("Starting multi-sinusoid NL-LS optimisation.")
 
         # optimisation
-        fit.fit_multi_sinusoid_grouped(self.ts_model, logger=self.logger)
+        fit.fit_multi_sinusoid_grouped(self.ts_model, g_min=config.min_group, g_max=config.max_group,
+                                       logger=self.logger)
             # # make model including everything to calculate noise level
             # resid = self.data.time_series.flux - self.ts_model.model_linear() - self.ts_model.model_sinusoid()
             # n_param = 2 * len(self.result.const) + 3 * len(self.result.f_n)

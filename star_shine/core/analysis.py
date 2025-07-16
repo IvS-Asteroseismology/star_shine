@@ -365,7 +365,7 @@ def replace_subset(ts_model, close_f, final_remove=True, logger=None):
 
 
 def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='hybrid', n_extract=0,
-                      fit_each_step=False, replace_each_step=True, logger=None):
+                      fit_each_step=False, g_min=45, g_max=50, replace_each_step=True, logger=None):
     """Extract all the frequencies from a periodic flux.
 
     Parameters
@@ -387,6 +387,10 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         If set to True, a non-linear least-squares fit of all extracted sinusoids in groups is performed at each
         iteration. While this increases the quality of the extracted signals, it drastically slows down the code.
         Generally gives a better quality of the extraction than only doing this all the way at the end.
+    g_min: int
+        Minimum group size for multi-sinusoid fit
+    g_max: int
+        Maximum group size for multi-sinusoid fit (g_max > g_min)
     replace_each_step: bool
         If set to True, close frequecies are attempted to be replaced by a single sinusoid at each iteration.
         May increase the quality of the extraction more than only doing this all the way at the end.
@@ -467,7 +471,7 @@ def extract_sinusoids(ts_model, bic_thr=2, snr_thr=0, stop_crit='bic', select='h
         # improve sinusoids with some strategy
         if fit_each_step:
             # fit all sinusoids for best improvement
-            fit.fit_multi_sinusoid_grouped(ts_model, logger=logger)
+            fit.fit_multi_sinusoid_grouped(ts_model, g_min=g_min, g_max=g_max, logger=logger)
         else:
             # select only close frequencies for iteration
             close_f = frs.f_within_rayleigh(ts_model.sinusoid.n_sin - 1, ts_model.sinusoid.f_n, ts_model.f_resolution)
