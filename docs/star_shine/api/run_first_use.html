@@ -31,25 +31,7 @@
             <h2>API Documentation</h2>
                 <ul class="memberlist">
             <li>
-                    <a class="variable" href="#data_path_traversable">data_path_traversable</a>
-            </li>
-            <li>
-                    <a class="variable" href="#target_id">target_id</a>
-            </li>
-            <li>
-                    <a class="variable" href="#file">file</a>
-            </li>
-            <li>
-                    <a class="variable" href="#data_path">data_path</a>
-            </li>
-            <li>
-                    <a class="variable" href="#file_list">file_list</a>
-            </li>
-            <li>
-                    <a class="variable" href="#data">data</a>
-            </li>
-            <li>
-                    <a class="variable" href="#pipeline">pipeline</a>
+                    <a class="function" href="#first_use_script">first_use_script</a>
             </li>
     </ul>
 
@@ -96,103 +78,66 @@ If not, this is less important, but do keep in mind that the first run will be s
 </span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">star_shine</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sts</span>
 </span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a>
 </span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a>
-</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a><span class="c1"># get the path to the test light curve</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a><span class="n">data_path_traversable</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s1">&#39;star_shine.data&#39;</span><span class="p">)</span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a><span class="n">target_id</span> <span class="o">=</span> <span class="s1">&#39;sim_000_lc&#39;</span>
-</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a><span class="n">file</span> <span class="o">=</span> <span class="n">data_path_traversable</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="n">target_id</span> <span class="o">+</span> <span class="s1">&#39;.dat&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
-</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a><span class="n">data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">file</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="n">file_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">file</span><span class="p">]</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a>
-</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a><span class="c1"># initialise the data and pipeline</span>
-</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a><span class="n">data</span> <span class="o">=</span> <span class="n">sts</span><span class="o">.</span><span class="n">Data</span><span class="o">.</span><span class="n">load_data</span><span class="p">(</span><span class="n">file_list</span><span class="p">,</span> <span class="n">data_dir</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">target_id</span><span class="o">=</span><span class="n">target_id</span><span class="p">,</span> <span class="n">data_id</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a><span class="n">pipeline</span> <span class="o">=</span> <span class="n">sts</span><span class="o">.</span><span class="n">Pipeline</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a><span class="n">pipeline</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a><span class="k">def</span><span class="w"> </span><span class="nf">first_use_script</span><span class="p">():</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a>    <span class="c1"># get the path to the test light curve</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a>    <span class="n">data_path_traversable</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s1">&#39;star_shine.data&#39;</span><span class="p">)</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a>    <span class="n">target_id</span> <span class="o">=</span> <span class="s1">&#39;sim_000_lc&#39;</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a>    <span class="n">file</span> <span class="o">=</span> <span class="n">data_path_traversable</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="n">target_id</span> <span class="o">+</span> <span class="s1">&#39;.dat&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a>    <span class="n">data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">file</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a>    <span class="n">file_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">file</span><span class="p">]</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a>
+</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a>    <span class="c1"># initialise the data and pipeline</span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a>    <span class="n">data</span> <span class="o">=</span> <span class="n">sts</span><span class="o">.</span><span class="n">Data</span><span class="o">.</span><span class="n">load_data</span><span class="p">(</span><span class="n">file_list</span><span class="p">,</span> <span class="n">data_dir</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">target_id</span><span class="o">=</span><span class="n">target_id</span><span class="p">,</span> <span class="n">data_id</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a>    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">sts</span><span class="o">.</span><span class="n">Pipeline</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a>
+</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a>    <span class="c1"># do a first run without fitting every step and lower group size</span>
+</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a>    <span class="n">sts</span><span class="o">.</span><span class="n">update_config</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;optimise_step&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;min_group&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span> <span class="s1">&#39;max_group&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">})</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a>    <span class="n">pipeline</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a>
+</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a>    <span class="c1"># do a second run with fitting every step</span>
+</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a>    <span class="n">sts</span><span class="o">.</span><span class="n">update_config</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;optimise_step&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a>    <span class="n">pipeline</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a>
+</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a>
+</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a>    <span class="n">first_use_script</span><span class="p">()</span>
 </span></pre></div>
 
 
             </section>
-                <section id="data_path_traversable">
-                    <div class="attr variable">
-            <span class="name">data_path_traversable</span>        =
-<span class="default_value">MultiplexedPath(&#39;/home/runner/work/star_shine/star_shine/star_shine/data&#39;)</span>
+                <section id="first_use_script">
+                            <input id="first_use_script-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">first_use_script</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
 
-        
+                <label class="view-source-button" for="first_use_script-view-source"><span>View Source</span></label>
+
     </div>
-    <a class="headerlink" href="#data_path_traversable"></a>
-    
-    
+    <a class="headerlink" href="#first_use_script"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="first_use_script-17"><a href="#first_use_script-17"><span class="linenos">17</span></a><span class="k">def</span><span class="w"> </span><span class="nf">first_use_script</span><span class="p">():</span>
+</span><span id="first_use_script-18"><a href="#first_use_script-18"><span class="linenos">18</span></a>    <span class="c1"># get the path to the test light curve</span>
+</span><span id="first_use_script-19"><a href="#first_use_script-19"><span class="linenos">19</span></a>    <span class="n">data_path_traversable</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s1">&#39;star_shine.data&#39;</span><span class="p">)</span>
+</span><span id="first_use_script-20"><a href="#first_use_script-20"><span class="linenos">20</span></a>    <span class="n">target_id</span> <span class="o">=</span> <span class="s1">&#39;sim_000_lc&#39;</span>
+</span><span id="first_use_script-21"><a href="#first_use_script-21"><span class="linenos">21</span></a>    <span class="n">file</span> <span class="o">=</span> <span class="n">data_path_traversable</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="n">target_id</span> <span class="o">+</span> <span class="s1">&#39;.dat&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+</span><span id="first_use_script-22"><a href="#first_use_script-22"><span class="linenos">22</span></a>    <span class="n">data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">file</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="first_use_script-23"><a href="#first_use_script-23"><span class="linenos">23</span></a>    <span class="n">file_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">file</span><span class="p">]</span>
+</span><span id="first_use_script-24"><a href="#first_use_script-24"><span class="linenos">24</span></a>
+</span><span id="first_use_script-25"><a href="#first_use_script-25"><span class="linenos">25</span></a>    <span class="c1"># initialise the data and pipeline</span>
+</span><span id="first_use_script-26"><a href="#first_use_script-26"><span class="linenos">26</span></a>    <span class="n">data</span> <span class="o">=</span> <span class="n">sts</span><span class="o">.</span><span class="n">Data</span><span class="o">.</span><span class="n">load_data</span><span class="p">(</span><span class="n">file_list</span><span class="p">,</span> <span class="n">data_dir</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">target_id</span><span class="o">=</span><span class="n">target_id</span><span class="p">,</span> <span class="n">data_id</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="first_use_script-27"><a href="#first_use_script-27"><span class="linenos">27</span></a>    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">sts</span><span class="o">.</span><span class="n">Pipeline</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</span><span id="first_use_script-28"><a href="#first_use_script-28"><span class="linenos">28</span></a>
+</span><span id="first_use_script-29"><a href="#first_use_script-29"><span class="linenos">29</span></a>    <span class="c1"># do a first run without fitting every step and lower group size</span>
+</span><span id="first_use_script-30"><a href="#first_use_script-30"><span class="linenos">30</span></a>    <span class="n">sts</span><span class="o">.</span><span class="n">update_config</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;optimise_step&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;min_group&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span> <span class="s1">&#39;max_group&#39;</span><span class="p">:</span> <span class="mi">20</span><span class="p">})</span>
+</span><span id="first_use_script-31"><a href="#first_use_script-31"><span class="linenos">31</span></a>    <span class="n">pipeline</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span><span id="first_use_script-32"><a href="#first_use_script-32"><span class="linenos">32</span></a>
+</span><span id="first_use_script-33"><a href="#first_use_script-33"><span class="linenos">33</span></a>    <span class="c1"># do a second run with fitting every step</span>
+</span><span id="first_use_script-34"><a href="#first_use_script-34"><span class="linenos">34</span></a>    <span class="n">sts</span><span class="o">.</span><span class="n">update_config</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;optimise_step&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+</span><span id="first_use_script-35"><a href="#first_use_script-35"><span class="linenos">35</span></a>    <span class="n">pipeline</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span></pre></div>
 
-                </section>
-                <section id="target_id">
-                    <div class="attr variable">
-            <span class="name">target_id</span>        =
-<span class="default_value">&#39;sim_000_lc&#39;</span>
 
-        
-    </div>
-    <a class="headerlink" href="#target_id"></a>
-    
-    
-
-                </section>
-                <section id="file">
-                    <div class="attr variable">
-            <span class="name">file</span>        =
-<span class="default_value">&#39;/home/runner/work/star_shine/star_shine/star_shine/data/sim_000_lc.dat&#39;</span>
-
-        
-    </div>
-    <a class="headerlink" href="#file"></a>
-    
-    
-
-                </section>
-                <section id="data_path">
-                    <div class="attr variable">
-            <span class="name">data_path</span>        =
-<span class="default_value">&#39;/home/runner/work/star_shine/star_shine/star_shine/data&#39;</span>
-
-        
-    </div>
-    <a class="headerlink" href="#data_path"></a>
-    
-    
-
-                </section>
-                <section id="file_list">
-                    <div class="attr variable">
-            <span class="name">file_list</span>        =
-<span class="default_value">[&#39;/home/runner/work/star_shine/star_shine/star_shine/data/sim_000_lc.dat&#39;]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#file_list"></a>
-    
-    
-
-                </section>
-                <section id="data">
-                    <div class="attr variable">
-            <span class="name">data</span>        =
-<input id="data-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="data-view-value"></label><span class="default_value">Data(target_id=&#39;sim_000_lc&#39;, data_id=&#39;&#39;, data_dir=&#39;&#39;, file_list=[&#39;/home/runner/work/star_shine/star_shine/star_shine/data/sim_000_lc.dat&#39;])</span>
-
-        
-    </div>
-    <a class="headerlink" href="#data"></a>
-    
-    
-
-                </section>
-                <section id="pipeline">
-                    <div class="attr variable">
-            <span class="name">pipeline</span>        =
-<span class="default_value">&lt;<a href="pipeline.html#Pipeline">star_shine.api.pipeline.Pipeline</a> object&gt;</span>
-
-        
-    </div>
-    <a class="headerlink" href="#pipeline"></a>
-    
     
 
                 </section>
