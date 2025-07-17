@@ -1,12 +1,15 @@
-"""What is Star Shine?
+"""
+# What is Star Shine?
 
 The name STAR SHINE is an acronym, and stands for:
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
+Yes... but what IS it?
+
 Star Shine is a Python application that is aimed at facilitating the analysis of variable light curves.
 It is broadly applicable to variable sources like pulsators, eclipsing binaries, and spotted stars.
 To this end, it implements the iterative prewhitening scheme common in asteroseismology, multi-sinusoid non-linear
-fitting, full integration of harmonic sinusoids, and more.
+fitting, full integration of harmonic sinusoid series, and more.
 It features a high degree of automation, offering a fully hands-off operation mode.
 Alternatively, each sinusoid can be extracted manually, and there are many customisation options to fine tune the
 methodology to specific needs.
@@ -20,7 +23,93 @@ That code can be found here: [github.com/LucIJspeert/star_shadow](https://github
 The first, general part of that algorithm was taken as a starting point, and completely rewritten for ease of use,
 customizability, and multithreaded speed.
 
-The code was written by: Luc IJspeert
+
+# Getting started
+
+Star Shine is indexed on PyPI, so the simplest way to install it is to use pip:
+
+    pip install star_shine
+
+One can then import the package from the python environment it was installed in.
+It is recommended to install into a separate virtual Python environment.
+Of course one can always manually download any desired release or make a fork on GitHub.
+The included `pyproject.toml` file can then be used to install the project using a tool like Poetry.
+
+The GUI is optional functionality, and its dependencies can be included when installing the package using:
+
+    pip install star_shine[gui]
+
+If there are issues launching the GUI, pip may not have properly installed all Pyside6 dependencies.
+In that case try installing Pyside6 separately with e.g. conda.
+Installing via the `pyproject.toml` via Poetry should also forego this dependency issue.
+
+### Notes on library versions
+
+The GUI uses the PySide6 library, which is tightly bound to specific Python versions.
+Each PySide6 version only supports a small range of Python versions, as may be found in their documentation.
+The standard Star Shine dependencies do not have this limitation.
+
+**Star Shine has only been tested in Python 3.11**.
+Using older versions could result in unexpected errors, however, any Python version >=3.6 is expected to work,
+and Python versions >=3.8 are expected to work with the GUI.
+An upper limit of Python 3.12 is set specifically for the GUI dependency pyside6, although later versions of this
+package support higher Python versions.
+
+**Package dependencies:** The following package versions have been used in the development of this code,
+meaning older versions can in principle work, but this is not guaranteed.
+NumPy 1.20.3, SciPy 1.7.3, Numba 0.55.1, h5py 3.7.0, Astropy 4.3.1, Pandas 1.2.3, Matplotlib 3.5.3, pyyaml 6.0.2,
+pyside6 6.6.0 (optional),
+pymc3 3.11.4 (optional), theano 1.1.2 (optional), Arviz 0.11.4 (optional), fastprogress 1.0.0 (optional).
+
+Newer versions are expected to work, and it is considered a bug if this is not the case.
+That statement does not extend to PySide6, because of its strong dependency on Python version.
+
+> [!WARNING]
+> Star Shine makes use of just-in-time compilation and caching of the compiled functions for fast operation.
+> Before first use, it is recommended to run the script `run_first_use.py`. This runs a very short time-series
+> (sim_000_lc.dat included in the data folder) and will make sure that the just-in-time compiler can do its magic to
+> make everything run as fast as it can. Just-in-time compilation can result in more optimised machine code than
+> ahead-of-time compilation. Note that compilation takes time, but this only applies to the first time each function is
+> used. In short: first time use is not indicative of the final runtime.
+
+
+## Example use
+
+Since the main feature of Star Shine is its fully automated operation, taking advantage of its functionality is
+as simple as running one function.
+First, set up a `Data` object:
+
+```python
+import star_shine as sts
+data = sts.Data.load_data(file_list)
+```
+
+The `file_list` is a list of strings with file paths.
+Then, use the `Data` object to initialise the `Pipeline`, and simply run it:
+
+```python
+pipeline = sts.Pipeline(data)
+pipeline.run()
+```
+
+A provided light curve file is expected to contain a time column, flux measurements (non-negative), and flux
+measurement errors.
+Astronomical data products in FITS format can also be read by the Data class, provided the correct column names are
+configured (by default these use standard TESS data product names).
+The normalisation of the time series handled automatically per time chunk (each separate file is considered a
+time chunk - e.g. a sector in TESS jargon).
+The stage parameter can be set to indicate which parts of the analysis will be performed, see the configuration
+documentation for options.
+
+If a save_dir is given, the outputs are saved in that directory with either the given target identifier or the file
+name of the first data file as identifier.
+If not given, files are saved in a subdirectory of where the data is.
+The 'overwrite' argument can be used to either overwrite old data, or to continue from a previous save file.
+The pipeline can print useful progress information if verbose is set to True in the configuration.
+In the case of harmonic signals such as in eclipsing binaries, and if an orbital period is known beforehand,
+this information can be used to find orbital harmonics in the prewhitened frequencies.
+If not provided, a period is found using a combination of phase dispersion minimisation, Lomb-Scargle periodogram
+amplitude, and the extracted frequencies.
 
 
 # Configuration
@@ -32,7 +121,7 @@ If it is not found in that location, or another error occurs, default values are
 
 The configuration can be changed through the API using the function `sts.update_config(file_name='', settings=None)`.
 Only one of `file_name` or `settings` can be used at a time.
-The use of `file_name` is fairly self-explanatory: simply supply a file path to a valid STAR SHINE config file
+The use of `file_name` is fairly self-explanatory: simply supply a file path to a valid Star Shine config file
 (yaml format).
 The `settings` keyword argument expects a dictionary with keys that are valid setting names.
 This offers a convenient way to change only one or a few settings.
@@ -46,110 +135,144 @@ If no file name is supplied, this overwrites the config file in the default loca
 In the GUI, the settings can be saved by clicking Save in the File > Settings dialog.
 To save a copy of the config file under a different name, choose File > Export Settings.
 
-## Individual settings
-
 All settings are explained in more detail below.
 
-### General settings
+## General settings
 
 `verbose`: bool, default=True
+
 Print information during runtime
 
 `stop_at_stage`: int, default=0
+
 Run the analysis up to and including this stage; 0 means all stages are run
 
-### Extraction settings
+## Extraction settings
 
 `select_next`: str, default='hybrid'
+
 Select the next frequency in iterative extraction based on 'amp', 'snr', or 'hybrid' (first amp then snr)
 
 `optimise_step`: bool, default=True
+
 Optimise with a non-linear multi-sinusoid fit at every step (T) or only at the end (F)
 
 `replace_step`: bool, default=True
+
 Attempt to replace closely spaced sinusoids by one sinusoid at every step (T) or only at the end (F)
 
 `stop_criterion`: str, default='bic'
+
 Stop criterion for the iterative extraction of sinusoids will be based on 'bic', or 'snr'
 
 `bic_thr`: float, default=2.0
+
 Delta-BIC threshold for the acceptance of sinusoids
 
 `snr_thr`: float, default=-1.0
+
 Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1
 
 `nyquist_factor`: float, default=1.0
+
 The simple Nyquist frequency approximation (1/(2 delta_t_min)) is multiplied by this factor
 
 `resolution_factor`: float, default=1.5
+
 The frequency resolution (1/T) is multiplied by this factor
 
 `window_width`: float, default=1.0
+
 Periodogram spectral noise is calculated over this window width
 
-### Optimisation settings
+## Optimisation settings
 
 `min_group`: int, default=45
+
 Minimum group size for the multi-sinusoid non-linear fit
 
 `max_group`: int, default=50
+
 Maximum group size for the multi-sinusoid non-linear fit (max_group > min_group)
 
-### Data and File settings
+## Data and File settings
 
 `overwrite`: bool, default=False
+
 Overwrite existing result files
 
 `data_dir`: str, default=''
+
 Root directory where the data files to be analysed are located; if empty will use current dir
 
 `save_dir`: str, default=''
+
 Root directory where analysis results will be saved; if empty will use current dir
 
 `save_ascii`: bool, default=False
+
 Save ascii variants of the HDF5 result files
 
-### Tabulated File settings
+## Tabulated File settings
 
 `cn_time`: str, default='time'
+
 Column name for the time stamps
 
 `cn_flux`: str, default='flux'
+
 Column name for the flux measurements
 
 `cn_flux_err`: str, default='flux_err'
+
 Column name for the flux measurement errors
 
-### FITS File settings
+## FITS File settings
 
 `cf_time`: str, default='TIME'
+
 Column name for the time stamps
 
 `cf_flux`: str, default='SAP_FLUX'
+
 Column name for the flux [examples: SAP_FLUX, PDCSAP_FLUX, KSPSAP_FLUX]
 
 `cf_flux_err`: str, default='SAP_FLUX_ERR'
+
 Column name for the flux errors [examples: SAP_FLUX_ERR, PDCSAP_FLUX_ERR, KSPSAP_FLUX_ERR]
 
 `cf_quality`: str, default='QUALITY'
+
 Column name for the flux quality flags
 
 `apply_q_flags`: bool, default=True
+
 Apply the quality flags supplied by the data source
 
 `halve_chunks`: bool, default=False
+
 Cut the time chunks in half (TESS data often has a discontinuity mid-sector)
 
-### GUI settings
+## GUI settings
 
 `dark_mode`: bool, default=False
+
 Dark mode. [WIP]
 
 `h_size_frac`: float, default=0.8
+
 Horizontal window size as a fraction of the screen width
 
 `v_size_frac`: float, default=0.8
+
 Vertical window size as a fraction of the screen height
+
+
+# Credits
+
+The code was written and documented by: Luc IJspeert, PhD in astronomy and astrophysics.
+
+Contributions were made to setting options and ideation by: Mathijs Vanrespaille.
 
 """
 

@@ -11,11 +11,11 @@
 
 [//]: # (make the badges dynamic...)
 
-## What is STAR SHINE?
-STAR SHINE is a Python application that is aimed at facilitating the analysis of variable light curves. 
+## What is Star Shine?
+Star Shine is a Python application that is aimed at facilitating the analysis of variable light curves. 
 It is broadly applicable to variable sources like pulsators, eclipsing binaries, and spotted stars. 
 To this end, it implements the iterative prewhitening scheme common in asteroseismology, multi-sinusoid non-linear 
-fitting, full integration of harmonic sinusoids, and more. 
+fitting, full integration of harmonic sinusoid series, and more. 
 It features a high degree of automation, offering a fully hands-off operation mode. 
 Alternatively, each sinusoid can be extracted manually, and there are many customisation options to fine tune the 
 methodology to specific needs. 
@@ -29,11 +29,12 @@ while the API allows flexible access to the methods for processing batches of ta
 ### Reference Material
 
 * Documentation pages: https://lucijspeert.github.io/star_shine/
-* The algorithm that this application stems from has been documented, tested and applied in the publication: [Automated eccentricity measurement from raw eclipsing binary light curves with intrinsic variability](https://ui.adsabs.harvard.edu/abs/2024arXiv240206084I/abstract)
+* The algorithm that this application stems from has been documented, tested and applied in the publication: 
+[Automated eccentricity measurement from raw eclipsing binary light curves with intrinsic variability](https://ui.adsabs.harvard.edu/abs/2024arXiv240206084I/abstract)
 
 ## Getting started
 
-The easiest way to install STAR SHINE is to use pip:
+The easiest way to install Star Shine is to use pip:
 
     pip install star_shine
 
@@ -48,7 +49,7 @@ The GUI is optional functionality, and its dependencies can be included when ins
 If there are issues launching the gui, pip may not have properly installed all Pyside6 dependencies. In that case try 
 installing Pyside6 separately with e.g. conda.
 
-**STAR SHINE has only been tested in Python 3.11**. Using older versions could result in unexpected errors, 
+**Star Shine has only been tested in Python 3.11**. Using older versions could result in unexpected errors, 
 although any Python version >=3.8 is expected to work. An upper limit of 3.12 is set specifically for the GUI 
 dependency pyside6, later versions of this package support higher Python versions.
 
@@ -59,7 +60,7 @@ pymc3 3.11.4 (optional), theano 1.1.2 (optional), Arviz 0.11.4 (optional), fastp
 
 Newer versions are expected to work, and it is considered a bug if this is not the case.
 
-**Important:** STAR SHINE makes use of just-in-time compilation and caching of the compiled functions for fast operation.
+**Important:** Star Shine makes use of just-in-time compilation and caching of the compiled functions for fast operation.
 Before first use, it is recommended to run the script `run_first_use.py`. This runs a very short time-series 
 (sim_000_lc.dat included in the data folder) and will make sure that the just-in-time compiler can do its magic to 
 make everything run as fast as it can. Just-in-time compilation can result in more optimised machine code than 
@@ -69,7 +70,7 @@ used. In short: first time use is not indicative of the final runtime.
 
 ### Example use
 
-Since the main feature of STAR SHINE is its fully automated operation, taking advantage of its functionality is 
+Since the main feature of Star Shine is its fully automated operation, taking advantage of its functionality is 
 as simple as running one function. First, set up a `Data` object:
 
     import star_shine as sts
@@ -115,18 +116,12 @@ to the less efficient manner of data storage).
 The .nc4 files (a wrapper for hdf5) contain pymc3 sampling chains.
 
 
-### Diagnostic plots
-
-There are several plotting functions available in the visualisation module. A simpler way to visualise the analysis
-is to use the GUI, which shows the data, periodogram, and the state of the model as the analysis progresses.
-
-
 ## Bugs and Issues
 
 Despite all the testing, I am certain that there are still bugs in this code, or will be created in future versions. 
 
 If you happen to come across any bugs or issues, *please* contact me. Only known bugs can be resolved.
-This can be done through opening an issue on the STAR SHINE GitHub page: 
+This can be done through opening an issue on the Star Shine GitHub page: 
 [LucIJspeert/star_shine/issues](https://github.com/LucIJspeert/star_shineshine/issues).
 
 If you are (going to be) working on new or improved features, I would love to hear from you and see if it can be 
