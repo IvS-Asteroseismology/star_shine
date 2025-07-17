@@ -83,7 +83,7 @@ import star_shine as sts
 data = sts.Data.load_data(file_list)
 ```
 
-The `file_list` is a list of strings with file paths.
+The `file_list` is a list of file path strings.
 Then, use the `Data` object to initialise the `Pipeline`, and simply run it:
 
 ```python
