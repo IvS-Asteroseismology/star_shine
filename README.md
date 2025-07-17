@@ -12,15 +12,17 @@
 [//]: # (make the badges dynamic...)
 
 ## What is STAR SHINE?
-STAR SHINE is a Python application that is aimed at facilitating the analysis of variable light curves. It is broadly 
-applicable to variable sources like pulsators, eclipsing binaries, and spotted stars. To this end, it implements the 
-iterative prewhitening scheme common in asteroseismology, multi-sinusoid non-linear fitting, full integration of harmonic 
-sinusoids, and more. It features a high degree of automation, offering a fully hands-off operation mode. Alternatively, each 
-sinusoid can be extracted manually, and there are many customisation options to fine tune the methodology to specific needs. 
+STAR SHINE is a Python application that is aimed at facilitating the analysis of variable light curves. 
+It is broadly applicable to variable sources like pulsators, eclipsing binaries, and spotted stars. 
+To this end, it implements the iterative prewhitening scheme common in asteroseismology, multi-sinusoid non-linear 
+fitting, full integration of harmonic sinusoids, and more. 
+It features a high degree of automation, offering a fully hands-off operation mode. 
+Alternatively, each sinusoid can be extracted manually, and there are many customisation options to fine tune the 
+methodology to specific needs. 
 The code has been written with efficiency in mind, incorporating many computational optimisations and low-level 
-parallelisation by default, resulting in very fast operation. The GUI provides a simple interface to directly see what is 
-happening during the analysis of your favourite target, while the API allows flexible access to the methods for processing 
-batches of targets.
+parallelisation by default, resulting in very fast operation. 
+The GUI provides a simple interface to directly see what is happening during the analysis of your favourite target, 
+while the API allows flexible access to the methods for processing batches of targets.
 
 ![Star Shine logo](star_shine/data/images/Star_Shine_transparent.png?raw=true)
 
