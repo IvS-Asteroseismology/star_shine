@@ -2,8 +2,6 @@
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This Python module contains periodograms functions for time series data.
-
-Code written by: Luc IJspeert
 """
 
 import numpy as np

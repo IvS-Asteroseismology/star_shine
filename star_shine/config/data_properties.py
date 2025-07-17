@@ -2,8 +2,6 @@
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This module contains functions that evaluate certain configuration attributes that depend on data properties.
-
-Code written by: Luc IJspeert
 """
 import numpy as np
 import numba as nb

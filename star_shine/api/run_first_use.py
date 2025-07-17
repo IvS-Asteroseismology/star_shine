@@ -4,8 +4,6 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 This Python script is meant to be run before first use, it ensures that the Just-In-Time compiler has done its job
 and cache the compiled functions. If your own use case involves time series longer than a few thousand data points,
 this is strongly recommended. If not, this is less important, but do keep in mind that the first run will be slower.
-
-Code written by: Luc IJspeert
 """
 
 import os

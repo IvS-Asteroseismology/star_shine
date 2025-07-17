@@ -1,5 +1,7 @@
 """STAR SHINE __init__ file
 
+.. include:: ../README.md
+
 Code written by: Luc IJspeert
 """
 
@@ -15,7 +17,5 @@ except ImportError as e:
     print(e)
     print('GUI unavailable, likely missing dependency PySide6.')
     pass
-
-__pdoc__ = {"star_shine.gui": False}
 
 __all__ = ['gui', 'api', 'core', 'config', 'data']

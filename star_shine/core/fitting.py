@@ -11,8 +11,6 @@ Nelder-Mead is extensively tested and found robust, while slow.
 TNC is tested, and seems reliable while being fast, though slightly worse BIC results.
 L-BFGS-B is tested, and seems reliable while being fast, though slightly worse BIC results.
 See publication appendix for more information.
-
-Code written by: Luc IJspeert
 """
 
 import numpy as np

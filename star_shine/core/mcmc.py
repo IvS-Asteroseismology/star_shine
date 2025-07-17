@@ -1,10 +1,7 @@
 """STAR SHADOW
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
-This module contains functions for the use in and to perform
-Markov Chain Monte Carlo (MCMC) with PyMC3
-
-Code written by: Luc IJspeert
+This module contains functions for the use in and to perform Markov Chain Monte Carlo (MCMC) with PyMC3
 """
 
 import logging

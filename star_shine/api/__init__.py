@@ -1,6 +1,4 @@
-"""STAR SHINE __init__ file
-
-Code written by: Luc IJspeert
+"""STAR SHINE api __init__ file
 """
 
 from .data import Data

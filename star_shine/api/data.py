@@ -2,8 +2,6 @@
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This Python module contains the data class for handling the user defined data to analyse.
-
-Code written by: Luc IJspeert
 """
 import os
 import numpy as np

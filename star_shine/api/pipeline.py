@@ -2,8 +2,6 @@
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This Python module contains the pipeline class that defines the analysis pipeline.
-
-Code written by: Luc IJspeert
 """
 import os
 import time as systime
@@ -13,8 +11,7 @@ from star_shine.api.data import Data
 from star_shine.api.result import Result
 
 from star_shine.core import analysis as ana, time_series as tms
-from star_shine.core import frequency_sets as frs, periodogram as pdg, fitting as fit
-from star_shine.core import goodness_of_fit as gof, mcmc as mcf, utility as ut
+from star_shine.core import periodogram as pdg, fitting as fit, utility as ut
 from star_shine.config.helpers import get_config, get_custom_logger
 
 

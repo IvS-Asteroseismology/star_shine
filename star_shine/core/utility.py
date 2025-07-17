@@ -2,8 +2,6 @@
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This module contains utility functions for data processing, unit conversions.
-
-Code written by: Luc IJspeert
 """
 import datetime
 import numpy as np

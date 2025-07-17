@@ -2,8 +2,6 @@
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This Python module contains the settings dialog for the graphical user interface.
-
-Code written by: Luc IJspeert
 """
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QLabel, QCheckBox
 from PySide6.QtWidgets import QMessageBox, QFrame

@@ -2,8 +2,6 @@
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This module contains io functions for reading and writing data and results.
-
-Code written by: Luc IJspeert
 """
 
 import os

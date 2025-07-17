@@ -2,8 +2,6 @@
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
 This Python module contains plotting functions for the graphical user interface.
-
-Code written by: Luc IJspeert
 """
 import os
 import matplotlib as mpl

@@ -3,8 +3,6 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 
 This Python module contains classes for handling the models for the time series. Includes a piece-wise linear model,
 sum of sinusoids, and harmonics.
-
-Code written by: Luc IJspeert
 """
 import numpy as np
 import numba as nb

@@ -1,10 +1,8 @@
 """STAR SHINE
 Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Iterative Non-linear Extraction
 
-This Python module contains functions for visualisation;
-specifically for visualising the analysis of stellar variability and harmonic sinusoids.
-
-Code written by: Luc IJspeert
+This Python module contains functions for visualisation; specifically for visualising the analysis of stellar
+variability and harmonic sinusoids.
 """
 
 import os
