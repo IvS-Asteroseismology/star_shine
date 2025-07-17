@@ -694,31 +694,31 @@ Satellite Time-series Analysis Routine using Sinusoids and Harmonics through Ite
 </span><span id="L-587"><a href="#L-587"><span class="linenos"> 587</span></a><span class="k">def</span><span class="w"> </span><span class="nf">extract_harmonics</span><span class="p">(</span><span class="n">ts_model</span><span class="p">,</span> <span class="n">bic_thr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span id="L-588"><a href="#L-588"><span class="linenos"> 588</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Tries to extract more harmonics from the flux</span>
 </span><span id="L-589"><a href="#L-589"><span class="linenos"> 589</span></a>
-</span><span id="L-590"><a href="#L-590"><span class="linenos"> 590</span></a><span class="sd">    Parameters</span>
-</span><span id="L-591"><a href="#L-591"><span class="linenos"> 591</span></a><span class="sd">    ----------</span>
-</span><span id="L-592"><a href="#L-592"><span class="linenos"> 592</span></a><span class="sd">    ts_model: tms.TimeSeriesModel</span>
-</span><span id="L-593"><a href="#L-593"><span class="linenos"> 593</span></a><span class="sd">        Instance of TimeSeriesModel containing the time series and model parameters.</span>
-</span><span id="L-594"><a href="#L-594"><span class="linenos"> 594</span></a><span class="sd">    bic_thr: float</span>
-</span><span id="L-595"><a href="#L-595"><span class="linenos"> 595</span></a><span class="sd">        The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.</span>
-</span><span id="L-596"><a href="#L-596"><span class="linenos"> 596</span></a><span class="sd">    logger: logging.Logger, optional</span>
-</span><span id="L-597"><a href="#L-597"><span class="linenos"> 597</span></a><span class="sd">        Instance of the logging library.</span>
-</span><span id="L-598"><a href="#L-598"><span class="linenos"> 598</span></a>
-</span><span id="L-599"><a href="#L-599"><span class="linenos"> 599</span></a><span class="sd">    See Also</span>
-</span><span id="L-600"><a href="#L-600"><span class="linenos"> 600</span></a><span class="sd">    --------</span>
-</span><span id="L-601"><a href="#L-601"><span class="linenos"> 601</span></a><span class="sd">    fix_harmonic_frequency</span>
-</span><span id="L-602"><a href="#L-602"><span class="linenos"> 602</span></a>
-</span><span id="L-603"><a href="#L-603"><span class="linenos"> 603</span></a><span class="sd">    Notes</span>
-</span><span id="L-604"><a href="#L-604"><span class="linenos"> 604</span></a><span class="sd">    -----</span>
-</span><span id="L-605"><a href="#L-605"><span class="linenos"> 605</span></a><span class="sd">    Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).</span>
-</span><span id="L-606"><a href="#L-606"><span class="linenos"> 606</span></a><span class="sd">    Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.</span>
+</span><span id="L-590"><a href="#L-590"><span class="linenos"> 590</span></a><span class="sd">    Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).</span>
+</span><span id="L-591"><a href="#L-591"><span class="linenos"> 591</span></a><span class="sd">    Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.</span>
+</span><span id="L-592"><a href="#L-592"><span class="linenos"> 592</span></a><span class="sd">    Harmonic frequencies up to twice the Nyquist frequency are considered, because they are more constrained than</span>
+</span><span id="L-593"><a href="#L-593"><span class="linenos"> 593</span></a><span class="sd">    free sinusoids.</span>
+</span><span id="L-594"><a href="#L-594"><span class="linenos"> 594</span></a>
+</span><span id="L-595"><a href="#L-595"><span class="linenos"> 595</span></a><span class="sd">    Parameters</span>
+</span><span id="L-596"><a href="#L-596"><span class="linenos"> 596</span></a><span class="sd">    ----------</span>
+</span><span id="L-597"><a href="#L-597"><span class="linenos"> 597</span></a><span class="sd">    ts_model: tms.TimeSeriesModel</span>
+</span><span id="L-598"><a href="#L-598"><span class="linenos"> 598</span></a><span class="sd">        Instance of TimeSeriesModel containing the time series and model parameters.</span>
+</span><span id="L-599"><a href="#L-599"><span class="linenos"> 599</span></a><span class="sd">    bic_thr: float</span>
+</span><span id="L-600"><a href="#L-600"><span class="linenos"> 600</span></a><span class="sd">        The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.</span>
+</span><span id="L-601"><a href="#L-601"><span class="linenos"> 601</span></a><span class="sd">    logger: logging.Logger, optional</span>
+</span><span id="L-602"><a href="#L-602"><span class="linenos"> 602</span></a><span class="sd">        Instance of the logging library.</span>
+</span><span id="L-603"><a href="#L-603"><span class="linenos"> 603</span></a>
+</span><span id="L-604"><a href="#L-604"><span class="linenos"> 604</span></a><span class="sd">    See Also</span>
+</span><span id="L-605"><a href="#L-605"><span class="linenos"> 605</span></a><span class="sd">    --------</span>
+</span><span id="L-606"><a href="#L-606"><span class="linenos"> 606</span></a><span class="sd">    fix_harmonic_frequency</span>
 </span><span id="L-607"><a href="#L-607"><span class="linenos"> 607</span></a><span class="sd">    &quot;&quot;&quot;</span>
 </span><span id="L-608"><a href="#L-608"><span class="linenos"> 608</span></a>    <span class="c1"># make lists of not-present possible harmonics paired with their base frequency</span>
 </span><span id="L-609"><a href="#L-609"><span class="linenos"> 609</span></a>    <span class="n">i_base_all</span> <span class="o">=</span> <span class="p">[]</span>
 </span><span id="L-610"><a href="#L-610"><span class="linenos"> 610</span></a>    <span class="n">f_base_all</span> <span class="o">=</span> <span class="p">[]</span>
 </span><span id="L-611"><a href="#L-611"><span class="linenos"> 611</span></a>    <span class="n">h_candidates_n</span> <span class="o">=</span> <span class="p">[]</span>
 </span><span id="L-612"><a href="#L-612"><span class="linenos"> 612</span></a>    <span class="k">for</span> <span class="n">i_base</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">h_base</span><span class="p">[</span><span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">harmonics</span><span class="p">]):</span>
-</span><span id="L-613"><a href="#L-613"><span class="linenos"> 613</span></a>        <span class="c1"># the range of harmonic multipliers below the Nyquist frequency</span>
-</span><span id="L-614"><a href="#L-614"><span class="linenos"> 614</span></a>        <span class="n">harmonics_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">pd_fn</span> <span class="o">/</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">f_n</span><span class="p">[</span><span class="n">i_base</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+</span><span id="L-613"><a href="#L-613"><span class="linenos"> 613</span></a>        <span class="c1"># the range of harmonic multipliers below twice (!) the Nyquist frequency</span>
+</span><span id="L-614"><a href="#L-614"><span class="linenos"> 614</span></a>        <span class="n">harmonics_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">pd_fn</span> <span class="o">/</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">f_n</span><span class="p">[</span><span class="n">i_base</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
 </span><span id="L-615"><a href="#L-615"><span class="linenos"> 615</span></a>
 </span><span id="L-616"><a href="#L-616"><span class="linenos"> 616</span></a>        <span class="c1"># h_mult minus one is the position for existing harmonics</span>
 </span><span id="L-617"><a href="#L-617"><span class="linenos"> 617</span></a>        <span class="n">harmonics_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">harmonics_i</span><span class="p">,</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">h_mult</span><span class="p">[</span><span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">h_base</span> <span class="o">==</span> <span class="n">i_base</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
@@ -2072,31 +2072,31 @@ Instance of the logging library.</li>
             <div class="pdoc-code codehilite"><pre><span></span><span id="extract_harmonics-588"><a href="#extract_harmonics-588"><span class="linenos">588</span></a><span class="k">def</span><span class="w"> </span><span class="nf">extract_harmonics</span><span class="p">(</span><span class="n">ts_model</span><span class="p">,</span> <span class="n">bic_thr</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 </span><span id="extract_harmonics-589"><a href="#extract_harmonics-589"><span class="linenos">589</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Tries to extract more harmonics from the flux</span>
 </span><span id="extract_harmonics-590"><a href="#extract_harmonics-590"><span class="linenos">590</span></a>
-</span><span id="extract_harmonics-591"><a href="#extract_harmonics-591"><span class="linenos">591</span></a><span class="sd">    Parameters</span>
-</span><span id="extract_harmonics-592"><a href="#extract_harmonics-592"><span class="linenos">592</span></a><span class="sd">    ----------</span>
-</span><span id="extract_harmonics-593"><a href="#extract_harmonics-593"><span class="linenos">593</span></a><span class="sd">    ts_model: tms.TimeSeriesModel</span>
-</span><span id="extract_harmonics-594"><a href="#extract_harmonics-594"><span class="linenos">594</span></a><span class="sd">        Instance of TimeSeriesModel containing the time series and model parameters.</span>
-</span><span id="extract_harmonics-595"><a href="#extract_harmonics-595"><span class="linenos">595</span></a><span class="sd">    bic_thr: float</span>
-</span><span id="extract_harmonics-596"><a href="#extract_harmonics-596"><span class="linenos">596</span></a><span class="sd">        The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.</span>
-</span><span id="extract_harmonics-597"><a href="#extract_harmonics-597"><span class="linenos">597</span></a><span class="sd">    logger: logging.Logger, optional</span>
-</span><span id="extract_harmonics-598"><a href="#extract_harmonics-598"><span class="linenos">598</span></a><span class="sd">        Instance of the logging library.</span>
-</span><span id="extract_harmonics-599"><a href="#extract_harmonics-599"><span class="linenos">599</span></a>
-</span><span id="extract_harmonics-600"><a href="#extract_harmonics-600"><span class="linenos">600</span></a><span class="sd">    See Also</span>
-</span><span id="extract_harmonics-601"><a href="#extract_harmonics-601"><span class="linenos">601</span></a><span class="sd">    --------</span>
-</span><span id="extract_harmonics-602"><a href="#extract_harmonics-602"><span class="linenos">602</span></a><span class="sd">    fix_harmonic_frequency</span>
-</span><span id="extract_harmonics-603"><a href="#extract_harmonics-603"><span class="linenos">603</span></a>
-</span><span id="extract_harmonics-604"><a href="#extract_harmonics-604"><span class="linenos">604</span></a><span class="sd">    Notes</span>
-</span><span id="extract_harmonics-605"><a href="#extract_harmonics-605"><span class="linenos">605</span></a><span class="sd">    -----</span>
-</span><span id="extract_harmonics-606"><a href="#extract_harmonics-606"><span class="linenos">606</span></a><span class="sd">    Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).</span>
-</span><span id="extract_harmonics-607"><a href="#extract_harmonics-607"><span class="linenos">607</span></a><span class="sd">    Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.</span>
+</span><span id="extract_harmonics-591"><a href="#extract_harmonics-591"><span class="linenos">591</span></a><span class="sd">    Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).</span>
+</span><span id="extract_harmonics-592"><a href="#extract_harmonics-592"><span class="linenos">592</span></a><span class="sd">    Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.</span>
+</span><span id="extract_harmonics-593"><a href="#extract_harmonics-593"><span class="linenos">593</span></a><span class="sd">    Harmonic frequencies up to twice the Nyquist frequency are considered, because they are more constrained than</span>
+</span><span id="extract_harmonics-594"><a href="#extract_harmonics-594"><span class="linenos">594</span></a><span class="sd">    free sinusoids.</span>
+</span><span id="extract_harmonics-595"><a href="#extract_harmonics-595"><span class="linenos">595</span></a>
+</span><span id="extract_harmonics-596"><a href="#extract_harmonics-596"><span class="linenos">596</span></a><span class="sd">    Parameters</span>
+</span><span id="extract_harmonics-597"><a href="#extract_harmonics-597"><span class="linenos">597</span></a><span class="sd">    ----------</span>
+</span><span id="extract_harmonics-598"><a href="#extract_harmonics-598"><span class="linenos">598</span></a><span class="sd">    ts_model: tms.TimeSeriesModel</span>
+</span><span id="extract_harmonics-599"><a href="#extract_harmonics-599"><span class="linenos">599</span></a><span class="sd">        Instance of TimeSeriesModel containing the time series and model parameters.</span>
+</span><span id="extract_harmonics-600"><a href="#extract_harmonics-600"><span class="linenos">600</span></a><span class="sd">    bic_thr: float</span>
+</span><span id="extract_harmonics-601"><a href="#extract_harmonics-601"><span class="linenos">601</span></a><span class="sd">        The minimum decrease in BIC by fitting a sinusoid for the signal to be considered significant.</span>
+</span><span id="extract_harmonics-602"><a href="#extract_harmonics-602"><span class="linenos">602</span></a><span class="sd">    logger: logging.Logger, optional</span>
+</span><span id="extract_harmonics-603"><a href="#extract_harmonics-603"><span class="linenos">603</span></a><span class="sd">        Instance of the logging library.</span>
+</span><span id="extract_harmonics-604"><a href="#extract_harmonics-604"><span class="linenos">604</span></a>
+</span><span id="extract_harmonics-605"><a href="#extract_harmonics-605"><span class="linenos">605</span></a><span class="sd">    See Also</span>
+</span><span id="extract_harmonics-606"><a href="#extract_harmonics-606"><span class="linenos">606</span></a><span class="sd">    --------</span>
+</span><span id="extract_harmonics-607"><a href="#extract_harmonics-607"><span class="linenos">607</span></a><span class="sd">    fix_harmonic_frequency</span>
 </span><span id="extract_harmonics-608"><a href="#extract_harmonics-608"><span class="linenos">608</span></a><span class="sd">    &quot;&quot;&quot;</span>
 </span><span id="extract_harmonics-609"><a href="#extract_harmonics-609"><span class="linenos">609</span></a>    <span class="c1"># make lists of not-present possible harmonics paired with their base frequency</span>
 </span><span id="extract_harmonics-610"><a href="#extract_harmonics-610"><span class="linenos">610</span></a>    <span class="n">i_base_all</span> <span class="o">=</span> <span class="p">[]</span>
 </span><span id="extract_harmonics-611"><a href="#extract_harmonics-611"><span class="linenos">611</span></a>    <span class="n">f_base_all</span> <span class="o">=</span> <span class="p">[]</span>
 </span><span id="extract_harmonics-612"><a href="#extract_harmonics-612"><span class="linenos">612</span></a>    <span class="n">h_candidates_n</span> <span class="o">=</span> <span class="p">[]</span>
 </span><span id="extract_harmonics-613"><a href="#extract_harmonics-613"><span class="linenos">613</span></a>    <span class="k">for</span> <span class="n">i_base</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">h_base</span><span class="p">[</span><span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">harmonics</span><span class="p">]):</span>
-</span><span id="extract_harmonics-614"><a href="#extract_harmonics-614"><span class="linenos">614</span></a>        <span class="c1"># the range of harmonic multipliers below the Nyquist frequency</span>
-</span><span id="extract_harmonics-615"><a href="#extract_harmonics-615"><span class="linenos">615</span></a>        <span class="n">harmonics_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">pd_fn</span> <span class="o">/</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">f_n</span><span class="p">[</span><span class="n">i_base</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+</span><span id="extract_harmonics-614"><a href="#extract_harmonics-614"><span class="linenos">614</span></a>        <span class="c1"># the range of harmonic multipliers below twice (!) the Nyquist frequency</span>
+</span><span id="extract_harmonics-615"><a href="#extract_harmonics-615"><span class="linenos">615</span></a>        <span class="n">harmonics_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">pd_fn</span> <span class="o">/</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">f_n</span><span class="p">[</span><span class="n">i_base</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
 </span><span id="extract_harmonics-616"><a href="#extract_harmonics-616"><span class="linenos">616</span></a>
 </span><span id="extract_harmonics-617"><a href="#extract_harmonics-617"><span class="linenos">617</span></a>        <span class="c1"># h_mult minus one is the position for existing harmonics</span>
 </span><span id="extract_harmonics-618"><a href="#extract_harmonics-618"><span class="linenos">618</span></a>        <span class="n">harmonics_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">harmonics_i</span><span class="p">,</span> <span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">h_mult</span><span class="p">[</span><span class="n">ts_model</span><span class="o">.</span><span class="n">sinusoid</span><span class="o">.</span><span class="n">h_base</span> <span class="o">==</span> <span class="n">i_base</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
@@ -2153,6 +2153,11 @@ Instance of the logging library.</li>
 
             <div class="docstring"><p>Tries to extract more harmonics from the flux</p>
 
+<p>Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).
+Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.
+Harmonic frequencies up to twice the Nyquist frequency are considered, because they are more constrained than
+free sinusoids.</p>
+
 <h6 id="parameters">Parameters</h6>
 
 <ul>
@@ -2167,11 +2172,6 @@ Instance of the logging library.</li>
 <h6 id="see-also">See Also</h6>
 
 <p><code>fix_harmonic_frequency</code>  </p>
-
-<h6 id="notes">Notes</h6>
-
-<p>Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).
-Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.</p>
 </div>
 
 
