@@ -16,7 +16,7 @@ except ImportError:
     az = None
     pass
 
-from star_shine.core import time_series as tms, model as mdl, frequency_sets as frs
+from star_shine.core import model as mdl, frequency_sets as frs
 from star_shine.core import periodogram as pdg, utility as ut, io
 from star_shine.config.helpers import get_mpl_stylesheet_path
 

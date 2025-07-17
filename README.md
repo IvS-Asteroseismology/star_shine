@@ -49,9 +49,10 @@ The GUI is optional functionality, and its dependencies can be included when ins
 If there are issues launching the gui, pip may not have properly installed all Pyside6 dependencies. In that case try 
 installing Pyside6 separately with e.g. conda.
 
-**Star Shine has only been tested in Python 3.11**. Using older versions could result in unexpected errors, 
-although any Python version >=3.8 is expected to work. An upper limit of 3.12 is set specifically for the GUI 
-dependency pyside6, later versions of this package support higher Python versions.
+**Star Shine has only been tested in Python 3.11 and 3.12**. 
+Using older versions could result in unexpected errors, although any Python version >=3.8 is expected to work. 
+An upper limit of 3.12 is set specifically for the GUI dependency pyside6, later versions of this package support 
+higher Python versions.
 
 **Package dependencies:** The following package versions have been used in the development of this code, 
 meaning older versions can in principle work, but this is not guaranteed. NumPy 1.20.3, SciPy 1.7.3, Numba 0.55.1, 

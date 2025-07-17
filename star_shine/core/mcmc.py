@@ -13,8 +13,8 @@ import star_shine.core.frequency_sets
 
 try:
     # optional functionality
-    import pymc3 as pm
-    import theano.tensor as tt
+    import pymc as pm
+    import pytensor.tensor as pt
     import arviz as az
     from fastprogress import fastprogress
 except (ImportError, AttributeError) as e:
@@ -77,8 +77,8 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
     """
     # setup
     time_t = time.reshape(-1, 1)  # transposed time
-    t_mean = tt.as_tensor_variable(np.mean(time))
-    t_mean_s = tt.as_tensor_variable(np.array([np.mean(time[s[0]:s[1]]) for s in i_chunks]))
+    t_mean = pt.as_tensor_variable(np.mean(time))
+    t_mean_s = pt.as_tensor_variable(np.array([np.mean(time[s[0]:s[1]]) for s in i_chunks]))
     lin_shape = (len(const),)
     sin_shape = (len(f_n),)
     # progress bar
@@ -97,7 +97,7 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
         slope_pm = pm.Normal('slope', mu=slope, sigma=sl_err, shape=lin_shape, testval=slope)
         # piece-wise linear curve
         linear_curves = [const_pm[k] + slope_pm[k] * (time[s[0]:s[1]] - t_mean_s[k]) for k, s in enumerate(i_chunks)]
-        model_linear = tt.concatenate(linear_curves)
+        model_linear = pt.concatenate(linear_curves)
         # sinusoid parameter models
         f_n_pm = pm.TruncatedNormal('f_n', mu=f_n, sigma=f_n_err, lower=0, shape=sin_shape, testval=f_n)
         a_n_pm = pm.TruncatedNormal('a_n', mu=a_n, sigma=a_n_err, lower=0, shape=sin_shape, testval=a_n)
@@ -111,8 +111,7 @@ def sample_sinusoid(time, flux, const, slope, f_n, a_n, ph_n, c_err, sl_err, f_n
     
     # do the sampling
     with lc_model:
-        inf_data = pm.sample(draws=1000, tune=1000, init='adapt_diag', cores=1, progressbar=(logger is not None),
-                             return_inferencedata=True)
+        inf_data = pm.sample(draws=1000, tune=1000, init='adapt_diag', cores=1, progressbar=(logger is not None))
     
     if logger is not None:
         az.summary(inf_data, round_to=2, circ_var_names=['ph_n'])
@@ -201,8 +200,8 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
     """
     # setup
     time_t = time.reshape(-1, 1)  # transposed time
-    t_mean = tt.as_tensor_variable(np.mean(time))
-    t_mean_s = tt.as_tensor_variable(np.array([np.mean(time[s[0]:s[1]]) for s in i_chunks]))
+    t_mean = pt.as_tensor_variable(np.mean(time))
+    t_mean_s = pt.as_tensor_variable(np.array([np.mean(time[s[0]:s[1]]) for s in i_chunks]))
     harmonics, harmonic_n = star_shine.core.frequency_sets.find_harmonics_from_pattern(f_n, 1/p_orb, f_tol=1e-9)
     non_harm = np.delete(np.arange(len(f_n)), harmonics)
     lin_shape = (len(const),)
@@ -224,7 +223,7 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
         slope_pm = pm.Normal('slope', mu=slope, sigma=sl_err, shape=lin_shape, testval=slope)
         # piece-wise linear curve
         linear_curves = [const_pm[k] + slope_pm[k] * (time[s[0]:s[1]] - t_mean_s[k]) for k, s in enumerate(i_chunks)]
-        model_linear = tt.concatenate(linear_curves)
+        model_linear = pt.concatenate(linear_curves)
         # sinusoid parameter models
         f_n_pm = pm.TruncatedNormal('f_n', mu=f_n[non_harm], sigma=f_n_err[non_harm], lower=0, shape=sin_shape,
                                     testval=f_n[non_harm])
@@ -250,8 +249,7 @@ def sample_sinusoid_h(time, flux, p_orb, const, slope, f_n, a_n, ph_n, p_err, c_
     
     # do the sampling
     with lc_model:
-        inf_data = pm.sample(draws=1000, tune=1000, init='adapt_diag', cores=1, progressbar=(logger is not None),
-                             return_inferencedata=True)
+        inf_data = pm.sample(draws=1000, tune=1000, init='adapt_diag', cores=1, progressbar=(logger is not None))
     
     if logger is not None:
         az.summary(inf_data, round_to=2, circ_var_names=['ph_n'])

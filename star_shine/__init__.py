@@ -41,7 +41,6 @@ The GUI is optional functionality, and its dependencies can be included when ins
 
 If there are issues launching the GUI, pip may not have properly installed all Pyside6 dependencies.
 In that case try installing Pyside6 separately with e.g. conda.
-Installing via the `pyproject.toml` via Poetry should also forego this dependency issue.
 
 ### Notes on library versions
 
@@ -49,7 +48,7 @@ The GUI uses the PySide6 library, which is tightly bound to specific Python vers
 Each PySide6 version only supports a small range of Python versions, as may be found in their documentation.
 The standard Star Shine dependencies do not have this limitation.
 
-**Star Shine has only been tested in Python 3.11**.
+**Star Shine has only been tested in Python 3.11 and 3.12**.
 Using older versions could result in unexpected errors, however, any Python version >=3.6 is expected to work,
 and Python versions >=3.8 are expected to work with the GUI.
 An upper limit of Python 3.12 is set specifically for the GUI dependency pyside6, although later versions of this
