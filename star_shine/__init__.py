@@ -51,127 +51,105 @@ To save a copy of the config file under a different name, choose File > Export S
 All settings are explained in more detail below.
 
 ### General settings
-verbose description:
-Print information during runtime
-verbose: True
 
-stop_at_stage description:
+`verbose`: bool, default=True
+Print information during runtime
+
+`stop_at_stage`: int, default=0
 Run the analysis up to and including this stage; 0 means all stages are run
-stop_at_stage: 0
 
 ### Extraction settings
-select_next description:
+
+`select_next`: str, default='hybrid'
 Select the next frequency in iterative extraction based on 'amp', 'snr', or 'hybrid' (first amp then snr)
-select_next: 'hybrid'
 
-optimise_step description:
+`optimise_step`: bool, default=True
 Optimise with a non-linear multi-sinusoid fit at every step (T) or only at the end (F)
-optimise_step: True
 
-replace_step description:
+`replace_step`: bool, default=True
 Attempt to replace closely spaced sinusoids by one sinusoid at every step (T) or only at the end (F)
-replace_step: True
 
-stop_criterion description:
+`stop_criterion`: str, default='bic'
 Stop criterion for the iterative extraction of sinusoids will be based on 'bic', or 'snr'
-stop_criterion: 'bic'
 
-bic_thr description:
+`bic_thr`: float, default=2.0
 Delta-BIC threshold for the acceptance of sinusoids
-bic_thr: 2.0
 
-snr_thr description:
+`snr_thr`: float, default=-1.0
 Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1
-snr_thr: -1.0
 
-nyquist_factor description:
+`nyquist_factor`: float, default=1.0
 The simple Nyquist frequency approximation (1/(2 delta_t_min)) is multiplied by this factor
-nyquist_factor: 1.0
 
-resolution_factor description:
+`resolution_factor`: float, default=1.5
 The frequency resolution (1/T) is multiplied by this factor
-resolution_factor: 1.5
 
-window_width description:
+`window_width`: float, default=1.0
 Periodogram spectral noise is calculated over this window width
-window_width: 1.0
 
 ### Optimisation settings
-min_group description:
-Minimum group size for the multi-sinusoid non-linear fit
-min_group: 45
 
-max_group description:
+`min_group`: int, default=45
+Minimum group size for the multi-sinusoid non-linear fit
+
+`max_group`: int, default=50
 Maximum group size for the multi-sinusoid non-linear fit (max_group > min_group)
-max_group: 50
 
 ### Data and File settings
-overwrite description:
+
+`overwrite`: bool, default=False
 Overwrite existing result files
-overwrite: False
 
-data_dir description:
+`data_dir`: str, default=''
 Root directory where the data files to be analysed are located; if empty will use current dir
-data_dir: ''
 
-save_dir description:
+`save_dir`: str, default=''
 Root directory where analysis results will be saved; if empty will use current dir
-save_dir: ''
 
-save_ascii description:
+`save_ascii`: bool, default=False
 Save ascii variants of the HDF5 result files
-save_ascii: False
 
 ### Tabulated File settings
-cn_time description:
+
+`cn_time`: str, default='time'
 Column name for the time stamps
-cn_time: 'time'
 
-cn_flux description:
+`cn_flux`: str, default='flux'
 Column name for the flux measurements
-cn_flux: 'flux'
 
-cn_flux_err description:
+`cn_flux_err`: str, default='flux_err'
 Column name for the flux measurement errors
-cn_flux_err: 'flux_err'
 
 ### FITS File settings
-cf_time description:
+
+`cf_time`: str, default='TIME'
 Column name for the time stamps
-cf_time: 'TIME'
 
-cf_flux description:
+`cf_flux`: str, default='SAP_FLUX'
 Column name for the flux [examples: SAP_FLUX, PDCSAP_FLUX, KSPSAP_FLUX]
-cf_flux: 'SAP_FLUX'
 
-cf_flux_err description:
+`cf_flux_err`: str, default='SAP_FLUX_ERR'
 Column name for the flux errors [examples: SAP_FLUX_ERR, PDCSAP_FLUX_ERR, KSPSAP_FLUX_ERR]
-cf_flux_err: 'SAP_FLUX_ERR'
 
-cf_quality description:
+`cf_quality`: str, default='QUALITY'
 Column name for the flux quality flags
-cf_quality: 'QUALITY'
 
-apply_q_flags description:
+`apply_q_flags`: bool, default=True
 Apply the quality flags supplied by the data source
-apply_q_flags: True
 
-halve_chunks description:
+`halve_chunks`: bool, default=False
 Cut the time chunks in half (TESS data often has a discontinuity mid-sector)
-halve_chunks: False
 
 ### GUI settings
-dark_mode description:
+
+`dark_mode`: bool, default=False
 Dark mode. [WIP]
-dark_mode: False
 
-h_size_frac description:
+`h_size_frac`: float, default=0.8
 Horizontal window size as a fraction of the screen width
-h_size_frac: 0.8
 
-v_size_frac description:
+`v_size_frac`: float, default=0.8
 Vertical window size as a fraction of the screen height
-v_size_frac: 0.8
 
 """
 
