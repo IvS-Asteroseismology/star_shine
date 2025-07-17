@@ -843,17 +843,6 @@ class SinusoidModel:
 
         return None
 
-    def enforce_harmonics(self):
-        """Enforce harmonic relations in the sinusoids.
-
-        This will set all harmonic frequencies to the integer multiple of the base frequency that they are
-        assigned to. Optionally performs a linear fit of the amplitudes and phases [wip].
-        """
-        if np.any(self._harmonics):
-            self._f_n[self._harmonics] = self._f_n[self._h_base[self._harmonics]] * self._h_mult[self._harmonics]
-
-        return None
-
     def set_sinusoids(self, time, f_n_new, a_n_new, ph_n_new, h_base_new=None, h_mult_new=None):
         """Set the current sinusoid model with the new parameters.
 
