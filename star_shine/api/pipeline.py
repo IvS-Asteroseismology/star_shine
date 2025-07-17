@@ -263,7 +263,7 @@ class Pipeline:
         return None
 
     def couple_harmonics(self):
-        """Find the orbital period and couple harmonic frequencies to the orbital period
+        """Find the base frequency and couple harmonic frequencies to the base frequency
 
         Returns
         -------

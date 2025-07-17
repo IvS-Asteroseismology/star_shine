@@ -587,6 +587,11 @@ def couple_harmonics(ts_model, f_base, logger=None):
 def extract_harmonics(ts_model, bic_thr=2, logger=None):
     """Tries to extract more harmonics from the flux
 
+    Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).
+    Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.
+    Harmonic frequencies up to twice the Nyquist frequency are considered, because they are more constrained than
+    free sinusoids.
+
     Parameters
     ----------
     ts_model: tms.TimeSeriesModel
@@ -599,19 +604,14 @@ def extract_harmonics(ts_model, bic_thr=2, logger=None):
     See Also
     --------
     fix_harmonic_frequency
-
-    Notes
-    -----
-    Looks for missing harmonics and checks whether adding them decreases the BIC sufficiently (by more than 2).
-    Assumes the harmonics are already fixed multiples of f_base as can be achieved with fix_harmonic_frequency.
     """
     # make lists of not-present possible harmonics paired with their base frequency
     i_base_all = []
     f_base_all = []
     h_candidates_n = []
     for i_base in np.unique(ts_model.sinusoid.h_base[ts_model.sinusoid.harmonics]):
-        # the range of harmonic multipliers below the Nyquist frequency
-        harmonics_i = np.arange(1, ts_model.pd_fn / ts_model.sinusoid.f_n[i_base], dtype=int)
+        # the range of harmonic multipliers below twice (!) the Nyquist frequency
+        harmonics_i = np.arange(1, 2 * ts_model.pd_fn / ts_model.sinusoid.f_n[i_base], dtype=int)
 
         # h_mult minus one is the position for existing harmonics
         harmonics_i = np.delete(harmonics_i, ts_model.sinusoid.h_mult[ts_model.sinusoid.h_base == i_base] - 1)
