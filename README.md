@@ -57,7 +57,7 @@ higher Python versions.
 **Package dependencies:** The following package versions have been used in the development of this code, 
 meaning older versions can in principle work, but this is not guaranteed. NumPy 1.20.3, SciPy 1.7.3, Numba 0.55.1, 
 h5py 3.7.0, Astropy 4.3.1, Pandas 1.2.3, Matplotlib 3.5.3, pyyaml 6.0.2, pyside6 6.6.0 (optional), 
-pymc3 3.11.4 (optional), theano 1.1.2 (optional), Arviz 0.11.4 (optional), fastprogress 1.0.0 (optional).
+pymc 5.24.0 (optional), Arviz 0.22.0 (optional), fastprogress 1.0.3 (optional).
 
 Newer versions are expected to work, and it is considered a bug if this is not the case.
 
@@ -67,6 +67,10 @@ Before first use, it is recommended to run the script `run_first_use.py`. This r
 make everything run as fast as it can. Just-in-time compilation can result in more optimised machine code than 
 ahead-of-time compilation. Note that compilation takes time, but this only applies to the first time each function is 
 used. In short: first time use is not indicative of the final runtime.
+
+The GUI can be started by running
+
+    sts.launch_gui()
 
 
 ### Example use
