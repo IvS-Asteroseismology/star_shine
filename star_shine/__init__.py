@@ -121,46 +121,62 @@ sts.launch_gui()
 
 # Working Principles
 
+Between two researchers there will be three opinions and four methods of analysing the data.
+Usually there are multiple viable ways to do things, so what matters is to be clear about which path was taken.
+Star Shine strives to offer configurability to cater to diverse needs, while providing a robust framework of
+well motivated approaches.
+The built-in defaults form the recommended methodology as envisioned by the author.
+
 What follows is an extremely detailed description of the inner workings of Star Shine.
-This includes top-level descriptions, as well as motivations for the choices of specific algorithms [WIP].
+This includes top-level descriptions, down to the motivations for the choices of specific algorithms [WIP].
 
 In broad lines, when running the fully automated pipeline, the following recipe is followed regardless of configuration:
 
 1. Extract all sinusoids.
-    We start by extracting the frequency with the highest amplitude (or signal-to-noise ratio, see settings) one by one,
-    directly from the Lomb-Scargle periodogram until the BIC (or signal-to-noise ratio, see settings) does not
-    significantly (see settings) improve anymore.
+    Sinusoids are iteratively extracted from the periodogram in order of highest to lowest prominence (this is
+    amplitude by default, but can also be signal-to-noise ratio - see settings).
+    Each iteration can involve multiple steps, including multi-sinusoid non-linear optimisation.
+    Iteration terminates when the acceptance threshold is no longer met (this is based on the BIC by default,
+    but can also be signal-to-noise ratio - see settings).
 
 2. Multi-sinusoid NL-LS optimisation.
-    The sinusoid parameters are optimised with a non-linear least-squares method, using groups of sinusoids to limit
-    the number of free parameters.
+    The sinusoid parameters are optimised with an efficient multi-sinusoid non-linear least-squares method.
+    Sinusoids are grouped according to their amplitude in order to limit the number of free parameters.
 
-3. Measure the harmonic base frequency and couple the harmonic sinusoids.
-    Primarily meant for the search of an eclipsing binary orbital period, the global search algorithm can find
-    prominent series of harmonic sinusoids. It uses phase dispersion, Lomb-Scargle amplitude and length/filling factor
-    of the harmonic series in the list of extracted sinusoids.
+3. Measure a harmonic base frequency and couple the harmonic sinusoids.
+    Originally meant for the search of an eclipsing binary orbital period, the global search algorithm can find
+    prominent series of harmonic sinusoids.
+    It uses a combination of phase dispersion, Lomb-Scargle amplitude, and length/filling factor of the harmonic
+    series in the list of extracted sinusoids.
+    It is possible to provide a base frequency if it is already known.
     Knowing the base frequency, it then sets the frequencies of the harmonics to their integer multiple values to
     couple them.
-    It is possible to provide a base frequency if it is already known.
-    This base frequency will still be optimised in consequent optimisation steps.
+    This process may remove a significant amount of sinusoids close to harmonic frequencies.
+    The base frequency will be optimised in consequent optimisation steps.
+    Multiple harmonic series are supported.
 
-4. Attempt to extract additional sinusoids.
-    The decreased number of free parameters (2 vs. 3) may allow the extraction of more harmonics, since the BIC
-    punishes for free parameters.
-    It is also attempted to extract more sinusoids like in step 1 again, now taking into account the presence of
-    harmonics.
+4. Extract additional sinusoids.
+    The decreased number of free parameters per harmonic sinusoid (2 vs. 3) may allow the extraction of more harmonics,
+    since the BIC punishes for free parameters.
+    It is also attempted to extract additional free sinusoids (a repetition of step 1), now taking into account the
+    presence of harmonics.
 
 5. Multi-sinusoid NL-LS optimisation with coupled harmonics.
-    The sinusoid parameters are optimised with a non-linear least-squares method, using groups of sinusoids to limit
-    the number of free parameters.
+    This is a repetition of step 2, now taking into account the presence of harmonics.
     Base frequencies and their respective coupled harmonics are optimised simultaneously with every sinusoid group.
 
 All steps include a final cleanup of the sinusoids.
-This means that two things are attempted.
+This means that the following two things are attempted.
 The first is to try to remove individual sinusoids, and checking whether the BIC improves by doing so.
 Secondly, it is tested whether groups of closely spaced sinusoids can be replaced by a single sinusoid while improving
 the BIC.
-With closely spaced is meant chains of sinusoids within the frequency resolution of each other.
+Closely spaced in this context means chains of sinusoids that are within the frequency resolution of their direct
+neighbour.
+
+
+## Iterative pre-whitening
+
+
 
 
 # Configuration
