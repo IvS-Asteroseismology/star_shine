@@ -29,7 +29,10 @@
   <ul>
     <li><a href="#example-use">Example use</a></li>
   </ul></li>
-  <li><a href="#working-principles">Working Principles</a></li>
+  <li><a href="#working-principles">Working Principles</a>
+  <ul>
+    <li><a href="#iterative-pre-whitening">Iterative pre-whitening</a></li>
+  </ul></li>
   <li><a href="#configuration">Configuration</a>
   <ul>
     <li><a href="#general-settings">General settings</a></li>
@@ -201,44 +204,57 @@ amplitude, and the extracted frequencies.</p>
 
 <h1 id="working-principles">Working Principles</h1>
 
+<p>Between two researchers there will be three opinions and four methods of analysing the data.
+Usually there are multiple viable ways to do things, so what matters is to be clear about which path was taken.
+Star Shine strives to offer configurability to cater to diverse needs, while providing a robust framework of
+well motivated approaches.
+The built-in defaults form the recommended methodology as envisioned by the author.</p>
+
 <p>What follows is an extremely detailed description of the inner workings of Star Shine.
-This includes top-level descriptions, as well as motivations for the choices of specific algorithms [WIP].</p>
+This includes top-level descriptions, down to the motivations for the choices of specific algorithms [WIP].</p>
 
 <p>In broad lines, when running the fully automated pipeline, the following recipe is followed regardless of configuration:</p>
 
 <ol>
 <li><p>Extract all sinusoids.
-We start by extracting the frequency with the highest amplitude (or signal-to-noise ratio, see settings) one by one,
-directly from the Lomb-Scargle periodogram until the BIC (or signal-to-noise ratio, see settings) does not
-significantly (see settings) improve anymore.</p></li>
+Sinusoids are iteratively extracted from the periodogram in order of highest to lowest prominence (this is
+amplitude by default, but can also be signal-to-noise ratio - see settings).
+Each iteration can involve multiple steps, including multi-sinusoid non-linear optimisation.
+Iteration terminates when the acceptance threshold is no longer met (this is based on the BIC by default,
+but can also be signal-to-noise ratio - see settings).</p></li>
 <li><p>Multi-sinusoid NL-LS optimisation.
-The sinusoid parameters are optimised with a non-linear least-squares method, using groups of sinusoids to limit
-the number of free parameters.</p></li>
-<li><p>Measure the harmonic base frequency and couple the harmonic sinusoids.
-Primarily meant for the search of an eclipsing binary orbital period, the global search algorithm can find
-prominent series of harmonic sinusoids. It uses phase dispersion, Lomb-Scargle amplitude and length/filling factor
-of the harmonic series in the list of extracted sinusoids.
+The sinusoid parameters are optimised with an efficient multi-sinusoid non-linear least-squares method.
+Sinusoids are grouped according to their amplitude in order to limit the number of free parameters.</p></li>
+<li><p>Measure a harmonic base frequency and couple the harmonic sinusoids.
+Originally meant for the search of an eclipsing binary orbital period, the global search algorithm can find
+prominent series of harmonic sinusoids.
+It uses a combination of phase dispersion, Lomb-Scargle amplitude, and length/filling factor of the harmonic
+series in the list of extracted sinusoids.
+It is possible to provide a base frequency if it is already known.
 Knowing the base frequency, it then sets the frequencies of the harmonics to their integer multiple values to
 couple them.
-It is possible to provide a base frequency if it is already known.
-This base frequency will still be optimised in consequent optimisation steps.</p></li>
-<li><p>Attempt to extract additional sinusoids.
-The decreased number of free parameters (2 vs. 3) may allow the extraction of more harmonics, since the BIC
-punishes for free parameters.
-It is also attempted to extract more sinusoids like in step 1 again, now taking into account the presence of
-harmonics.</p></li>
+This process may remove a significant amount of sinusoids close to harmonic frequencies.
+The base frequency will be optimised in consequent optimisation steps.
+Multiple harmonic series are supported.</p></li>
+<li><p>Extract additional sinusoids.
+The decreased number of free parameters per harmonic sinusoid (2 vs. 3) may allow the extraction of more harmonics,
+since the BIC punishes for free parameters.
+It is also attempted to extract additional free sinusoids (a repetition of step 1), now taking into account the
+presence of harmonics.</p></li>
 <li><p>Multi-sinusoid NL-LS optimisation with coupled harmonics.
-The sinusoid parameters are optimised with a non-linear least-squares method, using groups of sinusoids to limit
-the number of free parameters.
+This is a repetition of step 2, now taking into account the presence of harmonics.
 Base frequencies and their respective coupled harmonics are optimised simultaneously with every sinusoid group.</p></li>
 </ol>
 
 <p>All steps include a final cleanup of the sinusoids.
-This means that two things are attempted.
+This means that the following two things are attempted.
 The first is to try to remove individual sinusoids, and checking whether the BIC improves by doing so.
 Secondly, it is tested whether groups of closely spaced sinusoids can be replaced by a single sinusoid while improving
 the BIC.
-With closely spaced is meant chains of sinusoids within the frequency resolution of each other.</p>
+Closely spaced in this context means chains of sinusoids that are within the frequency resolution of their direct
+neighbour.</p>
+
+<h2 id="iterative-pre-whitening">Iterative pre-whitening</h2>
 
 <h1 id="configuration">Configuration</h1>
 
@@ -593,290 +609,306 @@ If this interest you, make a feature request (or react to it if exists) on GitHu
 </span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a>
 </span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a><span class="sd"># Working Principles</span>
 </span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>
-</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a><span class="sd">What follows is an extremely detailed description of the inner workings of Star Shine.</span>
-</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="sd">This includes top-level descriptions, as well as motivations for the choices of specific algorithms [WIP].</span>
-</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>
-</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a><span class="sd">In broad lines, when running the fully automated pipeline, the following recipe is followed regardless of configuration:</span>
-</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a>
-</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a><span class="sd">1. Extract all sinusoids.</span>
-</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a><span class="sd">    We start by extracting the frequency with the highest amplitude (or signal-to-noise ratio, see settings) one by one,</span>
-</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a><span class="sd">    directly from the Lomb-Scargle periodogram until the BIC (or signal-to-noise ratio, see settings) does not</span>
-</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a><span class="sd">    significantly (see settings) improve anymore.</span>
-</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>
-</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a><span class="sd">2. Multi-sinusoid NL-LS optimisation.</span>
-</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a><span class="sd">    The sinusoid parameters are optimised with a non-linear least-squares method, using groups of sinusoids to limit</span>
-</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a><span class="sd">    the number of free parameters.</span>
-</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>
-</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a><span class="sd">3. Measure the harmonic base frequency and couple the harmonic sinusoids.</span>
-</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a><span class="sd">    Primarily meant for the search of an eclipsing binary orbital period, the global search algorithm can find</span>
-</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a><span class="sd">    prominent series of harmonic sinusoids. It uses phase dispersion, Lomb-Scargle amplitude and length/filling factor</span>
-</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a><span class="sd">    of the harmonic series in the list of extracted sinusoids.</span>
-</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a><span class="sd">    Knowing the base frequency, it then sets the frequencies of the harmonics to their integer multiple values to</span>
-</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a><span class="sd">    couple them.</span>
-</span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a><span class="sd">    It is possible to provide a base frequency if it is already known.</span>
-</span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a><span class="sd">    This base frequency will still be optimised in consequent optimisation steps.</span>
-</span><span id="L-146"><a href="#L-146"><span class="linenos">146</span></a>
-</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a><span class="sd">4. Attempt to extract additional sinusoids.</span>
-</span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a><span class="sd">    The decreased number of free parameters (2 vs. 3) may allow the extraction of more harmonics, since the BIC</span>
-</span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a><span class="sd">    punishes for free parameters.</span>
-</span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a><span class="sd">    It is also attempted to extract more sinusoids like in step 1 again, now taking into account the presence of</span>
-</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a><span class="sd">    harmonics.</span>
-</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>
-</span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a><span class="sd">5. Multi-sinusoid NL-LS optimisation with coupled harmonics.</span>
-</span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a><span class="sd">    The sinusoid parameters are optimised with a non-linear least-squares method, using groups of sinusoids to limit</span>
-</span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a><span class="sd">    the number of free parameters.</span>
-</span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a><span class="sd">    Base frequencies and their respective coupled harmonics are optimised simultaneously with every sinusoid group.</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a><span class="sd">Between two researchers there will be three opinions and four methods of analysing the data.</span>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="sd">Usually there are multiple viable ways to do things, so what matters is to be clear about which path was taken.</span>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a><span class="sd">Star Shine strives to offer configurability to cater to diverse needs, while providing a robust framework of</span>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a><span class="sd">well motivated approaches.</span>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a><span class="sd">The built-in defaults form the recommended methodology as envisioned by the author.</span>
+</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a><span class="sd">What follows is an extremely detailed description of the inner workings of Star Shine.</span>
+</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a><span class="sd">This includes top-level descriptions, down to the motivations for the choices of specific algorithms [WIP].</span>
+</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>
+</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a><span class="sd">In broad lines, when running the fully automated pipeline, the following recipe is followed regardless of configuration:</span>
+</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a>
+</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a><span class="sd">1. Extract all sinusoids.</span>
+</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a><span class="sd">    Sinusoids are iteratively extracted from the periodogram in order of highest to lowest prominence (this is</span>
+</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a><span class="sd">    amplitude by default, but can also be signal-to-noise ratio - see settings).</span>
+</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a><span class="sd">    Each iteration can involve multiple steps, including multi-sinusoid non-linear optimisation.</span>
+</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a><span class="sd">    Iteration terminates when the acceptance threshold is no longer met (this is based on the BIC by default,</span>
+</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a><span class="sd">    but can also be signal-to-noise ratio - see settings).</span>
+</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>
+</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a><span class="sd">2. Multi-sinusoid NL-LS optimisation.</span>
+</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a><span class="sd">    The sinusoid parameters are optimised with an efficient multi-sinusoid non-linear least-squares method.</span>
+</span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a><span class="sd">    Sinusoids are grouped according to their amplitude in order to limit the number of free parameters.</span>
+</span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a>
+</span><span id="L-146"><a href="#L-146"><span class="linenos">146</span></a><span class="sd">3. Measure a harmonic base frequency and couple the harmonic sinusoids.</span>
+</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a><span class="sd">    Originally meant for the search of an eclipsing binary orbital period, the global search algorithm can find</span>
+</span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a><span class="sd">    prominent series of harmonic sinusoids.</span>
+</span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a><span class="sd">    It uses a combination of phase dispersion, Lomb-Scargle amplitude, and length/filling factor of the harmonic</span>
+</span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a><span class="sd">    series in the list of extracted sinusoids.</span>
+</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a><span class="sd">    It is possible to provide a base frequency if it is already known.</span>
+</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a><span class="sd">    Knowing the base frequency, it then sets the frequencies of the harmonics to their integer multiple values to</span>
+</span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a><span class="sd">    couple them.</span>
+</span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a><span class="sd">    This process may remove a significant amount of sinusoids close to harmonic frequencies.</span>
+</span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a><span class="sd">    The base frequency will be optimised in consequent optimisation steps.</span>
+</span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a><span class="sd">    Multiple harmonic series are supported.</span>
 </span><span id="L-157"><a href="#L-157"><span class="linenos">157</span></a>
-</span><span id="L-158"><a href="#L-158"><span class="linenos">158</span></a><span class="sd">All steps include a final cleanup of the sinusoids.</span>
-</span><span id="L-159"><a href="#L-159"><span class="linenos">159</span></a><span class="sd">This means that two things are attempted.</span>
-</span><span id="L-160"><a href="#L-160"><span class="linenos">160</span></a><span class="sd">The first is to try to remove individual sinusoids, and checking whether the BIC improves by doing so.</span>
-</span><span id="L-161"><a href="#L-161"><span class="linenos">161</span></a><span class="sd">Secondly, it is tested whether groups of closely spaced sinusoids can be replaced by a single sinusoid while improving</span>
-</span><span id="L-162"><a href="#L-162"><span class="linenos">162</span></a><span class="sd">the BIC.</span>
-</span><span id="L-163"><a href="#L-163"><span class="linenos">163</span></a><span class="sd">With closely spaced is meant chains of sinusoids within the frequency resolution of each other.</span>
-</span><span id="L-164"><a href="#L-164"><span class="linenos">164</span></a>
-</span><span id="L-165"><a href="#L-165"><span class="linenos">165</span></a>
-</span><span id="L-166"><a href="#L-166"><span class="linenos">166</span></a><span class="sd"># Configuration</span>
+</span><span id="L-158"><a href="#L-158"><span class="linenos">158</span></a><span class="sd">4. Extract additional sinusoids.</span>
+</span><span id="L-159"><a href="#L-159"><span class="linenos">159</span></a><span class="sd">    The decreased number of free parameters per harmonic sinusoid (2 vs. 3) may allow the extraction of more harmonics,</span>
+</span><span id="L-160"><a href="#L-160"><span class="linenos">160</span></a><span class="sd">    since the BIC punishes for free parameters.</span>
+</span><span id="L-161"><a href="#L-161"><span class="linenos">161</span></a><span class="sd">    It is also attempted to extract additional free sinusoids (a repetition of step 1), now taking into account the</span>
+</span><span id="L-162"><a href="#L-162"><span class="linenos">162</span></a><span class="sd">    presence of harmonics.</span>
+</span><span id="L-163"><a href="#L-163"><span class="linenos">163</span></a>
+</span><span id="L-164"><a href="#L-164"><span class="linenos">164</span></a><span class="sd">5. Multi-sinusoid NL-LS optimisation with coupled harmonics.</span>
+</span><span id="L-165"><a href="#L-165"><span class="linenos">165</span></a><span class="sd">    This is a repetition of step 2, now taking into account the presence of harmonics.</span>
+</span><span id="L-166"><a href="#L-166"><span class="linenos">166</span></a><span class="sd">    Base frequencies and their respective coupled harmonics are optimised simultaneously with every sinusoid group.</span>
 </span><span id="L-167"><a href="#L-167"><span class="linenos">167</span></a>
-</span><span id="L-168"><a href="#L-168"><span class="linenos">168</span></a><span class="sd">In general, settings are always saved in the current session, only.</span>
-</span><span id="L-169"><a href="#L-169"><span class="linenos">169</span></a><span class="sd">At the start of a session, the configuration file config.yaml is read in from the default location (which is the</span>
-</span><span id="L-170"><a href="#L-170"><span class="linenos">170</span></a><span class="sd">star_shine/config directory).</span>
-</span><span id="L-171"><a href="#L-171"><span class="linenos">171</span></a><span class="sd">If it is not found in that location, or another error occurs, default values are used.</span>
-</span><span id="L-172"><a href="#L-172"><span class="linenos">172</span></a>
-</span><span id="L-173"><a href="#L-173"><span class="linenos">173</span></a><span class="sd">The configuration can be changed through the API using the function `sts.update_config(file_name=&#39;&#39;, settings=None)`.</span>
-</span><span id="L-174"><a href="#L-174"><span class="linenos">174</span></a><span class="sd">Only one of `file_name` or `settings` can be used at a time.</span>
-</span><span id="L-175"><a href="#L-175"><span class="linenos">175</span></a><span class="sd">The use of `file_name` is fairly self-explanatory: simply supply a file path to a valid Star Shine config file</span>
-</span><span id="L-176"><a href="#L-176"><span class="linenos">176</span></a><span class="sd">(yaml format).</span>
-</span><span id="L-177"><a href="#L-177"><span class="linenos">177</span></a><span class="sd">The `settings` keyword argument expects a dictionary with keys that are valid setting names.</span>
-</span><span id="L-178"><a href="#L-178"><span class="linenos">178</span></a><span class="sd">This offers a convenient way to change only one or a few settings at a time.</span>
+</span><span id="L-168"><a href="#L-168"><span class="linenos">168</span></a><span class="sd">All steps include a final cleanup of the sinusoids.</span>
+</span><span id="L-169"><a href="#L-169"><span class="linenos">169</span></a><span class="sd">This means that the following two things are attempted.</span>
+</span><span id="L-170"><a href="#L-170"><span class="linenos">170</span></a><span class="sd">The first is to try to remove individual sinusoids, and checking whether the BIC improves by doing so.</span>
+</span><span id="L-171"><a href="#L-171"><span class="linenos">171</span></a><span class="sd">Secondly, it is tested whether groups of closely spaced sinusoids can be replaced by a single sinusoid while improving</span>
+</span><span id="L-172"><a href="#L-172"><span class="linenos">172</span></a><span class="sd">the BIC.</span>
+</span><span id="L-173"><a href="#L-173"><span class="linenos">173</span></a><span class="sd">Closely spaced in this context means chains of sinusoids that are within the frequency resolution of their direct</span>
+</span><span id="L-174"><a href="#L-174"><span class="linenos">174</span></a><span class="sd">neighbour.</span>
+</span><span id="L-175"><a href="#L-175"><span class="linenos">175</span></a>
+</span><span id="L-176"><a href="#L-176"><span class="linenos">176</span></a>
+</span><span id="L-177"><a href="#L-177"><span class="linenos">177</span></a><span class="sd">## Iterative pre-whitening</span>
+</span><span id="L-178"><a href="#L-178"><span class="linenos">178</span></a>
 </span><span id="L-179"><a href="#L-179"><span class="linenos">179</span></a>
-</span><span id="L-180"><a href="#L-180"><span class="linenos">180</span></a><span class="sd">To change settings in the GUI, go to File &gt; Settings, change any fields and click Apply.</span>
-</span><span id="L-181"><a href="#L-181"><span class="linenos">181</span></a><span class="sd">A valid config file may also be used by going to File &gt; Import Settings.</span>
-</span><span id="L-182"><a href="#L-182"><span class="linenos">182</span></a>
-</span><span id="L-183"><a href="#L-183"><span class="linenos">183</span></a><span class="sd">The configuration can be saved to file using the API function `sts.save_config(file_name=&#39;&#39;)`.</span>
-</span><span id="L-184"><a href="#L-184"><span class="linenos">184</span></a><span class="sd">If no file name is supplied, this overwrites the config file in the default location.</span>
-</span><span id="L-185"><a href="#L-185"><span class="linenos">185</span></a>
-</span><span id="L-186"><a href="#L-186"><span class="linenos">186</span></a><span class="sd">In the GUI, the settings can be saved by clicking Save in the File &gt; Settings dialog.</span>
-</span><span id="L-187"><a href="#L-187"><span class="linenos">187</span></a><span class="sd">To save a copy of the config file under a different name or directory, choose File &gt; Export Settings.</span>
+</span><span id="L-180"><a href="#L-180"><span class="linenos">180</span></a>
+</span><span id="L-181"><a href="#L-181"><span class="linenos">181</span></a>
+</span><span id="L-182"><a href="#L-182"><span class="linenos">182</span></a><span class="sd"># Configuration</span>
+</span><span id="L-183"><a href="#L-183"><span class="linenos">183</span></a>
+</span><span id="L-184"><a href="#L-184"><span class="linenos">184</span></a><span class="sd">In general, settings are always saved in the current session, only.</span>
+</span><span id="L-185"><a href="#L-185"><span class="linenos">185</span></a><span class="sd">At the start of a session, the configuration file config.yaml is read in from the default location (which is the</span>
+</span><span id="L-186"><a href="#L-186"><span class="linenos">186</span></a><span class="sd">star_shine/config directory).</span>
+</span><span id="L-187"><a href="#L-187"><span class="linenos">187</span></a><span class="sd">If it is not found in that location, or another error occurs, default values are used.</span>
 </span><span id="L-188"><a href="#L-188"><span class="linenos">188</span></a>
-</span><span id="L-189"><a href="#L-189"><span class="linenos">189</span></a><span class="sd">All settings are explained in more detail below.</span>
-</span><span id="L-190"><a href="#L-190"><span class="linenos">190</span></a>
-</span><span id="L-191"><a href="#L-191"><span class="linenos">191</span></a><span class="sd">## General settings</span>
-</span><span id="L-192"><a href="#L-192"><span class="linenos">192</span></a>
-</span><span id="L-193"><a href="#L-193"><span class="linenos">193</span></a><span class="sd">`verbose`: bool, default=True</span>
-</span><span id="L-194"><a href="#L-194"><span class="linenos">194</span></a>
-</span><span id="L-195"><a href="#L-195"><span class="linenos">195</span></a><span class="sd">Print information during runtime.</span>
-</span><span id="L-196"><a href="#L-196"><span class="linenos">196</span></a><span class="sd">This includes detailed progress updates that are not normally logged.</span>
-</span><span id="L-197"><a href="#L-197"><span class="linenos">197</span></a><span class="sd">Some status messages are always logged to a file in the same directory as the analysis results.</span>
-</span><span id="L-198"><a href="#L-198"><span class="linenos">198</span></a><span class="sd">This setting is always active in the GUI.</span>
-</span><span id="L-199"><a href="#L-199"><span class="linenos">199</span></a>
-</span><span id="L-200"><a href="#L-200"><span class="linenos">200</span></a><span class="sd">`stop_at_stage`: int, default=0</span>
+</span><span id="L-189"><a href="#L-189"><span class="linenos">189</span></a><span class="sd">The configuration can be changed through the API using the function `sts.update_config(file_name=&#39;&#39;, settings=None)`.</span>
+</span><span id="L-190"><a href="#L-190"><span class="linenos">190</span></a><span class="sd">Only one of `file_name` or `settings` can be used at a time.</span>
+</span><span id="L-191"><a href="#L-191"><span class="linenos">191</span></a><span class="sd">The use of `file_name` is fairly self-explanatory: simply supply a file path to a valid Star Shine config file</span>
+</span><span id="L-192"><a href="#L-192"><span class="linenos">192</span></a><span class="sd">(yaml format).</span>
+</span><span id="L-193"><a href="#L-193"><span class="linenos">193</span></a><span class="sd">The `settings` keyword argument expects a dictionary with keys that are valid setting names.</span>
+</span><span id="L-194"><a href="#L-194"><span class="linenos">194</span></a><span class="sd">This offers a convenient way to change only one or a few settings at a time.</span>
+</span><span id="L-195"><a href="#L-195"><span class="linenos">195</span></a>
+</span><span id="L-196"><a href="#L-196"><span class="linenos">196</span></a><span class="sd">To change settings in the GUI, go to File &gt; Settings, change any fields and click Apply.</span>
+</span><span id="L-197"><a href="#L-197"><span class="linenos">197</span></a><span class="sd">A valid config file may also be used by going to File &gt; Import Settings.</span>
+</span><span id="L-198"><a href="#L-198"><span class="linenos">198</span></a>
+</span><span id="L-199"><a href="#L-199"><span class="linenos">199</span></a><span class="sd">The configuration can be saved to file using the API function `sts.save_config(file_name=&#39;&#39;)`.</span>
+</span><span id="L-200"><a href="#L-200"><span class="linenos">200</span></a><span class="sd">If no file name is supplied, this overwrites the config file in the default location.</span>
 </span><span id="L-201"><a href="#L-201"><span class="linenos">201</span></a>
-</span><span id="L-202"><a href="#L-202"><span class="linenos">202</span></a><span class="sd">Run the analysis up to and including this stage; 0 means all stages are run.</span>
-</span><span id="L-203"><a href="#L-203"><span class="linenos">203</span></a><span class="sd">When running the full pipeline, a predefined sequence of analysis steps is performed.</span>
-</span><span id="L-204"><a href="#L-204"><span class="linenos">204</span></a><span class="sd">The followed recipe is: &#39;iterative_prewhitening&#39;, &#39;optimise_sinusoid&#39;, &#39;couple_harmonics&#39;, &#39;iterative_prewhitening&#39;,</span>
-</span><span id="L-205"><a href="#L-205"><span class="linenos">205</span></a><span class="sd">&#39;optimise_sinusoid&#39;.</span>
-</span><span id="L-206"><a href="#L-206"><span class="linenos">206</span></a><span class="sd">For more detail, see &quot;Working Principles&quot;.</span>
-</span><span id="L-207"><a href="#L-207"><span class="linenos">207</span></a>
-</span><span id="L-208"><a href="#L-208"><span class="linenos">208</span></a><span class="sd">## Extraction settings</span>
-</span><span id="L-209"><a href="#L-209"><span class="linenos">209</span></a>
-</span><span id="L-210"><a href="#L-210"><span class="linenos">210</span></a><span class="sd">`select_next`: str, default=&#39;hybrid&#39;</span>
-</span><span id="L-211"><a href="#L-211"><span class="linenos">211</span></a>
-</span><span id="L-212"><a href="#L-212"><span class="linenos">212</span></a><span class="sd">Select the next sinusoid in iterative extraction based on amplitude (&#39;amp&#39;), signal-to-noise ratio (&#39;snr&#39;), or first</span>
-</span><span id="L-213"><a href="#L-213"><span class="linenos">213</span></a><span class="sd">amplitude and then signal-to-noise ratio (&#39;hybrid&#39;).</span>
-</span><span id="L-214"><a href="#L-214"><span class="linenos">214</span></a><span class="sd">The latter option is an attempt at avoiding red noise when there is still high-frequency signal present at lower</span>
-</span><span id="L-215"><a href="#L-215"><span class="linenos">215</span></a><span class="sd">amplitudes.</span>
-</span><span id="L-216"><a href="#L-216"><span class="linenos">216</span></a>
-</span><span id="L-217"><a href="#L-217"><span class="linenos">217</span></a><span class="sd">`optimise_step`: bool, default=True</span>
-</span><span id="L-218"><a href="#L-218"><span class="linenos">218</span></a>
-</span><span id="L-219"><a href="#L-219"><span class="linenos">219</span></a><span class="sd">Optimise with a multi-sinusoid non-linear fit at every step (True) or only at the end (False).</span>
-</span><span id="L-220"><a href="#L-220"><span class="linenos">220</span></a><span class="sd">In case of False, the fit at the end is only automatically performed when running the full pipeline.</span>
-</span><span id="L-221"><a href="#L-221"><span class="linenos">221</span></a><span class="sd">When running the iterative prewhitening separately, the fit at the end has to be performed manually.</span>
-</span><span id="L-222"><a href="#L-222"><span class="linenos">222</span></a>
-</span><span id="L-223"><a href="#L-223"><span class="linenos">223</span></a><span class="sd">`replace_step`: bool, default=True</span>
-</span><span id="L-224"><a href="#L-224"><span class="linenos">224</span></a>
-</span><span id="L-225"><a href="#L-225"><span class="linenos">225</span></a><span class="sd">Attempt to replace closely spaced sinusoids by one sinusoid at every step (True) or only at the end (False).</span>
-</span><span id="L-226"><a href="#L-226"><span class="linenos">226</span></a><span class="sd">Contrary to the optimise_step setting, this is always included automatically at the end of iterative prewhitening.</span>
+</span><span id="L-202"><a href="#L-202"><span class="linenos">202</span></a><span class="sd">In the GUI, the settings can be saved by clicking Save in the File &gt; Settings dialog.</span>
+</span><span id="L-203"><a href="#L-203"><span class="linenos">203</span></a><span class="sd">To save a copy of the config file under a different name or directory, choose File &gt; Export Settings.</span>
+</span><span id="L-204"><a href="#L-204"><span class="linenos">204</span></a>
+</span><span id="L-205"><a href="#L-205"><span class="linenos">205</span></a><span class="sd">All settings are explained in more detail below.</span>
+</span><span id="L-206"><a href="#L-206"><span class="linenos">206</span></a>
+</span><span id="L-207"><a href="#L-207"><span class="linenos">207</span></a><span class="sd">## General settings</span>
+</span><span id="L-208"><a href="#L-208"><span class="linenos">208</span></a>
+</span><span id="L-209"><a href="#L-209"><span class="linenos">209</span></a><span class="sd">`verbose`: bool, default=True</span>
+</span><span id="L-210"><a href="#L-210"><span class="linenos">210</span></a>
+</span><span id="L-211"><a href="#L-211"><span class="linenos">211</span></a><span class="sd">Print information during runtime.</span>
+</span><span id="L-212"><a href="#L-212"><span class="linenos">212</span></a><span class="sd">This includes detailed progress updates that are not normally logged.</span>
+</span><span id="L-213"><a href="#L-213"><span class="linenos">213</span></a><span class="sd">Some status messages are always logged to a file in the same directory as the analysis results.</span>
+</span><span id="L-214"><a href="#L-214"><span class="linenos">214</span></a><span class="sd">This setting is always active in the GUI.</span>
+</span><span id="L-215"><a href="#L-215"><span class="linenos">215</span></a>
+</span><span id="L-216"><a href="#L-216"><span class="linenos">216</span></a><span class="sd">`stop_at_stage`: int, default=0</span>
+</span><span id="L-217"><a href="#L-217"><span class="linenos">217</span></a>
+</span><span id="L-218"><a href="#L-218"><span class="linenos">218</span></a><span class="sd">Run the analysis up to and including this stage; 0 means all stages are run.</span>
+</span><span id="L-219"><a href="#L-219"><span class="linenos">219</span></a><span class="sd">When running the full pipeline, a predefined sequence of analysis steps is performed.</span>
+</span><span id="L-220"><a href="#L-220"><span class="linenos">220</span></a><span class="sd">The followed recipe is: &#39;iterative_prewhitening&#39;, &#39;optimise_sinusoid&#39;, &#39;couple_harmonics&#39;, &#39;iterative_prewhitening&#39;,</span>
+</span><span id="L-221"><a href="#L-221"><span class="linenos">221</span></a><span class="sd">&#39;optimise_sinusoid&#39;.</span>
+</span><span id="L-222"><a href="#L-222"><span class="linenos">222</span></a><span class="sd">For more detail, see &quot;Working Principles&quot;.</span>
+</span><span id="L-223"><a href="#L-223"><span class="linenos">223</span></a>
+</span><span id="L-224"><a href="#L-224"><span class="linenos">224</span></a><span class="sd">## Extraction settings</span>
+</span><span id="L-225"><a href="#L-225"><span class="linenos">225</span></a>
+</span><span id="L-226"><a href="#L-226"><span class="linenos">226</span></a><span class="sd">`select_next`: str, default=&#39;hybrid&#39;</span>
 </span><span id="L-227"><a href="#L-227"><span class="linenos">227</span></a>
-</span><span id="L-228"><a href="#L-228"><span class="linenos">228</span></a><span class="sd">`stop_criterion`: str, default=&#39;bic&#39;</span>
-</span><span id="L-229"><a href="#L-229"><span class="linenos">229</span></a>
-</span><span id="L-230"><a href="#L-230"><span class="linenos">230</span></a><span class="sd">Stop criterion for the iterative extraction of sinusoids will be based on BIC (&#39;bic&#39;), or signal-to-noise ratio (&#39;snr&#39;).</span>
-</span><span id="L-231"><a href="#L-231"><span class="linenos">231</span></a><span class="sd">The BIC provides a more objective measure of the information content of the time series.</span>
-</span><span id="L-232"><a href="#L-232"><span class="linenos">232</span></a><span class="sd">It is recommended to use the BIC here, in tandem with a signal-to-noise ratio cut before physical interpretation.</span>
-</span><span id="L-233"><a href="#L-233"><span class="linenos">233</span></a>
-</span><span id="L-234"><a href="#L-234"><span class="linenos">234</span></a><span class="sd">`bic_thr`: float, default=2.0</span>
-</span><span id="L-235"><a href="#L-235"><span class="linenos">235</span></a>
-</span><span id="L-236"><a href="#L-236"><span class="linenos">236</span></a><span class="sd">Delta-BIC threshold for the acceptance of sinusoids, if stop_criterion is set to &#39;bic&#39;.</span>
-</span><span id="L-237"><a href="#L-237"><span class="linenos">237</span></a><span class="sd">Values of 2 to 10 are rule-of-thumb values that approximately correspond to certainty levels &#39;weak evidence&#39; to</span>
-</span><span id="L-238"><a href="#L-238"><span class="linenos">238</span></a><span class="sd">&#39;strong evidence&#39;.</span>
-</span><span id="L-239"><a href="#L-239"><span class="linenos">239</span></a>
-</span><span id="L-240"><a href="#L-240"><span class="linenos">240</span></a><span class="sd">`snr_thr`: float, default=-1.0</span>
-</span><span id="L-241"><a href="#L-241"><span class="linenos">241</span></a>
-</span><span id="L-242"><a href="#L-242"><span class="linenos">242</span></a><span class="sd">Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1.</span>
-</span><span id="L-243"><a href="#L-243"><span class="linenos">243</span></a><span class="sd">This is both for if stop_criterion is set to &#39;snr&#39;, and for use in the built-in method for making signal-to-noise ratio</span>
-</span><span id="L-244"><a href="#L-244"><span class="linenos">244</span></a><span class="sd">cuts after the time series analysis is done.</span>
-</span><span id="L-245"><a href="#L-245"><span class="linenos">245</span></a><span class="sd">The built-in method is specific to TESS, see the documentation for more information.</span>
-</span><span id="L-246"><a href="#L-246"><span class="linenos">246</span></a>
-</span><span id="L-247"><a href="#L-247"><span class="linenos">247</span></a><span class="sd">`nyquist_factor`: float, default=1.0</span>
-</span><span id="L-248"><a href="#L-248"><span class="linenos">248</span></a>
-</span><span id="L-249"><a href="#L-249"><span class="linenos">249</span></a><span class="sd">The simple Nyquist frequency approximation (1/(2 delta_t_min)) is multiplied by this factor.</span>
-</span><span id="L-250"><a href="#L-250"><span class="linenos">250</span></a><span class="sd">The Nyquist frequency is defined as the highest frequency that can be found in a time series dataset of fixed time</span>
-</span><span id="L-251"><a href="#L-251"><span class="linenos">251</span></a><span class="sd">interval.</span>
-</span><span id="L-252"><a href="#L-252"><span class="linenos">252</span></a><span class="sd">For irregular time intervals, it can be approximated by using the minimum time interval that occurs in the time series.</span>
-</span><span id="L-253"><a href="#L-253"><span class="linenos">253</span></a><span class="sd">However, a more rigorous approach shows that the actual Nyquist frequency can be a large integer times higher than this</span>
-</span><span id="L-254"><a href="#L-254"><span class="linenos">254</span></a><span class="sd">estimate.</span>
-</span><span id="L-255"><a href="#L-255"><span class="linenos">255</span></a><span class="sd">Therefore, this factor allows the user to increase the highest frequency of sinusoid extraction.</span>
-</span><span id="L-256"><a href="#L-256"><span class="linenos">256</span></a>
-</span><span id="L-257"><a href="#L-257"><span class="linenos">257</span></a><span class="sd">Note: harmonic sinusoids are always extracted up to twice the limiting frequency value, due to their additional</span>
-</span><span id="L-258"><a href="#L-258"><span class="linenos">258</span></a><span class="sd">constraint.</span>
-</span><span id="L-259"><a href="#L-259"><span class="linenos">259</span></a>
-</span><span id="L-260"><a href="#L-260"><span class="linenos">260</span></a><span class="sd">`resolution_factor`: float, default=1.5</span>
-</span><span id="L-261"><a href="#L-261"><span class="linenos">261</span></a>
-</span><span id="L-262"><a href="#L-262"><span class="linenos">262</span></a><span class="sd">The frequency resolution (1/T) is multiplied by this factor.</span>
-</span><span id="L-263"><a href="#L-263"><span class="linenos">263</span></a><span class="sd">The frequency resolution defines the separation between two periodogram peaks that is needed to distinguish them from</span>
-</span><span id="L-264"><a href="#L-264"><span class="linenos">264</span></a><span class="sd">each other.</span>
-</span><span id="L-265"><a href="#L-265"><span class="linenos">265</span></a><span class="sd">Due to complex window functions and subsequent spectral windows, it may be desirable to increase this value.</span>
-</span><span id="L-266"><a href="#L-266"><span class="linenos">266</span></a><span class="sd">By default, a factor of one and a half is already applied, as is common practice in asteroseismology.</span>
-</span><span id="L-267"><a href="#L-267"><span class="linenos">267</span></a>
-</span><span id="L-268"><a href="#L-268"><span class="linenos">268</span></a><span class="sd">Note: the frequency resolution is not used as an exclusion zone around extracted frequencies, and this is not a</span>
-</span><span id="L-269"><a href="#L-269"><span class="linenos">269</span></a><span class="sd">supported feature of Star Shine.</span>
-</span><span id="L-270"><a href="#L-270"><span class="linenos">270</span></a><span class="sd">Experience teaches that this leads to worse models.</span>
-</span><span id="L-271"><a href="#L-271"><span class="linenos">271</span></a>
-</span><span id="L-272"><a href="#L-272"><span class="linenos">272</span></a><span class="sd">`window_width`: float, default=1.0</span>
-</span><span id="L-273"><a href="#L-273"><span class="linenos">273</span></a>
-</span><span id="L-274"><a href="#L-274"><span class="linenos">274</span></a><span class="sd">Periodogram spectral noise is calculated over this window width.</span>
-</span><span id="L-275"><a href="#L-275"><span class="linenos">275</span></a><span class="sd">Only influences the extraction in the signal-to-noise ratio mode of picking the next sinusoid.</span>
-</span><span id="L-276"><a href="#L-276"><span class="linenos">276</span></a>
-</span><span id="L-277"><a href="#L-277"><span class="linenos">277</span></a><span class="sd">## Optimisation settings</span>
-</span><span id="L-278"><a href="#L-278"><span class="linenos">278</span></a>
-</span><span id="L-279"><a href="#L-279"><span class="linenos">279</span></a><span class="sd">`min_group`: int, default=45</span>
-</span><span id="L-280"><a href="#L-280"><span class="linenos">280</span></a>
-</span><span id="L-281"><a href="#L-281"><span class="linenos">281</span></a><span class="sd">Minimum group size for the multi-sinusoid non-linear fit.</span>
-</span><span id="L-282"><a href="#L-282"><span class="linenos">282</span></a><span class="sd">See `max_group` below for more information.</span>
+</span><span id="L-228"><a href="#L-228"><span class="linenos">228</span></a><span class="sd">Select the next sinusoid in iterative extraction based on amplitude (&#39;amp&#39;), signal-to-noise ratio (&#39;snr&#39;), or first</span>
+</span><span id="L-229"><a href="#L-229"><span class="linenos">229</span></a><span class="sd">amplitude and then signal-to-noise ratio (&#39;hybrid&#39;).</span>
+</span><span id="L-230"><a href="#L-230"><span class="linenos">230</span></a><span class="sd">The latter option is an attempt at avoiding red noise when there is still high-frequency signal present at lower</span>
+</span><span id="L-231"><a href="#L-231"><span class="linenos">231</span></a><span class="sd">amplitudes.</span>
+</span><span id="L-232"><a href="#L-232"><span class="linenos">232</span></a>
+</span><span id="L-233"><a href="#L-233"><span class="linenos">233</span></a><span class="sd">`optimise_step`: bool, default=True</span>
+</span><span id="L-234"><a href="#L-234"><span class="linenos">234</span></a>
+</span><span id="L-235"><a href="#L-235"><span class="linenos">235</span></a><span class="sd">Optimise with a multi-sinusoid non-linear fit at every step (True) or only at the end (False).</span>
+</span><span id="L-236"><a href="#L-236"><span class="linenos">236</span></a><span class="sd">In case of False, the fit at the end is only automatically performed when running the full pipeline.</span>
+</span><span id="L-237"><a href="#L-237"><span class="linenos">237</span></a><span class="sd">When running the iterative prewhitening separately, the fit at the end has to be performed manually.</span>
+</span><span id="L-238"><a href="#L-238"><span class="linenos">238</span></a>
+</span><span id="L-239"><a href="#L-239"><span class="linenos">239</span></a><span class="sd">`replace_step`: bool, default=True</span>
+</span><span id="L-240"><a href="#L-240"><span class="linenos">240</span></a>
+</span><span id="L-241"><a href="#L-241"><span class="linenos">241</span></a><span class="sd">Attempt to replace closely spaced sinusoids by one sinusoid at every step (True) or only at the end (False).</span>
+</span><span id="L-242"><a href="#L-242"><span class="linenos">242</span></a><span class="sd">Contrary to the optimise_step setting, this is always included automatically at the end of iterative prewhitening.</span>
+</span><span id="L-243"><a href="#L-243"><span class="linenos">243</span></a>
+</span><span id="L-244"><a href="#L-244"><span class="linenos">244</span></a><span class="sd">`stop_criterion`: str, default=&#39;bic&#39;</span>
+</span><span id="L-245"><a href="#L-245"><span class="linenos">245</span></a>
+</span><span id="L-246"><a href="#L-246"><span class="linenos">246</span></a><span class="sd">Stop criterion for the iterative extraction of sinusoids will be based on BIC (&#39;bic&#39;), or signal-to-noise ratio (&#39;snr&#39;).</span>
+</span><span id="L-247"><a href="#L-247"><span class="linenos">247</span></a><span class="sd">The BIC provides a more objective measure of the information content of the time series.</span>
+</span><span id="L-248"><a href="#L-248"><span class="linenos">248</span></a><span class="sd">It is recommended to use the BIC here, in tandem with a signal-to-noise ratio cut before physical interpretation.</span>
+</span><span id="L-249"><a href="#L-249"><span class="linenos">249</span></a>
+</span><span id="L-250"><a href="#L-250"><span class="linenos">250</span></a><span class="sd">`bic_thr`: float, default=2.0</span>
+</span><span id="L-251"><a href="#L-251"><span class="linenos">251</span></a>
+</span><span id="L-252"><a href="#L-252"><span class="linenos">252</span></a><span class="sd">Delta-BIC threshold for the acceptance of sinusoids, if stop_criterion is set to &#39;bic&#39;.</span>
+</span><span id="L-253"><a href="#L-253"><span class="linenos">253</span></a><span class="sd">Values of 2 to 10 are rule-of-thumb values that approximately correspond to certainty levels &#39;weak evidence&#39; to</span>
+</span><span id="L-254"><a href="#L-254"><span class="linenos">254</span></a><span class="sd">&#39;strong evidence&#39;.</span>
+</span><span id="L-255"><a href="#L-255"><span class="linenos">255</span></a>
+</span><span id="L-256"><a href="#L-256"><span class="linenos">256</span></a><span class="sd">`snr_thr`: float, default=-1.0</span>
+</span><span id="L-257"><a href="#L-257"><span class="linenos">257</span></a>
+</span><span id="L-258"><a href="#L-258"><span class="linenos">258</span></a><span class="sd">Signal-to-noise threshold for the acceptance of sinusoids, uses a built-in method if set to -1.</span>
+</span><span id="L-259"><a href="#L-259"><span class="linenos">259</span></a><span class="sd">This is both for if stop_criterion is set to &#39;snr&#39;, and for use in the built-in method for making signal-to-noise ratio</span>
+</span><span id="L-260"><a href="#L-260"><span class="linenos">260</span></a><span class="sd">cuts after the time series analysis is done.</span>
+</span><span id="L-261"><a href="#L-261"><span class="linenos">261</span></a><span class="sd">The built-in method is specific to TESS, see the documentation for more information.</span>
+</span><span id="L-262"><a href="#L-262"><span class="linenos">262</span></a>
+</span><span id="L-263"><a href="#L-263"><span class="linenos">263</span></a><span class="sd">`nyquist_factor`: float, default=1.0</span>
+</span><span id="L-264"><a href="#L-264"><span class="linenos">264</span></a>
+</span><span id="L-265"><a href="#L-265"><span class="linenos">265</span></a><span class="sd">The simple Nyquist frequency approximation (1/(2 delta_t_min)) is multiplied by this factor.</span>
+</span><span id="L-266"><a href="#L-266"><span class="linenos">266</span></a><span class="sd">The Nyquist frequency is defined as the highest frequency that can be found in a time series dataset of fixed time</span>
+</span><span id="L-267"><a href="#L-267"><span class="linenos">267</span></a><span class="sd">interval.</span>
+</span><span id="L-268"><a href="#L-268"><span class="linenos">268</span></a><span class="sd">For irregular time intervals, it can be approximated by using the minimum time interval that occurs in the time series.</span>
+</span><span id="L-269"><a href="#L-269"><span class="linenos">269</span></a><span class="sd">However, a more rigorous approach shows that the actual Nyquist frequency can be a large integer times higher than this</span>
+</span><span id="L-270"><a href="#L-270"><span class="linenos">270</span></a><span class="sd">estimate.</span>
+</span><span id="L-271"><a href="#L-271"><span class="linenos">271</span></a><span class="sd">Therefore, this factor allows the user to increase the highest frequency of sinusoid extraction.</span>
+</span><span id="L-272"><a href="#L-272"><span class="linenos">272</span></a>
+</span><span id="L-273"><a href="#L-273"><span class="linenos">273</span></a><span class="sd">Note: harmonic sinusoids are always extracted up to twice the limiting frequency value, due to their additional</span>
+</span><span id="L-274"><a href="#L-274"><span class="linenos">274</span></a><span class="sd">constraint.</span>
+</span><span id="L-275"><a href="#L-275"><span class="linenos">275</span></a>
+</span><span id="L-276"><a href="#L-276"><span class="linenos">276</span></a><span class="sd">`resolution_factor`: float, default=1.5</span>
+</span><span id="L-277"><a href="#L-277"><span class="linenos">277</span></a>
+</span><span id="L-278"><a href="#L-278"><span class="linenos">278</span></a><span class="sd">The frequency resolution (1/T) is multiplied by this factor.</span>
+</span><span id="L-279"><a href="#L-279"><span class="linenos">279</span></a><span class="sd">The frequency resolution defines the separation between two periodogram peaks that is needed to distinguish them from</span>
+</span><span id="L-280"><a href="#L-280"><span class="linenos">280</span></a><span class="sd">each other.</span>
+</span><span id="L-281"><a href="#L-281"><span class="linenos">281</span></a><span class="sd">Due to complex window functions and subsequent spectral windows, it may be desirable to increase this value.</span>
+</span><span id="L-282"><a href="#L-282"><span class="linenos">282</span></a><span class="sd">By default, a factor of one and a half is already applied, as is common practice in asteroseismology.</span>
 </span><span id="L-283"><a href="#L-283"><span class="linenos">283</span></a>
-</span><span id="L-284"><a href="#L-284"><span class="linenos">284</span></a><span class="sd">`max_group`: int, default=50</span>
-</span><span id="L-285"><a href="#L-285"><span class="linenos">285</span></a>
-</span><span id="L-286"><a href="#L-286"><span class="linenos">286</span></a><span class="sd">Maximum group size for the multi-sinusoid non-linear fit (max_group &gt; min_group).</span>
-</span><span id="L-287"><a href="#L-287"><span class="linenos">287</span></a><span class="sd">Simultaneously optimising a larger number of sinusoids is beneficial for the quality of the fit, but may drastically</span>
-</span><span id="L-288"><a href="#L-288"><span class="linenos">288</span></a><span class="sd">increase the time it takes to complete.</span>
-</span><span id="L-289"><a href="#L-289"><span class="linenos">289</span></a><span class="sd">Make sure max_group is always larger than min_group.</span>
-</span><span id="L-290"><a href="#L-290"><span class="linenos">290</span></a><span class="sd">The final group sizes are determined during runtime by the largest amplitude jump within the group size limits.</span>
-</span><span id="L-291"><a href="#L-291"><span class="linenos">291</span></a>
-</span><span id="L-292"><a href="#L-292"><span class="linenos">292</span></a><span class="sd">## Data and File settings</span>
-</span><span id="L-293"><a href="#L-293"><span class="linenos">293</span></a>
-</span><span id="L-294"><a href="#L-294"><span class="linenos">294</span></a><span class="sd">`overwrite`: bool, default=False</span>
-</span><span id="L-295"><a href="#L-295"><span class="linenos">295</span></a>
-</span><span id="L-296"><a href="#L-296"><span class="linenos">296</span></a><span class="sd">Overwrite existing result files.</span>
-</span><span id="L-297"><a href="#L-297"><span class="linenos">297</span></a><span class="sd">When running the full pipeline, save files are automatically generated.</span>
-</span><span id="L-298"><a href="#L-298"><span class="linenos">298</span></a><span class="sd">Any pre-existing save files of the same name will be overwritten if this setting is set to True.</span>
-</span><span id="L-299"><a href="#L-299"><span class="linenos">299</span></a><span class="sd">Otherwise, existing save files of the same name will be loaded and their results used to skip ahead in the pipeline.</span>
-</span><span id="L-300"><a href="#L-300"><span class="linenos">300</span></a>
-</span><span id="L-301"><a href="#L-301"><span class="linenos">301</span></a><span class="sd">`data_dir`: str, default=&#39;&#39;</span>
-</span><span id="L-302"><a href="#L-302"><span class="linenos">302</span></a>
-</span><span id="L-303"><a href="#L-303"><span class="linenos">303</span></a><span class="sd">Root directory where the data files to be analysed are located; if empty will use current dir.</span>
-</span><span id="L-304"><a href="#L-304"><span class="linenos">304</span></a><span class="sd">Appended to the front of the file name(s).</span>
-</span><span id="L-305"><a href="#L-305"><span class="linenos">305</span></a><span class="sd">Mainly for use in automated scripts, not relevant in the GUI.</span>
-</span><span id="L-306"><a href="#L-306"><span class="linenos">306</span></a>
-</span><span id="L-307"><a href="#L-307"><span class="linenos">307</span></a><span class="sd">`save_dir`: str, default=&#39;&#39;</span>
-</span><span id="L-308"><a href="#L-308"><span class="linenos">308</span></a>
-</span><span id="L-309"><a href="#L-309"><span class="linenos">309</span></a><span class="sd">Root directory where analysis results will be saved; if empty will use current dir.</span>
-</span><span id="L-310"><a href="#L-310"><span class="linenos">310</span></a><span class="sd">Appended to the front of the file name(s).</span>
-</span><span id="L-311"><a href="#L-311"><span class="linenos">311</span></a><span class="sd">A subdirectory is automatically made with the target identifier to store the results and log file.</span>
-</span><span id="L-312"><a href="#L-312"><span class="linenos">312</span></a>
-</span><span id="L-313"><a href="#L-313"><span class="linenos">313</span></a><span class="sd">`save_ascii`: bool, default=False</span>
-</span><span id="L-314"><a href="#L-314"><span class="linenos">314</span></a>
-</span><span id="L-315"><a href="#L-315"><span class="linenos">315</span></a><span class="sd">Save ascii variants of the HDF5 result files.</span>
-</span><span id="L-316"><a href="#L-316"><span class="linenos">316</span></a><span class="sd">Saves several CSV files per HDF5 file, due to format constraints.</span>
-</span><span id="L-317"><a href="#L-317"><span class="linenos">317</span></a>
-</span><span id="L-318"><a href="#L-318"><span class="linenos">318</span></a><span class="sd">## Tabulated File settings</span>
-</span><span id="L-319"><a href="#L-319"><span class="linenos">319</span></a>
-</span><span id="L-320"><a href="#L-320"><span class="linenos">320</span></a><span class="sd">`cn_time`: str, default=&#39;time&#39;</span>
-</span><span id="L-321"><a href="#L-321"><span class="linenos">321</span></a>
-</span><span id="L-322"><a href="#L-322"><span class="linenos">322</span></a><span class="sd">Column name for the time stamps.</span>
-</span><span id="L-323"><a href="#L-323"><span class="linenos">323</span></a><span class="sd">When using CSV data, tries to read in time data from this column name.</span>
+</span><span id="L-284"><a href="#L-284"><span class="linenos">284</span></a><span class="sd">Note: the frequency resolution is not used as an exclusion zone around extracted frequencies, and this is not a</span>
+</span><span id="L-285"><a href="#L-285"><span class="linenos">285</span></a><span class="sd">supported feature of Star Shine.</span>
+</span><span id="L-286"><a href="#L-286"><span class="linenos">286</span></a><span class="sd">Experience teaches that this leads to worse models.</span>
+</span><span id="L-287"><a href="#L-287"><span class="linenos">287</span></a>
+</span><span id="L-288"><a href="#L-288"><span class="linenos">288</span></a><span class="sd">`window_width`: float, default=1.0</span>
+</span><span id="L-289"><a href="#L-289"><span class="linenos">289</span></a>
+</span><span id="L-290"><a href="#L-290"><span class="linenos">290</span></a><span class="sd">Periodogram spectral noise is calculated over this window width.</span>
+</span><span id="L-291"><a href="#L-291"><span class="linenos">291</span></a><span class="sd">Only influences the extraction in the signal-to-noise ratio mode of picking the next sinusoid.</span>
+</span><span id="L-292"><a href="#L-292"><span class="linenos">292</span></a>
+</span><span id="L-293"><a href="#L-293"><span class="linenos">293</span></a><span class="sd">## Optimisation settings</span>
+</span><span id="L-294"><a href="#L-294"><span class="linenos">294</span></a>
+</span><span id="L-295"><a href="#L-295"><span class="linenos">295</span></a><span class="sd">`min_group`: int, default=45</span>
+</span><span id="L-296"><a href="#L-296"><span class="linenos">296</span></a>
+</span><span id="L-297"><a href="#L-297"><span class="linenos">297</span></a><span class="sd">Minimum group size for the multi-sinusoid non-linear fit.</span>
+</span><span id="L-298"><a href="#L-298"><span class="linenos">298</span></a><span class="sd">See `max_group` below for more information.</span>
+</span><span id="L-299"><a href="#L-299"><span class="linenos">299</span></a>
+</span><span id="L-300"><a href="#L-300"><span class="linenos">300</span></a><span class="sd">`max_group`: int, default=50</span>
+</span><span id="L-301"><a href="#L-301"><span class="linenos">301</span></a>
+</span><span id="L-302"><a href="#L-302"><span class="linenos">302</span></a><span class="sd">Maximum group size for the multi-sinusoid non-linear fit (max_group &gt; min_group).</span>
+</span><span id="L-303"><a href="#L-303"><span class="linenos">303</span></a><span class="sd">Simultaneously optimising a larger number of sinusoids is beneficial for the quality of the fit, but may drastically</span>
+</span><span id="L-304"><a href="#L-304"><span class="linenos">304</span></a><span class="sd">increase the time it takes to complete.</span>
+</span><span id="L-305"><a href="#L-305"><span class="linenos">305</span></a><span class="sd">Make sure max_group is always larger than min_group.</span>
+</span><span id="L-306"><a href="#L-306"><span class="linenos">306</span></a><span class="sd">The final group sizes are determined during runtime by the largest amplitude jump within the group size limits.</span>
+</span><span id="L-307"><a href="#L-307"><span class="linenos">307</span></a>
+</span><span id="L-308"><a href="#L-308"><span class="linenos">308</span></a><span class="sd">## Data and File settings</span>
+</span><span id="L-309"><a href="#L-309"><span class="linenos">309</span></a>
+</span><span id="L-310"><a href="#L-310"><span class="linenos">310</span></a><span class="sd">`overwrite`: bool, default=False</span>
+</span><span id="L-311"><a href="#L-311"><span class="linenos">311</span></a>
+</span><span id="L-312"><a href="#L-312"><span class="linenos">312</span></a><span class="sd">Overwrite existing result files.</span>
+</span><span id="L-313"><a href="#L-313"><span class="linenos">313</span></a><span class="sd">When running the full pipeline, save files are automatically generated.</span>
+</span><span id="L-314"><a href="#L-314"><span class="linenos">314</span></a><span class="sd">Any pre-existing save files of the same name will be overwritten if this setting is set to True.</span>
+</span><span id="L-315"><a href="#L-315"><span class="linenos">315</span></a><span class="sd">Otherwise, existing save files of the same name will be loaded and their results used to skip ahead in the pipeline.</span>
+</span><span id="L-316"><a href="#L-316"><span class="linenos">316</span></a>
+</span><span id="L-317"><a href="#L-317"><span class="linenos">317</span></a><span class="sd">`data_dir`: str, default=&#39;&#39;</span>
+</span><span id="L-318"><a href="#L-318"><span class="linenos">318</span></a>
+</span><span id="L-319"><a href="#L-319"><span class="linenos">319</span></a><span class="sd">Root directory where the data files to be analysed are located; if empty will use current dir.</span>
+</span><span id="L-320"><a href="#L-320"><span class="linenos">320</span></a><span class="sd">Appended to the front of the file name(s).</span>
+</span><span id="L-321"><a href="#L-321"><span class="linenos">321</span></a><span class="sd">Mainly for use in automated scripts, not relevant in the GUI.</span>
+</span><span id="L-322"><a href="#L-322"><span class="linenos">322</span></a>
+</span><span id="L-323"><a href="#L-323"><span class="linenos">323</span></a><span class="sd">`save_dir`: str, default=&#39;&#39;</span>
 </span><span id="L-324"><a href="#L-324"><span class="linenos">324</span></a>
-</span><span id="L-325"><a href="#L-325"><span class="linenos">325</span></a><span class="sd">`cn_flux`: str, default=&#39;flux&#39;</span>
-</span><span id="L-326"><a href="#L-326"><span class="linenos">326</span></a>
-</span><span id="L-327"><a href="#L-327"><span class="linenos">327</span></a><span class="sd">Column name for the flux measurements.</span>
-</span><span id="L-328"><a href="#L-328"><span class="linenos">328</span></a><span class="sd">When using CSV data, tries to read in flux data from this column name.</span>
-</span><span id="L-329"><a href="#L-329"><span class="linenos">329</span></a>
-</span><span id="L-330"><a href="#L-330"><span class="linenos">330</span></a><span class="sd">`cn_flux_err`: str, default=&#39;flux_err&#39;</span>
-</span><span id="L-331"><a href="#L-331"><span class="linenos">331</span></a>
-</span><span id="L-332"><a href="#L-332"><span class="linenos">332</span></a><span class="sd">Column name for the flux measurement errors.</span>
-</span><span id="L-333"><a href="#L-333"><span class="linenos">333</span></a><span class="sd">When using CSV data, tries to read in flux error data from this column name.</span>
-</span><span id="L-334"><a href="#L-334"><span class="linenos">334</span></a>
-</span><span id="L-335"><a href="#L-335"><span class="linenos">335</span></a><span class="sd">## FITS File settings</span>
-</span><span id="L-336"><a href="#L-336"><span class="linenos">336</span></a>
-</span><span id="L-337"><a href="#L-337"><span class="linenos">337</span></a><span class="sd">`cf_time`: str, default=&#39;TIME&#39;</span>
-</span><span id="L-338"><a href="#L-338"><span class="linenos">338</span></a>
-</span><span id="L-339"><a href="#L-339"><span class="linenos">339</span></a><span class="sd">Column name for the time stamps.</span>
-</span><span id="L-340"><a href="#L-340"><span class="linenos">340</span></a><span class="sd">When using FITS data, tries to read in time data from this column name.</span>
-</span><span id="L-341"><a href="#L-341"><span class="linenos">341</span></a>
-</span><span id="L-342"><a href="#L-342"><span class="linenos">342</span></a><span class="sd">`cf_flux`: str, default=&#39;SAP_FLUX&#39;</span>
-</span><span id="L-343"><a href="#L-343"><span class="linenos">343</span></a>
-</span><span id="L-344"><a href="#L-344"><span class="linenos">344</span></a><span class="sd">Column name for the flux.</span>
-</span><span id="L-345"><a href="#L-345"><span class="linenos">345</span></a><span class="sd">When using FITS data, tries to read in flux data from this column name.</span>
-</span><span id="L-346"><a href="#L-346"><span class="linenos">346</span></a><span class="sd">Examples: SAP_FLUX, PDCSAP_FLUX, KSPSAP_FLUX.</span>
+</span><span id="L-325"><a href="#L-325"><span class="linenos">325</span></a><span class="sd">Root directory where analysis results will be saved; if empty will use current dir.</span>
+</span><span id="L-326"><a href="#L-326"><span class="linenos">326</span></a><span class="sd">Appended to the front of the file name(s).</span>
+</span><span id="L-327"><a href="#L-327"><span class="linenos">327</span></a><span class="sd">A subdirectory is automatically made with the target identifier to store the results and log file.</span>
+</span><span id="L-328"><a href="#L-328"><span class="linenos">328</span></a>
+</span><span id="L-329"><a href="#L-329"><span class="linenos">329</span></a><span class="sd">`save_ascii`: bool, default=False</span>
+</span><span id="L-330"><a href="#L-330"><span class="linenos">330</span></a>
+</span><span id="L-331"><a href="#L-331"><span class="linenos">331</span></a><span class="sd">Save ascii variants of the HDF5 result files.</span>
+</span><span id="L-332"><a href="#L-332"><span class="linenos">332</span></a><span class="sd">Saves several CSV files per HDF5 file, due to format constraints.</span>
+</span><span id="L-333"><a href="#L-333"><span class="linenos">333</span></a>
+</span><span id="L-334"><a href="#L-334"><span class="linenos">334</span></a><span class="sd">## Tabulated File settings</span>
+</span><span id="L-335"><a href="#L-335"><span class="linenos">335</span></a>
+</span><span id="L-336"><a href="#L-336"><span class="linenos">336</span></a><span class="sd">`cn_time`: str, default=&#39;time&#39;</span>
+</span><span id="L-337"><a href="#L-337"><span class="linenos">337</span></a>
+</span><span id="L-338"><a href="#L-338"><span class="linenos">338</span></a><span class="sd">Column name for the time stamps.</span>
+</span><span id="L-339"><a href="#L-339"><span class="linenos">339</span></a><span class="sd">When using CSV data, tries to read in time data from this column name.</span>
+</span><span id="L-340"><a href="#L-340"><span class="linenos">340</span></a>
+</span><span id="L-341"><a href="#L-341"><span class="linenos">341</span></a><span class="sd">`cn_flux`: str, default=&#39;flux&#39;</span>
+</span><span id="L-342"><a href="#L-342"><span class="linenos">342</span></a>
+</span><span id="L-343"><a href="#L-343"><span class="linenos">343</span></a><span class="sd">Column name for the flux measurements.</span>
+</span><span id="L-344"><a href="#L-344"><span class="linenos">344</span></a><span class="sd">When using CSV data, tries to read in flux data from this column name.</span>
+</span><span id="L-345"><a href="#L-345"><span class="linenos">345</span></a>
+</span><span id="L-346"><a href="#L-346"><span class="linenos">346</span></a><span class="sd">`cn_flux_err`: str, default=&#39;flux_err&#39;</span>
 </span><span id="L-347"><a href="#L-347"><span class="linenos">347</span></a>
-</span><span id="L-348"><a href="#L-348"><span class="linenos">348</span></a><span class="sd">`cf_flux_err`: str, default=&#39;SAP_FLUX_ERR&#39;</span>
-</span><span id="L-349"><a href="#L-349"><span class="linenos">349</span></a>
-</span><span id="L-350"><a href="#L-350"><span class="linenos">350</span></a><span class="sd">Column name for the flux errors.</span>
-</span><span id="L-351"><a href="#L-351"><span class="linenos">351</span></a><span class="sd">When using FITS data, tries to read in flux error data from this column name.</span>
-</span><span id="L-352"><a href="#L-352"><span class="linenos">352</span></a><span class="sd">Examples: SAP_FLUX_ERR, PDCSAP_FLUX_ERR, KSPSAP_FLUX_ERR.</span>
-</span><span id="L-353"><a href="#L-353"><span class="linenos">353</span></a>
-</span><span id="L-354"><a href="#L-354"><span class="linenos">354</span></a><span class="sd">`cf_quality`: str, default=&#39;QUALITY&#39;</span>
-</span><span id="L-355"><a href="#L-355"><span class="linenos">355</span></a>
-</span><span id="L-356"><a href="#L-356"><span class="linenos">356</span></a><span class="sd">Column name for the flux quality flags.</span>
-</span><span id="L-357"><a href="#L-357"><span class="linenos">357</span></a><span class="sd">When using FITS data, tries to read in quality flags from this column name.</span>
-</span><span id="L-358"><a href="#L-358"><span class="linenos">358</span></a>
-</span><span id="L-359"><a href="#L-359"><span class="linenos">359</span></a><span class="sd">`apply_q_flags`: bool, default=True</span>
-</span><span id="L-360"><a href="#L-360"><span class="linenos">360</span></a>
-</span><span id="L-361"><a href="#L-361"><span class="linenos">361</span></a><span class="sd">Apply the quality flags supplied by the data source.</span>
-</span><span id="L-362"><a href="#L-362"><span class="linenos">362</span></a><span class="sd">Quality flags are assumed to follow the convention that zero means a good flux measurement.</span>
+</span><span id="L-348"><a href="#L-348"><span class="linenos">348</span></a><span class="sd">Column name for the flux measurement errors.</span>
+</span><span id="L-349"><a href="#L-349"><span class="linenos">349</span></a><span class="sd">When using CSV data, tries to read in flux error data from this column name.</span>
+</span><span id="L-350"><a href="#L-350"><span class="linenos">350</span></a>
+</span><span id="L-351"><a href="#L-351"><span class="linenos">351</span></a><span class="sd">## FITS File settings</span>
+</span><span id="L-352"><a href="#L-352"><span class="linenos">352</span></a>
+</span><span id="L-353"><a href="#L-353"><span class="linenos">353</span></a><span class="sd">`cf_time`: str, default=&#39;TIME&#39;</span>
+</span><span id="L-354"><a href="#L-354"><span class="linenos">354</span></a>
+</span><span id="L-355"><a href="#L-355"><span class="linenos">355</span></a><span class="sd">Column name for the time stamps.</span>
+</span><span id="L-356"><a href="#L-356"><span class="linenos">356</span></a><span class="sd">When using FITS data, tries to read in time data from this column name.</span>
+</span><span id="L-357"><a href="#L-357"><span class="linenos">357</span></a>
+</span><span id="L-358"><a href="#L-358"><span class="linenos">358</span></a><span class="sd">`cf_flux`: str, default=&#39;SAP_FLUX&#39;</span>
+</span><span id="L-359"><a href="#L-359"><span class="linenos">359</span></a>
+</span><span id="L-360"><a href="#L-360"><span class="linenos">360</span></a><span class="sd">Column name for the flux.</span>
+</span><span id="L-361"><a href="#L-361"><span class="linenos">361</span></a><span class="sd">When using FITS data, tries to read in flux data from this column name.</span>
+</span><span id="L-362"><a href="#L-362"><span class="linenos">362</span></a><span class="sd">Examples: SAP_FLUX, PDCSAP_FLUX, KSPSAP_FLUX.</span>
 </span><span id="L-363"><a href="#L-363"><span class="linenos">363</span></a>
-</span><span id="L-364"><a href="#L-364"><span class="linenos">364</span></a><span class="sd">`halve_chunks`: bool, default=False</span>
+</span><span id="L-364"><a href="#L-364"><span class="linenos">364</span></a><span class="sd">`cf_flux_err`: str, default=&#39;SAP_FLUX_ERR&#39;</span>
 </span><span id="L-365"><a href="#L-365"><span class="linenos">365</span></a>
-</span><span id="L-366"><a href="#L-366"><span class="linenos">366</span></a><span class="sd">Cut the time chunks in half (TESS data often has a discontinuity mid-sector).</span>
-</span><span id="L-367"><a href="#L-367"><span class="linenos">367</span></a><span class="sd">This is a convenience feature, mainly for users of TESS data, that makes sure the linear model is able to fit</span>
-</span><span id="L-368"><a href="#L-368"><span class="linenos">368</span></a><span class="sd">residual trends well in the case of flux discontinuities in the middle of a time chunk.</span>
+</span><span id="L-366"><a href="#L-366"><span class="linenos">366</span></a><span class="sd">Column name for the flux errors.</span>
+</span><span id="L-367"><a href="#L-367"><span class="linenos">367</span></a><span class="sd">When using FITS data, tries to read in flux error data from this column name.</span>
+</span><span id="L-368"><a href="#L-368"><span class="linenos">368</span></a><span class="sd">Examples: SAP_FLUX_ERR, PDCSAP_FLUX_ERR, KSPSAP_FLUX_ERR.</span>
 </span><span id="L-369"><a href="#L-369"><span class="linenos">369</span></a>
-</span><span id="L-370"><a href="#L-370"><span class="linenos">370</span></a><span class="sd">## GUI settings</span>
+</span><span id="L-370"><a href="#L-370"><span class="linenos">370</span></a><span class="sd">`cf_quality`: str, default=&#39;QUALITY&#39;</span>
 </span><span id="L-371"><a href="#L-371"><span class="linenos">371</span></a>
-</span><span id="L-372"><a href="#L-372"><span class="linenos">372</span></a><span class="sd">`dark_mode`: bool, default=False</span>
-</span><span id="L-373"><a href="#L-373"><span class="linenos">373</span></a>
-</span><span id="L-374"><a href="#L-374"><span class="linenos">374</span></a><span class="sd">Dark mode. [WIP]</span>
-</span><span id="L-375"><a href="#L-375"><span class="linenos">375</span></a><span class="sd">If this interest you, make a feature request (or react to it if exists) on GitHub.</span>
+</span><span id="L-372"><a href="#L-372"><span class="linenos">372</span></a><span class="sd">Column name for the flux quality flags.</span>
+</span><span id="L-373"><a href="#L-373"><span class="linenos">373</span></a><span class="sd">When using FITS data, tries to read in quality flags from this column name.</span>
+</span><span id="L-374"><a href="#L-374"><span class="linenos">374</span></a>
+</span><span id="L-375"><a href="#L-375"><span class="linenos">375</span></a><span class="sd">`apply_q_flags`: bool, default=True</span>
 </span><span id="L-376"><a href="#L-376"><span class="linenos">376</span></a>
-</span><span id="L-377"><a href="#L-377"><span class="linenos">377</span></a><span class="sd">`h_size_frac`: float, default=0.8</span>
-</span><span id="L-378"><a href="#L-378"><span class="linenos">378</span></a>
-</span><span id="L-379"><a href="#L-379"><span class="linenos">379</span></a><span class="sd">Horizontal window size as a fraction of the screen width.</span>
-</span><span id="L-380"><a href="#L-380"><span class="linenos">380</span></a>
-</span><span id="L-381"><a href="#L-381"><span class="linenos">381</span></a><span class="sd">`v_size_frac`: float, default=0.8</span>
-</span><span id="L-382"><a href="#L-382"><span class="linenos">382</span></a>
-</span><span id="L-383"><a href="#L-383"><span class="linenos">383</span></a><span class="sd">Vertical window size as a fraction of the screen height.</span>
-</span><span id="L-384"><a href="#L-384"><span class="linenos">384</span></a>
+</span><span id="L-377"><a href="#L-377"><span class="linenos">377</span></a><span class="sd">Apply the quality flags supplied by the data source.</span>
+</span><span id="L-378"><a href="#L-378"><span class="linenos">378</span></a><span class="sd">Quality flags are assumed to follow the convention that zero means a good flux measurement.</span>
+</span><span id="L-379"><a href="#L-379"><span class="linenos">379</span></a>
+</span><span id="L-380"><a href="#L-380"><span class="linenos">380</span></a><span class="sd">`halve_chunks`: bool, default=False</span>
+</span><span id="L-381"><a href="#L-381"><span class="linenos">381</span></a>
+</span><span id="L-382"><a href="#L-382"><span class="linenos">382</span></a><span class="sd">Cut the time chunks in half (TESS data often has a discontinuity mid-sector).</span>
+</span><span id="L-383"><a href="#L-383"><span class="linenos">383</span></a><span class="sd">This is a convenience feature, mainly for users of TESS data, that makes sure the linear model is able to fit</span>
+</span><span id="L-384"><a href="#L-384"><span class="linenos">384</span></a><span class="sd">residual trends well in the case of flux discontinuities in the middle of a time chunk.</span>
 </span><span id="L-385"><a href="#L-385"><span class="linenos">385</span></a>
-</span><span id="L-386"><a href="#L-386"><span class="linenos">386</span></a><span class="sd"># Credits</span>
+</span><span id="L-386"><a href="#L-386"><span class="linenos">386</span></a><span class="sd">## GUI settings</span>
 </span><span id="L-387"><a href="#L-387"><span class="linenos">387</span></a>
-</span><span id="L-388"><a href="#L-388"><span class="linenos">388</span></a><span class="sd">The code was written and documented by: Luc IJspeert, PhD in astronomy and astrophysics.</span>
+</span><span id="L-388"><a href="#L-388"><span class="linenos">388</span></a><span class="sd">`dark_mode`: bool, default=False</span>
 </span><span id="L-389"><a href="#L-389"><span class="linenos">389</span></a>
-</span><span id="L-390"><a href="#L-390"><span class="linenos">390</span></a><span class="sd">Contributions were made to setting options and ideation by: Mathijs Vanrespaille.</span>
-</span><span id="L-391"><a href="#L-391"><span class="linenos">391</span></a>
-</span><span id="L-392"><a href="#L-392"><span class="linenos">392</span></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-393"><a href="#L-393"><span class="linenos">393</span></a>
-</span><span id="L-394"><a href="#L-394"><span class="linenos">394</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.api.main</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-</span><span id="L-395"><a href="#L-395"><span class="linenos">395</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.api.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">Data</span>
-</span><span id="L-396"><a href="#L-396"><span class="linenos">396</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.api.result</span><span class="w"> </span><span class="kn">import</span> <span class="n">Result</span>
-</span><span id="L-397"><a href="#L-397"><span class="linenos">397</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.api.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+</span><span id="L-390"><a href="#L-390"><span class="linenos">390</span></a><span class="sd">Dark mode. [WIP]</span>
+</span><span id="L-391"><a href="#L-391"><span class="linenos">391</span></a><span class="sd">If this interest you, make a feature request (or react to it if exists) on GitHub.</span>
+</span><span id="L-392"><a href="#L-392"><span class="linenos">392</span></a>
+</span><span id="L-393"><a href="#L-393"><span class="linenos">393</span></a><span class="sd">`h_size_frac`: float, default=0.8</span>
+</span><span id="L-394"><a href="#L-394"><span class="linenos">394</span></a>
+</span><span id="L-395"><a href="#L-395"><span class="linenos">395</span></a><span class="sd">Horizontal window size as a fraction of the screen width.</span>
+</span><span id="L-396"><a href="#L-396"><span class="linenos">396</span></a>
+</span><span id="L-397"><a href="#L-397"><span class="linenos">397</span></a><span class="sd">`v_size_frac`: float, default=0.8</span>
 </span><span id="L-398"><a href="#L-398"><span class="linenos">398</span></a>
-</span><span id="L-399"><a href="#L-399"><span class="linenos">399</span></a><span class="k">try</span><span class="p">:</span>
-</span><span id="L-400"><a href="#L-400"><span class="linenos">400</span></a>    <span class="c1"># GUI</span>
-</span><span id="L-401"><a href="#L-401"><span class="linenos">401</span></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">.gui.gui_app</span><span class="w"> </span><span class="kn">import</span> <span class="n">launch_gui</span>
-</span><span id="L-402"><a href="#L-402"><span class="linenos">402</span></a><span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="L-403"><a href="#L-403"><span class="linenos">403</span></a>    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-</span><span id="L-404"><a href="#L-404"><span class="linenos">404</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;GUI unavailable, likely missing dependency PySide6.&#39;</span><span class="p">)</span>
-</span><span id="L-405"><a href="#L-405"><span class="linenos">405</span></a>    <span class="k">pass</span>
-</span><span id="L-406"><a href="#L-406"><span class="linenos">406</span></a>
-</span><span id="L-407"><a href="#L-407"><span class="linenos">407</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;gui&#39;</span><span class="p">,</span> <span class="s1">&#39;api&#39;</span><span class="p">,</span> <span class="s1">&#39;core&#39;</span><span class="p">,</span> <span class="s1">&#39;config&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">]</span>
+</span><span id="L-399"><a href="#L-399"><span class="linenos">399</span></a><span class="sd">Vertical window size as a fraction of the screen height.</span>
+</span><span id="L-400"><a href="#L-400"><span class="linenos">400</span></a>
+</span><span id="L-401"><a href="#L-401"><span class="linenos">401</span></a>
+</span><span id="L-402"><a href="#L-402"><span class="linenos">402</span></a><span class="sd"># Credits</span>
+</span><span id="L-403"><a href="#L-403"><span class="linenos">403</span></a>
+</span><span id="L-404"><a href="#L-404"><span class="linenos">404</span></a><span class="sd">The code was written and documented by: Luc IJspeert, PhD in astronomy and astrophysics.</span>
+</span><span id="L-405"><a href="#L-405"><span class="linenos">405</span></a>
+</span><span id="L-406"><a href="#L-406"><span class="linenos">406</span></a><span class="sd">Contributions were made to setting options and ideation by: Mathijs Vanrespaille.</span>
+</span><span id="L-407"><a href="#L-407"><span class="linenos">407</span></a>
+</span><span id="L-408"><a href="#L-408"><span class="linenos">408</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-409"><a href="#L-409"><span class="linenos">409</span></a>
+</span><span id="L-410"><a href="#L-410"><span class="linenos">410</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.api.main</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+</span><span id="L-411"><a href="#L-411"><span class="linenos">411</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.api.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">Data</span>
+</span><span id="L-412"><a href="#L-412"><span class="linenos">412</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.api.result</span><span class="w"> </span><span class="kn">import</span> <span class="n">Result</span>
+</span><span id="L-413"><a href="#L-413"><span class="linenos">413</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.api.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+</span><span id="L-414"><a href="#L-414"><span class="linenos">414</span></a>
+</span><span id="L-415"><a href="#L-415"><span class="linenos">415</span></a><span class="k">try</span><span class="p">:</span>
+</span><span id="L-416"><a href="#L-416"><span class="linenos">416</span></a>    <span class="c1"># GUI</span>
+</span><span id="L-417"><a href="#L-417"><span class="linenos">417</span></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">.gui.gui_app</span><span class="w"> </span><span class="kn">import</span> <span class="n">launch_gui</span>
+</span><span id="L-418"><a href="#L-418"><span class="linenos">418</span></a><span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="L-419"><a href="#L-419"><span class="linenos">419</span></a>    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+</span><span id="L-420"><a href="#L-420"><span class="linenos">420</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;GUI unavailable, likely missing dependency PySide6.&#39;</span><span class="p">)</span>
+</span><span id="L-421"><a href="#L-421"><span class="linenos">421</span></a>    <span class="k">pass</span>
+</span><span id="L-422"><a href="#L-422"><span class="linenos">422</span></a>
+</span><span id="L-423"><a href="#L-423"><span class="linenos">423</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;gui&#39;</span><span class="p">,</span> <span class="s1">&#39;api&#39;</span><span class="p">,</span> <span class="s1">&#39;core&#39;</span><span class="p">,</span> <span class="s1">&#39;config&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">]</span>
 </span></pre></div>
 
 
